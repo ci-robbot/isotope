@@ -5108,6 +5108,7 @@ COPY rootfs/usr/lib/systemd/system/isotope-backup.service rootfs/usr/lib/systemd
 # starts the daemon on the installed system only.
 COPY rootfs/usr/lib/systemd/system/docker.service rootfs/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
 COPY rootfs/system/oem/92_docker.yaml /system/oem/92_docker.yaml
+COPY rootfs/system/oem/94_isotope_state.yaml /system/oem/94_isotope_state.yaml
 COPY rootfs-server/ /
 
 FROM ${DESKTOP}-rootfs AS desktop-rootfs

@@ -1,0 +1,54 @@
+# Keep the machine's settings that live outside /etc and /home across reboots
+# (the desktops and the server edition).
+#
+# Kairos rebuilds /etc and /var at every boot and keeps only the paths in its
+# persistent list (PERSISTENT_STATE_PATHS, kairos-init's 00_rootfs.yaml), and
+# none of these is on it:
+#
+#   /etc/NetworkManager/system-connections  the saved Wi-Fi networks and every
+#                                           other connection (keyfile plugin),
+#                                           with their passwords
+#   /var/lib/NetworkManager                 NetworkManager's own state: the
+#                                           secret key behind stable MAC and
+#                                           IPv6 addresses, DHCP leases
+#   /var/lib/bluetooth                      paired Bluetooth devices
+#   /var/lib/AccountsService                the user pictures and account
+#                                           details COSMIC Settings sets
+#   /var/lib/power-profiles-daemon          the chosen power profile
+#   /var/lib/systemd/backlight              screen brightness, restored at boot
+#   /var/lib/systemd/rfkill                 Wi-Fi and Bluetooth on/off
+#                                           (airplane mode)
+#
+# Without this, a Wi-Fi network joined in Isotope Welcome, the panel or nmtui
+# was forgotten at the next boot, and so was every paired headset. A path
+# that is not on an image (no Bluetooth on the server) is only an empty
+# directory on the persistent partition.
+#
+# The paths are added to CUSTOM_BIND_MOUNTS, which cos-setup's rootfs.after
+# stage reads once. 92_docker.yaml sets that variable with a plain
+# `environment:` block, which replaces any earlier value, so this file sorts
+# after it and appends instead, skipping a path that is already listed. No
+# `if:` guard: the rootfs stage runs in the initramfs, where the installed
+# system's /etc is not the running one yet.
+name: "Isotope machine state"
+stages:
+  rootfs:
+    - name: "persist the saved networks, Bluetooth pairings and device settings"
+      commands:
+        - |
+          layout=/run/cos/cos-layout.env
+          touch "$layout"
+          # shellcheck source=/dev/null
+          . "$layout" 2>/dev/null || true
+          merged="${CUSTOM_BIND_MOUNTS:-}"
+          for p in /etc/NetworkManager/system-connections /var/lib/NetworkManager \
+                   /var/lib/bluetooth /var/lib/AccountsService \
+                   /var/lib/power-profiles-daemon \
+                   /var/lib/systemd/backlight /var/lib/systemd/rfkill; do
+            case " $merged " in
+              *" $p "*) ;;
+              *) merged="$merged $p" ;;
+            esac
+          done
+          sed -i '/^CUSTOM_BIND_MOUNTS=/d' "$layout"
+          printf 'CUSTOM_BIND_MOUNTS="%s"\n' "${merged# }" >> "$layout"

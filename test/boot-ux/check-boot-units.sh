@@ -72,6 +72,8 @@ done
 check "NetworkManager and its wait-online are enabled" \
     "$(ena NetworkManager.service) && $(ena NetworkManager-wait-online.service)"
 
+check "the boot stage persists saved networks and Bluetooth pairings" \
+    "grep -q /etc/NetworkManager/system-connections /system/oem/94_isotope_state.yaml && grep -q /var/lib/bluetooth /system/oem/94_isotope_state.yaml"
 check "getty@tty1 is enabled, not masked" "$(ena getty@tty1.service)"
 # Kairos' 09_systemd_services.yaml runs this at every boot; on a masked unit it
 # fails and the boot logs "failed to run systemctl enable getty@tty1".

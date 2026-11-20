@@ -161,6 +161,9 @@ jobs:
       - name: Version pins are tracked by Renovate
         run: scripts/check-renovate-pins.sh
 
+      - name: Saved networks and device settings survive a reboot
+        run: test/state/test-persist-state.sh
+
       - name: Configs match the Isotope palette
         run: python3 tools/gen-theme.py --check
 

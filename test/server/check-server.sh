@@ -90,6 +90,8 @@ check "docker is not enabled in the image" \
     "! test -e /etc/systemd/system/multi-user.target.wants/docker.service && ! test -e /etc/systemd/system/sockets.target.wants/docker.socket"
 check "the boot stage persists /var/lib/docker and starts docker after install" \
     "grep -q 'CUSTOM_BIND_MOUNTS: \"/var/lib/docker\"' /system/oem/92_docker.yaml && grep -q 'live_mode' /system/oem/92_docker.yaml && grep -q 'systemctl start --no-block docker.socket docker.service' /system/oem/92_docker.yaml"
+check "the boot stage persists the saved network connections" \
+    "grep -q /etc/NetworkManager/system-connections /system/oem/94_isotope_state.yaml"
 check "iptables is installed" "command -v iptables"
 check "the container kernel modules are present" \
     "k=\$(ls /lib/modules) && for m in overlay bridge br_netfilter veth nf_nat xt_MASQUERADE; do find /lib/modules/\$k -name \"\$m.ko*\" | grep -q . || exit 1; done"
