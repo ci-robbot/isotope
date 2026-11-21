@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -26,6 +27,9 @@ type Hooks struct {
 	OpenShortcutSheet func() error
 	// WriteStamp records how the flow ended. The UI calls it once.
 	WriteStamp func(Stamp)
+	// Window runs a window action (minimize, maximize, close, ...) the
+	// title bar asked for. Nil with no title bar.
+	Window func(system.Action)
 	// Close asks the window to close. The request comes back through
 	// CloseRequested, which lets it through once the flow has ended.
 	Close func()
@@ -110,6 +114,9 @@ type UI struct {
 	pageAt time.Time // when it came in, for the slide
 	focus  event.Tag // focus this on the next frame
 	scale  float32   // Ctrl+Plus and Ctrl+Minus
+	// bar is the title bar Welcome draws when the compositor draws none
+	// (COSMIC); nil when the window manager has its own.
+	bar *guikit.TitleBar
 
 	// stamped: the stamp is written; closing: the UI asked to close.
 	stamped, closing bool
@@ -184,6 +191,15 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	guikit.FillRect(gtx, image.Rectangle{Max: size}, guikit.ColWindow)
 	gtx.Constraints = layout.Exact(size)
+	if u.bar != nil {
+		if acts := u.bar.Update(gtx); acts != 0 && u.hooks.Window != nil {
+			u.hooks.Window(acts)
+		}
+		h := u.bar.Layout(gtx, u.Theme).Size.Y
+		defer op.Offset(image.Pt(0, h)).Push(gtx.Ops).Pop()
+		size.Y -= h
+		gtx.Constraints = layout.Exact(size)
+	}
 	p := u.page()
 	u.Frame(gtx, u.steps(), u.slide(p.Body), func(gtx layout.Context) layout.Dimensions {
 		lead, trail := p.Footer(u.nav())

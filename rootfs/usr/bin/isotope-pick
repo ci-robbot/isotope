@@ -14,9 +14,11 @@
 prompt=${1:-Select}
 lines=${2:-14}
 tab=$(printf '\t')
+# The session file may set ISOTOPE_MENU_WIDTH (COSMIC's menu is narrower).
+[ -r /etc/isotope/session ] && . /etc/isotope/session
 
 if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v fuzzel >/dev/null 2>&1; then
-    pick() { fuzzel --dmenu --width=48 --lines="$lines" --prompt="$prompt > "; }
+    pick() { fuzzel --dmenu --width="${ISOTOPE_MENU_WIDTH:-48}" --lines="$lines" --prompt="$prompt > "; }
     items=$(cat)
     [ -n "$items" ] || exit 1
     case "$items" in

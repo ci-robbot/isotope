@@ -106,7 +106,15 @@ func main() {
 	win := new(app.Window)
 	// closeAsked: the UI asked to close; the close is sent after the frame.
 	closeAsked := false
-	win.Option(app.Title("Welcome to Isotope"), app.Size(unit.Dp(1100), unit.Dp(720)), app.Decorated(true))
+	// COSMIC's compositor asks clients to draw their own decorations and
+	// Gio's fallback bar is blue with the buttons on the right, so Welcome
+	// draws an Isotope bar there (buttons on the left, as the COSMIC header
+	// bars). Other desktops keep their own bars.
+	ownBar := d == Cosmic
+	sw, sh, ss := screenSize(ExecRunner{}, d)
+	ww, wh := WindowSize(sw, sh, ss)
+	win.Option(app.Title("Welcome to Isotope"), app.Size(unit.Dp(ww), unit.Dp(wh)),
+		app.MinSize(unit.Dp(minW), unit.Dp(minH)), app.Decorated(!ownBar))
 	u := newUI(flowFor(page, d), d, guikit.NewShaper(), Hooks{
 		Invalidate:        win.Invalidate,
 		Logout:            func() error { return start(logoutCommand(d)...) },
@@ -120,6 +128,7 @@ func main() {
 			}
 		},
 		Close:   func() { closeAsked = true },
+		Window:  func(a system.Action) { win.Perform(a) },
 		Runner:  ExecRunner{},
 		Network: nmNetwork{},
 		// The Language page asks the daemon; the group only decides
@@ -139,6 +148,9 @@ func main() {
 		},
 	})
 	u.appList = appList
+	if ownBar {
+		u.bar = &guikit.TitleBar{Title: "Welcome to Isotope", Left: guikit.ControlsLeftHere()}
+	}
 	u.version = versionLine("/etc/isotope/release")
 	if f, err := os.Open(ShortcutsFile); err == nil {
 		if s, err := ParseShortcuts(f); err == nil {
@@ -182,6 +194,11 @@ func main() {
 					os.Exit(1)
 				}
 				os.Exit(0)
+			case app.ConfigEvent:
+				if u.bar != nil {
+					u.bar.Maximized = e.Config.Mode == app.Maximized
+					win.Invalidate()
+				}
 			case app.FrameEvent:
 				gtx := app.NewContext(&ops, e)
 				u.Layout(gtx)

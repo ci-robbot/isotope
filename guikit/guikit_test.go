@@ -2,8 +2,10 @@ package guikit
 
 import (
 	"image"
+	"os"
 	"testing"
 
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
@@ -93,5 +95,67 @@ func TestConfirmCoversTheWindow(t *testing.T) {
 	// On a window narrower than the card, the card shrinks to fit.
 	if d := th.Confirm(testContext(300, 400), "Skip setup?", "Words.", nil); d.Size != image.Pt(300, 400) {
 		t.Fatalf("narrow: %v", d.Size)
+	}
+}
+
+func TestControlOrder(t *testing.T) {
+	l, r := ControlOrder(true), ControlOrder(false)
+	if l[0] != system.ActionClose || l[2] != system.ActionMaximize {
+		t.Errorf("left order = %v", l)
+	}
+	if r[0] != system.ActionMinimize || r[2] != system.ActionClose {
+		t.Errorf("right order = %v", r)
+	}
+}
+
+func TestControlsLeft(t *testing.T) {
+	files := map[string]string{}
+	read := func(p string) ([]byte, error) {
+		if v, ok := files[p]; ok {
+			return []byte(v), nil
+		}
+		return nil, os.ErrNotExist
+	}
+	env := func(m map[string]string) func(string) string { return func(k string) string { return m[k] } }
+	cosmic := env(map[string]string{"XDG_CURRENT_DESKTOP": "COSMIC"})
+	sys := "/usr/share/cosmic/com.system76.CosmicTk/v1/window_controls_left"
+	usr := "/home/u/.config/cosmic/com.system76.CosmicTk/v1/window_controls_left"
+
+	if ControlsLeft(env(map[string]string{"XDG_CURRENT_DESKTOP": "sway"}), "/home/u", read) {
+		t.Error("sway: buttons left")
+	}
+	if ControlsLeft(cosmic, "/home/u", read) {
+		t.Error("COSMIC without the key: buttons left")
+	}
+	files[sys] = "true\n"
+	if !ControlsLeft(cosmic, "/home/u", read) {
+		t.Error("COSMIC with the system key: want left")
+	}
+	files[usr] = "false"
+	if ControlsLeft(cosmic, "/home/u", read) {
+		t.Error("the user's false must win")
+	}
+	delete(files, usr)
+	xdg := env(map[string]string{"XDG_CURRENT_DESKTOP": "COSMIC", "XDG_CONFIG_HOME": "/cfg"})
+	files["/cfg/cosmic/com.system76.CosmicTk/v1/window_controls_left"] = "false"
+	if ControlsLeft(xdg, "/home/u", read) {
+		t.Error("XDG_CONFIG_HOME override ignored")
+	}
+}
+
+func TestTitleBarLayoutHeight(t *testing.T) {
+	th := &Theme{Shaper: NewShaper()}
+	for _, left := range []bool{true, false} {
+		bar := &TitleBar{Title: "Welcome to Isotope", Left: left}
+		gtx := layout.Context{
+			Ops:         new(op.Ops),
+			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(image.Pt(800, 600)),
+		}
+		d := bar.Layout(gtx, th)
+		if d.Size != image.Pt(800, TitleBarHeight) {
+			t.Errorf("left=%v: size %v", left, d.Size)
+		}
+		bar.Update(gtx)
 	}
 }

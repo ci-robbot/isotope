@@ -3,3 +3,4 @@ DISPLAY_NAME=Wayland
 # The terminal isotope-update tray opens its dialogs in; split on spaces,
 # the command and its arguments follow.
 TERMINAL_EXEC="cosmic-term -e"
+ISOTOPE_MENU_WIDTH=38
