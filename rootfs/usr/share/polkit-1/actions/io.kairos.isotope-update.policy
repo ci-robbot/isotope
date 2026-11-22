@@ -58,4 +58,14 @@
       <allow_active>no</allow_active>
     </defaults>
   </action>
+
+  <action id="io.kairos.isotope-update.backup">
+    <description>Back up this machine, or change when it backs up</description>
+    <message>Only members of the admin group can back up this machine.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>no</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

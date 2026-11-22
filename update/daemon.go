@@ -29,6 +29,8 @@ const (
 	StateUnmanaged       State = "unmanaged"
 	// StateExtension: an extension job runs kairos-agent sysext.
 	StateExtension State = "extension"
+	// StateBackup: a backup job runs restic (BackupNow).
+	StateBackup State = "backup"
 )
 
 // Status is everything a client shows: the tray menu, the CLI's status line.
@@ -42,6 +44,9 @@ type Status struct {
 	// ExtResult and ExtDetail are the outcome of the last extension job:
 	// one of the extResult* words and its sentence, "" until one ends.
 	ExtResult, ExtDetail string
+	// BackupResult and BackupDetail are the outcome of the last backup job
+	// the service ran: one of the backupResult* words and its sentence.
+	BackupResult, BackupDetail string
 }
 
 // The reboot marker's first word, and Status.Pending. Only "installed" means
@@ -191,6 +196,11 @@ type Daemon struct {
 	extResult, extDetail string // guarded by mu
 	extCat               extCache
 
+	// backup runs one backup to the configured target; nil refuses
+	// BackupNow. NewDaemon sets daemonBackup.
+	backup                     func(progress func(string)) (string, error)
+	backupResult, backupDetail string // guarded by mu
+
 	relMu    sync.Mutex
 	relCache []Latest
 	relOK    bool
@@ -201,7 +211,7 @@ type Daemon struct {
 // file the system is not an Isotope install this daemon may update, and
 // every mutating call is refused.
 func NewDaemon(b Backend) *Daemon {
-	d := &Daemon{backend: b, state: StateIdle}
+	d := &Daemon{backend: b, state: StateIdle, backup: daemonBackup}
 	if e, ok := b.(ExtBackend); ok {
 		d.ext = e
 	}
@@ -258,6 +268,9 @@ func (d *Daemon) statusLocked() Status {
 		Pending:   d.pendingLocked(),
 		ExtResult: d.extResult,
 		ExtDetail: d.extDetail,
+
+		BackupResult: d.backupResult,
+		BackupDetail: d.backupDetail,
 	}
 }
 
@@ -330,7 +343,7 @@ func (d *Daemon) Busy() bool {
 }
 
 func (d *Daemon) busyLocked() bool {
-	return d.state == StateChecking || d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension
+	return d.state == StateChecking || d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup
 }
 
 // newest is the newest published tag; FetchReleases sorts newest first.
@@ -697,7 +710,7 @@ func (d *Daemon) Cancel() error {
 		}
 		d.setLocked(prev, detail)
 		return nil
-	case StateApplying:
+	case StateApplying, StateBackup:
 		return ErrNotCancellable
 	case StateExtension:
 		return errExtRunning
@@ -712,7 +725,7 @@ func (d *Daemon) Cancel() error {
 // until the reboot fails.
 func (d *Daemon) Reboot() error {
 	d.mu.Lock()
-	if d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension {
+	if d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup {
 		d.mu.Unlock()
 		return ErrBusy
 	}
@@ -743,7 +756,7 @@ func (d *Daemon) RebootPrevious() error {
 	case d.rebooting:
 		d.mu.Unlock()
 		return ErrRebooting
-	case d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension:
+	case d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup:
 		d.mu.Unlock()
 		return ErrBusy
 	case d.state == StateRebootPending && d.pending == pendingInstalled:

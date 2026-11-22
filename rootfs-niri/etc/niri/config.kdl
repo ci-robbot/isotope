@@ -400,9 +400,10 @@ window-rule {
     open-floating true
 }
 
-// Isotope Welcome is a dialog-sized window, not a column.
+// Isotope Welcome and Isotope System are dialog-sized windows, not columns.
 window-rule {
     match app-id="^isotope-welcome$"
+    match app-id="^isotope-system$"
     open-floating true
 }
 

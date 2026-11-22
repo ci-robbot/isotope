@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kairos-community/isotope/update/isorelease"
 )
 
 // Exit codes. `check` exits exitUpdate when an update is available, so a script
@@ -62,6 +64,9 @@ Commands:
   welcome [PAGE]    Isotope Welcome, the first-login setup, again; or one
                     of its pages: apps, language, network, appearance,
                     accessibility, shortcuts
+  system [PAGE]     Isotope System, the window for all of the above;
+                    or one of its pages: updates, desktop, extensions,
+                    backup, security, network, users, disks, about
   help              this text
 
 Started by the desktop session and by systemd, not by hand:
@@ -133,6 +138,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdWelcome(args, stderr)
 	case "wallpaper-follow":
 		return cmdWallpaperFollow(stderr)
+	case "system":
+		return cmdSystem(args, stderr)
 	case "daemon":
 		return cmdDaemon(args, stderr)
 	case "efi-boot-entry":
@@ -246,7 +253,7 @@ func cmdUpgrade(args []string, stdin io.Reader, stdout, stderr io.Writer) (code 
 		return exitUsage
 	}
 	if *version != "" {
-		if _, ok := parseSemver(*version); !ok {
+		if !isTag(*version) {
 			fmt.Fprintf(stderr, "isotope: %q is not a release tag like v1.2.3\n", *version)
 			return exitUsage
 		}
@@ -271,7 +278,7 @@ func cmdUpgrade(args []string, stdin io.Reader, stdout, stderr io.Writer) (code 
 			return exitOK
 		}
 		tag = latest.Tag
-	} else if _, ok := parseSemver(tag); !ok {
+	} else if !isTag(tag) {
 		fmt.Fprintf(stderr, "isotope: %q is not a release tag like v1.2.3\n", tag)
 		return exitUsage
 	}
@@ -442,12 +449,12 @@ func lineWarning(line string) string {
 
 // flavorAgent is the agent appliance: it has no daemon, so its CLI keeps the
 // direct sudo + kairos-agent path.
-const flavorAgent = "agent"
+const flavorAgent = isorelease.FlavorAgent
 
 // flavorServer is the server edition: no desktop, one image line
 // (server-<tag>). It has the daemon, so its CLI works as on a desktop, but it
 // installs only server images, and a desktop never installs one.
-const flavorServer = "server"
+const flavorServer = isorelease.FlavorServer
 
 // switchable are the desktops `switch` can install.
 var switchable = []string{"sway", "i3", "cosmic", "niri"}
@@ -574,7 +581,7 @@ func newestRelease(c daemonClient, stderr io.Writer) (string, int) {
 	}
 	newest := ""
 	for _, t := range tags {
-		if _, ok := parseSemver(t); ok && (newest == "" || Newer(t, newest)) {
+		if isTag(t) && (newest == "" || Newer(t, newest)) {
 			newest = t
 		}
 	}

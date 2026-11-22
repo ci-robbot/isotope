@@ -212,6 +212,12 @@ RUN rm -f /usr/bin/isotope-welcome /usr/bin/isotope-first-run-apps \
       /usr/share/isotope/first-run-apps.list && \
     sed -i -e '/isotope-welcome/d' -e '/isotope-first-run-apps/d' /etc/i3/config && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q -e 'isotope-welcome' -e 'isotope-first-run-apps'
+# No Isotope System: the appliance has no update service (the agent keeps
+# `isotope upgrade` through sudo) and no admin person. isotope-menu and the
+# tray fall back to the terminal when the app is missing.
+RUN rm -f /usr/bin/isotope-system /usr/share/applications/isotope-system.desktop && \
+    sed -i -e '/isotope-system/d' /etc/i3/config && \
+    ! grep -rhsv '^[[:space:]]*#' /etc/i3 | grep -q 'isotope-system'
 # No clipboard history. An AI agent drives the appliance: a history would keep
 # every token, password or key that the agent or a person copies, and give it
 # back to anything that can run a command or read the screen, the agent

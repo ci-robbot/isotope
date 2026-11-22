@@ -227,6 +227,8 @@ for_window [class="IsotopeFloat"] floating enable, resize set 820 520, move posi
 for_window [class="IsotopeFloat" title="Keyboard shortcuts"] resize set 900 720, move position center
 # Isotope Welcome is a dialog-sized window, not a tile.
 for_window [class="isotope-welcome"] floating enable
+# So is Isotope System.
+for_window [class="isotope-system"] floating enable
 
 bar {
     position top

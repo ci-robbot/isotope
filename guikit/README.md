@@ -15,8 +15,9 @@ window itself, so `go test ./...` here needs no cgo and no GPU.
   fields, radio and checkbox, cards, panels, warnings, links, headings, a
   scrolled page, a pick list, the Isotope mark and the small icons.
 - The window frame: the desktop background, the floating window, the sidebar
-  with the step list, the page slide, the footer with its buttons, the zoom
-  (Ctrl+Plus, Ctrl+Minus, Ctrl+0) and Esc.
+  with the step list (or, for an app whose pages are not a flow, the
+  navigation list of `NavSidebar`), the page slide, the footer with its
+  buttons, the zoom (Ctrl+Plus, Ctrl+Minus, Ctrl+0) and Esc.
 
 ## What does not
 

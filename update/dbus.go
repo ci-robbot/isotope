@@ -35,6 +35,9 @@ const (
 	// actionSettings covers machine settings the Welcome app changes: the
 	// system language.
 	actionSettings = "io.kairos.isotope-update.settings"
+	// actionBackup covers backing up now and the backup schedule: the backup
+	// reads every file on the machine as root.
+	actionBackup = "io.kairos.isotope-update.backup"
 )
 
 // busIntrospection describes the interface for busctl, d-feet and friends.
@@ -77,6 +80,9 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
     <method name="RecoveryReseal"><arg name="secret" type="h" direction="in"/></method>
     <method name="RecoveryNewKey"><arg name="secrets" type="h" direction="in"/></method>
     <method name="SetLocale"><arg name="lang" type="s" direction="in"/></method>
+    <method name="BackupStatus"><arg name="status" type="a{sv}" direction="out"/></method>
+    <method name="BackupNow"/>
+    <method name="SetBackupSchedule"><arg name="schedule" type="s" direction="in"/></method>
     <signal name="StateChanged"><arg name="status" type="a{sv}"/></signal>
     <signal name="Progress"><arg name="line" type="s"/></signal>
   </interface>` + introspect.IntrospectDataString + `</node>`
@@ -361,15 +367,17 @@ func sandboxed(c callerCreds) (bool, error) {
 
 func statusDict(s Status) map[string]dbus.Variant {
 	return map[string]dbus.Variant{
-		"state":      dbus.MakeVariant(string(s.State)),
-		"installed":  dbus.MakeVariant(s.Installed),
-		"latest":     dbus.MakeVariant(s.Latest),
-		"pin":        dbus.MakeVariant(s.Pin),
-		"detail":     dbus.MakeVariant(s.Detail),
-		"advanced":   dbus.MakeVariant(s.Advanced),
-		"pending":    dbus.MakeVariant(s.Pending),
-		"ext_result": dbus.MakeVariant(s.ExtResult),
-		"ext_detail": dbus.MakeVariant(s.ExtDetail),
+		"state":         dbus.MakeVariant(string(s.State)),
+		"installed":     dbus.MakeVariant(s.Installed),
+		"latest":        dbus.MakeVariant(s.Latest),
+		"pin":           dbus.MakeVariant(s.Pin),
+		"detail":        dbus.MakeVariant(s.Detail),
+		"advanced":      dbus.MakeVariant(s.Advanced),
+		"pending":       dbus.MakeVariant(s.Pending),
+		"ext_result":    dbus.MakeVariant(s.ExtResult),
+		"ext_detail":    dbus.MakeVariant(s.ExtDetail),
+		"backup_result": dbus.MakeVariant(s.BackupResult),
+		"backup_detail": dbus.MakeVariant(s.BackupDetail),
 	}
 }
 

@@ -248,6 +248,8 @@ for_window [app_id="floatterm"] floating enable, resize set 820 520, move positi
 for_window [app_id="floatterm" title="Keyboard shortcuts"] resize set 900 720, move position center
 # Isotope Welcome is a dialog-sized window, not a tile.
 for_window [app_id="isotope-welcome"] floating enable
+# So is Isotope System.
+for_window [app_id="isotope-system"] floating enable
 
 ### Status bar ############################################################
 # waybar (Isotope palette) — config at /etc/xdg/waybar/{config,style.css}. Modules:

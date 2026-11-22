@@ -154,13 +154,15 @@ func (h *trayHarness) launched() [][]string {
 	return append([][]string(nil), h.launches...)
 }
 
-func startTray(t *testing.T, dial func() (daemonClient, error), first, every time.Duration) *trayHarness {
+func startTray(t *testing.T, dial func() (daemonClient, error), first, every time.Duration, opts ...func(*trayApp)) *trayHarness {
 	t.Helper()
 	t.Setenv("XDG_STATE_HOME", t.TempDir())
 	h := &trayHarness{ui: &recUI{}, log: &syncBuf{}}
 	rel := Release{Flavor: "sway", Version: "v0.1.0", ImageRepo: "ghcr.io/kairos-community/isotope", GitHubRepo: "kairos-community/isotope"}
 	h.app = newTrayApp(rel, h.ui, dial, h.log)
 	h.app.firstCheck, h.app.interval, h.app.retry = first, every, 5*time.Millisecond
+	// The terminal path; TestTrayOpensIsotopeSystem sets its own.
+	h.app.system = nil
 	h.app.notify = func(summary, body string) error {
 		h.mu.Lock()
 		h.notes = append(h.notes, summary+" | "+body)
@@ -181,6 +183,9 @@ func startTray(t *testing.T, dial func() (daemonClient, error), first, every tim
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
+	for _, o := range opts {
+		o(h.app)
+	}
 	go func() { h.app.run(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done })
 	return h
@@ -419,6 +424,93 @@ func TestTrayClicks(t *testing.T) {
 	}
 	if f.count("Reboot") != 1 || len(h.notified()) != 1 || !strings.Contains(h.notified()[0], "admin group") {
 		t.Fatalf("reboot calls %d, notes %q", f.count("Reboot"), h.notified())
+	}
+}
+
+// TestTrayOpensIsotopeSystem: with Isotope System installed, every item
+// that needs an answer opens its page instead of a terminal or the Isotope
+// menu; Cancel stays a click on the service; the menu offers the app.
+func TestTrayOpensIsotopeSystem(t *testing.T) {
+	f := &trayFake{st: Status{State: StateInspecting, Installed: "v0.1.0"}}
+	var mu sync.Mutex
+	var pages []string
+	opened := make(chan struct{}, 16)
+	h := startTray(t, dialFake(f), time.Hour, time.Hour, func(a *trayApp) {
+		a.system = func(page string) error {
+			mu.Lock()
+			pages = append(pages, page)
+			mu.Unlock()
+			opened <- struct{}{}
+			return nil
+		}
+	})
+	h.ui.waitView(t, "the system item", func(v trayView) bool {
+		return v.Icon == "busy" && len(v.Menu) > 0 && v.Menu[len(v.Menu)-1].ID == "system"
+	})
+	ids := []string{"install-latest", "releases/v0.2.0", "advanced", "switch/i3", "gpu/vm", "extensions", "recovery", "system"}
+	for _, id := range ids {
+		h.app.clicks <- id
+	}
+	for range ids {
+		select {
+		case <-opened:
+		case <-time.After(5 * time.Second):
+			t.Fatal("Isotope System was not opened for every item")
+		}
+	}
+	h.app.clicks <- "cancel"
+	deadline := time.Now().Add(5 * time.Second)
+	for f.count("Cancel") == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	want := []string{"updates", "updates", "updates", "desktop", "desktop", "extensions", "security", "updates"}
+	if !reflect.DeepEqual(pages, want) {
+		t.Fatalf("pages %q, want %q", pages, want)
+	}
+	if len(h.launched()) != 0 || len(h.menus) != 0 {
+		t.Fatalf("a terminal or the menu opened: %q %q", h.launched(), h.menus)
+	}
+	if f.count("Cancel") != 1 {
+		t.Fatal("Cancel did not reach the service")
+	}
+}
+
+func TestSystemPage(t *testing.T) {
+	for id, want := range map[string]string{
+		"install-latest": "updates", "releases/v1.0.0": "updates", "advanced": "updates",
+		"switch/niri": "desktop", "gpu/full": "desktop", "extensions": "extensions",
+		"recovery": "security", "system": "updates",
+	} {
+		if got, ok := systemPage(id); !ok || got != want {
+			t.Errorf("%s: %q %v, want %q", id, got, ok, want)
+		}
+	}
+	for _, id := range []string{"cancel", "restart", "rollback", "status"} {
+		if _, ok := systemPage(id); ok {
+			t.Errorf("%s opens Isotope System", id)
+		}
+	}
+}
+
+func TestSystemCommandRunsTheApp(t *testing.T) {
+	old := execSystem
+	t.Cleanup(func() { execSystem = old })
+	var got []string
+	execSystem = func(bin string, argv, env []string) error {
+		got = append([]string{bin}, argv...)
+		return nil
+	}
+	if code, _, errOut := runCLI("", "system", "backup"); code != exitOK {
+		t.Fatalf("code %d, %q", code, errOut)
+	}
+	if want := []string{systemBinary, "isotope-system", "backup"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("ran %q, want %q", got, want)
+	}
+	execSystem = func(string, []string, []string) error { return errors.New("no such file") }
+	if code, _, errOut := runCLI("", "system"); code != exitError || !strings.Contains(errOut, "isotope-system") {
+		t.Fatalf("missing app: code %d, %q", code, errOut)
 	}
 }
 

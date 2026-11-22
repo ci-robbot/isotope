@@ -307,6 +307,7 @@ func statusFromDict(m map[string]dbus.Variant) Status {
 		State: State(str(m, "state")), Installed: str(m, "installed"), Latest: str(m, "latest"),
 		Pin: str(m, "pin"), Detail: str(m, "detail"), Advanced: boolean(m, "advanced"),
 		Pending: str(m, "pending"), ExtResult: str(m, "ext_result"), ExtDetail: str(m, "ext_detail"),
+		BackupResult: str(m, "backup_result"), BackupDetail: str(m, "backup_detail"),
 	}
 }
 

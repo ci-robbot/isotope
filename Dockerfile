@@ -5457,6 +5457,35 @@ COPY --from=welcome-build /out/x11/isotope-welcome /usr/bin/isotope-welcome
 FROM scratch AS welcome-server
 FROM welcome-${DESKTOP} AS welcome
 
+# Isotope System (system/), the window for the system's jobs (updates,
+# desktop, extensions, backup, the disk's keys, network), built like Isotope
+# Welcome: the same two builds, system-${DESKTOP} picks one. It imports
+# update/isorelease, so the update module's source is copied too.
+FROM welcome-build AS system-build
+COPY update/go.mod update/go.sum update/
+COPY system/go.mod system/go.sum system/
+RUN cd system && go mod download
+COPY update/ update/
+COPY system/ system/
+RUN cd system && \
+    CGO_ENABLED=1 go test -tags nox11,novulkan . && \
+    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system . && \
+    { /out/wayland/isotope-system --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
+    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-system . && \
+    { /out/x11/isotope-system --nonsense 2>/dev/null; [ $? -eq 2 ]; }
+
+FROM scratch AS system-sway
+COPY --from=system-build /out/wayland/isotope-system /usr/bin/isotope-system
+FROM scratch AS system-cosmic
+COPY --from=system-build /out/wayland/isotope-system /usr/bin/isotope-system
+FROM scratch AS system-niri
+COPY --from=system-build /out/wayland/isotope-system /usr/bin/isotope-system
+FROM scratch AS system-i3
+COPY --from=system-build /out/x11/isotope-system /usr/bin/isotope-system
+# The server has no desktop and takes no system app.
+FROM scratch AS system-server
+FROM system-${DESKTOP} AS system
+
 
 # ---------------------------------------------------------------------------
 # isotope-update: release checker, desktop notifier, `kairos-agent upgrade`
@@ -5747,6 +5776,9 @@ COPY --from=cage /cage/usr/bin/cage /usr/bin/cage
 # Isotope Welcome, the variant's build (welcome-${DESKTOP}). The sessions
 # start `isotope-welcome --login`; Dockerfile.agent removes it.
 COPY --from=welcome / /
+# Isotope System, the variant's build (system-${DESKTOP}). The tray and
+# the Isotope menu open its pages; Dockerfile.agent removes it.
+COPY --from=system / /
 # libX11's Compose tables, data only. libxkbcommon reads them for the locale,
 # and Gio stops ("xkb_compose_table_new_from_locale failed") without them;
 # they also make dead keys work in the GUI. Only i3 ships libX11 itself.

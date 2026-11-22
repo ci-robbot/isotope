@@ -44,6 +44,8 @@ func statusLine(st Status) string {
 		return "Installing the update…"
 	case StateExtension:
 		return "Changing system extensions…"
+	case StateBackup:
+		return "Backing up this machine…"
 	case StateRebootPending:
 		// After a failed or interrupted install the slots may already be
 		// swapped: no retry before a restart.
@@ -94,7 +96,7 @@ func BuildMenu(st Status, releases []Latest, flavor, line string) []MenuItem {
 	var rel []MenuItem
 	for _, r := range releases {
 		// Only release tags: anything else would fail `upgrade --version`.
-		if _, ok := parseSemver(r.Tag); !ok || r.Tag == st.Installed {
+		if !isTag(r.Tag) || r.Tag == st.Installed {
 			continue
 		}
 		rel = append(rel, MenuItem{ID: "releases/" + r.Tag, Label: r.Tag, Enabled: can})

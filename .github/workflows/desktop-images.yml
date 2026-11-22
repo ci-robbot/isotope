@@ -37,6 +37,8 @@ on:
       - "test/boot-ux/check-boot-units.sh"
       - "test/welcome/**"
       - "welcome/**"
+      - "system/**"
+      - "test/system/**"
       - "guikit/**"
       - "scripts/ci-containerd-store.sh"
       - ".github/workflows/desktop-images.yml"
@@ -87,7 +89,7 @@ jobs:
             for f in "${files[@]}"; do
               case "$f" in
                 Dockerfile|Makefile|rootfs/*|test/graphics/*|test/boot-ux/check-boot-units.sh|tools/stage-key.py|\
-                test/welcome/*|welcome/*|guikit/*|\
+                test/welcome/*|welcome/*|guikit/*|test/system/*|system/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs-sway/*) want[sway]=1 ;;

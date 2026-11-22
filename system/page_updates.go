@@ -1,0 +1,263 @@
+package main
+
+import (
+	"strings"
+
+	"gioui.org/layout"
+	"gioui.org/widget"
+
+	"github.com/kairos-community/isotope/guikit"
+)
+
+func init() { pageMakers[PageUpdates] = func(u *UI) pageView { return &updatesPage{u: u} } }
+
+// updatesPage: the installed release, Check now, install the latest or
+// another release, the progress of a running install, restart, rollback,
+// and in advanced mode any image.
+type updatesPage struct {
+	u    *UI
+	list widget.List
+
+	// tags are the published releases (Releases), under u.mu.
+	tags     []string
+	checking bool
+	checkErr string
+
+	check, install, cancel, restart, rollback, advanced widget.Clickable
+	others                                              []widget.Clickable
+	image                                               *guikit.Field
+}
+
+func (p *updatesPage) Shown() {
+	if p.image == nil {
+		p.image = guikit.NewField(true)
+	}
+	p.refresh(false)
+}
+
+// refresh lists the releases; with check it first has the daemon check
+// for a new one (the tray's own check runs on its schedule).
+func (p *updatesPage) refresh(check bool) {
+	u, d := p.u, p.u.hooks.Daemon
+	if d == nil {
+		return
+	}
+	u.mu.Lock()
+	if p.checking {
+		u.mu.Unlock()
+		return
+	}
+	p.checking, p.checkErr = true, ""
+	u.mu.Unlock()
+	u.async(func() {
+		var err error
+		if check {
+			err = d.Check()
+		}
+		tags, lerr := d.Releases()
+		u.mu.Lock()
+		defer u.mu.Unlock()
+		p.checking = false
+		if lerr == nil {
+			p.tags = tags
+		}
+		switch {
+		case err != nil:
+			p.checkErr = "Could not check for updates: " + Describe(err)
+		case lerr != nil:
+			p.checkErr = "Could not list the releases: " + Describe(lerr)
+		}
+	})
+}
+
+func (p *updatesPage) offer() (UpdateOffer, Status, bool, string) {
+	st, ok, why := p.u.status()
+	p.u.mu.Lock()
+	tags := append([]string(nil), p.tags...)
+	p.u.mu.Unlock()
+	return OfferFor(st, tags, p.u.sys.Release.Line()), st, ok, why
+}
+
+func (p *updatesPage) Update(gtx layout.Context) {
+	u := p.u
+	o, _, _, _ := p.offer()
+	if p.check.Clicked(gtx) {
+		p.refresh(true)
+	}
+	if p.install.Clicked(gtx) && o.Latest != "" && o.CanInstall {
+		p.installTag(o.Latest)
+	}
+	for i := range p.others {
+		if p.others[i].Clicked(gtx) && i < len(o.Others) && o.CanInstall {
+			p.installTag(o.Others[i])
+		}
+	}
+	if p.cancel.Clicked(gtx) {
+		p.call("Cannot cancel", func(d Daemon) error { return d.Cancel() })
+	}
+	if p.restart.Clicked(gtx) {
+		u.reboot()
+	}
+	if p.rollback.Clicked(gtx) {
+		u.ask("Restart into the previous system?",
+			"The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again.",
+			choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
+			choice{Label: "Restart", Kind: guikit.ButtonPrimary, Do: func() {
+				p.call("Cannot restart into the previous system", func(d Daemon) error { return d.RebootPrevious() })
+			}})
+	}
+	submitted := p.image != nil && p.image.Submitted(gtx)
+	if (p.advanced.Clicked(gtx) || submitted) && o.Advanced && o.CanInstall {
+		if ref := strings.TrimSpace(p.image.Editor.Text()); ref != "" {
+			u.startInstall(ref, ref, true, "")
+		}
+	}
+}
+
+func (p *updatesPage) installTag(tag string) {
+	ref, err := releaseRef(p.u.sys.Release, p.u.sys.Release.Flavor, p.u.sys.Release.Line(), tag)
+	if err != nil {
+		p.u.tell("Cannot install "+tag, err.Error())
+		return
+	}
+	p.u.startInstall("Isotope "+tag, ref, false, "")
+}
+
+// call runs a daemon call that needs no answer and says why it failed.
+func (p *updatesPage) call(title string, f func(Daemon) error) {
+	d := p.u.hooks.Daemon
+	if d == nil {
+		return
+	}
+	p.u.async(func() {
+		if err := f(d); err != nil {
+			p.u.tell(title, Describe(err))
+		}
+	})
+}
+
+func (p *updatesPage) Footer() (leading, trailing []guikit.Action) {
+	o, st, ok, _ := p.offer()
+	p.u.mu.Lock()
+	checking := p.checking
+	p.u.mu.Unlock()
+	label := "Check now"
+	if checking {
+		label = "Checking…"
+	}
+	trailing = append(trailing, guikit.Action{Click: &p.check, Kind: guikit.ButtonSecondary, Label: label,
+		Disabled: !ok || checking || st.Busy()})
+	if o.Latest != "" {
+		trailing = append(trailing, guikit.Action{Click: &p.install, Kind: guikit.ButtonPrimary,
+			Label: "Install " + o.Latest, Disabled: !o.CanInstall || !p.u.sys.Admin})
+	}
+	if o.Restart {
+		trailing = append(trailing, guikit.Action{Click: &p.restart, Kind: guikit.ButtonPrimary, Label: "Restart now"})
+	}
+	return nil, trailing
+}
+
+func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
+	u := p.u
+	o, st, ok, why := p.offer()
+	lines := u.progress()
+	u.mu.Lock()
+	checkErr := p.checkErr
+	u.mu.Unlock()
+	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
+		var c col
+		c.add(u.Heading("Updates", "Isotope updates as a whole image: the running system is not touched, the new one starts at the next boot, and the previous one stays in the boot menu."))
+		c.gap(24)
+		if u.sys.ReleaseErr != "" {
+			c.add(u.errorBox("This system has no Isotope release file: " + u.sys.ReleaseErr))
+			return c.layout(gtx)
+		}
+		if !ok {
+			c.add(u.errorBox(orUnknown(why)))
+			return c.layout(gtx)
+		}
+		c.add(u.lead(o.Headline))
+		sub := "Installed: Isotope " + orUnknown(st.Installed) + " · " + lineLabels[u.sys.Release.Line()]
+		if st.Pin != "" {
+			sub += " · pinned to " + st.Pin + " (installing the latest release removes the pin)"
+		}
+		c.gap(6)
+		c.add(u.dim(sub))
+		if st.State == StateError && st.Detail != "" {
+			c.gap(12)
+			c.add(u.errorBox(st.Detail))
+		}
+		if st.State == StateRebootPending && st.Detail != "" {
+			c.gap(12)
+			c.add(u.notice(st.Detail))
+		}
+		if checkErr != "" {
+			c.gap(12)
+			c.add(u.errorBox(checkErr))
+		}
+		if s := u.installing(); s != "" {
+			c.gap(16)
+			c.add(u.spinnerLine(s))
+		}
+		if st.State == StateInspecting || st.State == StateApplying {
+			c.gap(16)
+			c.add(u.spinnerLine(headline(st)))
+			c.gap(10)
+			c.add(u.log(lines, 8))
+			if o.Cancel {
+				c.gap(10)
+				c.add(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel the update"}))
+			}
+		}
+		if !u.sys.Admin {
+			c.gap(16)
+			c.add(u.notice("Only an administrator (a member of the admin group) can install updates. You can still check for them."))
+		}
+		if len(o.Others) > 0 {
+			if len(p.others) < len(o.Others) {
+				p.others = make([]widget.Clickable, len(o.Others))
+			}
+			c.gap(28)
+			c.add(u.caps("OTHER RELEASES"))
+			c.gap(4)
+			c.add(u.dim("Installing an older release pins the system to it, until you install the latest again."))
+			c.gap(10)
+			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+				var rows col
+				for i, tag := range o.Others {
+					if i > 0 {
+						rows.gap(8)
+					}
+					rows.add(u.row("Isotope "+tag, "", u.buttons(guikit.Action{Click: &p.others[i], Kind: guikit.ButtonSecondary,
+						Label: "Install", Disabled: !o.CanInstall || !u.sys.Admin})))
+				}
+				return rows.layout(gtx)
+			}))
+		}
+		if o.Advanced {
+			c.gap(28)
+			c.add(u.caps("INSTALL AN IMAGE"))
+			c.gap(4)
+			c.add(u.dim("Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first."))
+			c.gap(10)
+			c.add(func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+						return u.Input(gtx, p.image, guikit.StMono13, 38, "", nil)
+					}),
+					layout.Rigid(layout.Spacer{Width: 10}.Layout),
+					layout.Rigid(u.buttons(guikit.Action{Click: &p.advanced, Kind: guikit.ButtonSecondary, Label: "Install…",
+						Disabled: !o.CanInstall || !u.sys.Admin})),
+				)
+			})
+		}
+		if o.Rollback {
+			c.gap(28)
+			c.add(u.caps("PREVIOUS SYSTEM"))
+			c.gap(10)
+			c.add(u.row("Restart into the previous system", "For the next boot only: the system you had before the last update.",
+				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: "Restart…", Disabled: !u.sys.Admin})))
+		}
+		return c.layout(gtx)
+	})
+}

@@ -475,17 +475,11 @@ func backupWarning(c backupConfig) string {
 }
 
 func backupSchedule(p backupPaths, s string, stdout, stderr io.Writer) int {
-	if s != "daily" && s != "weekly" && s != "off" {
-		fmt.Fprintf(stderr, "isotope backup schedule: %q is not daily, weekly or off\n", s)
+	c, err := setBackupSchedule(p, s)
+	var bad errBadSchedule
+	if errors.As(err, &bad) {
+		fmt.Fprintf(stderr, "isotope backup schedule: %v\n", err)
 		return exitUsage
-	}
-	c, err := loadBackupConfig(p)
-	if err == nil && c.Target == "" && s != "off" {
-		err = errors.New("there is no backup target; run `isotope backup init TARGET` first")
-	}
-	if err == nil {
-		c.Schedule = s
-		err = saveBackupConfig(p, c)
 	}
 	if err != nil {
 		fmt.Fprintln(stderr, "isotope:", err)
@@ -497,6 +491,30 @@ func backupSchedule(p backupPaths, s string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "This machine backs up %s to %s.\n", s, c.Target)
 	}
 	return exitOK
+}
+
+// errBadSchedule is a schedule that is not daily, weekly or off.
+type errBadSchedule string
+
+func (e errBadSchedule) Error() string {
+	return fmt.Sprintf("%q is not daily, weekly or off", string(e))
+}
+
+// setBackupSchedule is `isotope backup schedule` and the daemon's
+// SetBackupSchedule: it changes the schedule in the config and returns it.
+func setBackupSchedule(p backupPaths, s string) (backupConfig, error) {
+	if s != "daily" && s != "weekly" && s != "off" {
+		return backupConfig{}, errBadSchedule(s)
+	}
+	c, err := loadBackupConfig(p)
+	if err == nil && c.Target == "" && s != "off" {
+		err = errors.New("there is no backup target; run `isotope backup init TARGET` first")
+	}
+	if err == nil {
+		c.Schedule = s
+		err = saveBackupConfig(p, c)
+	}
+	return c, err
 }
 
 // targetPresent says whether a directory target holds a restic repository
@@ -524,24 +542,52 @@ func scheduledSkip(c backupConfig) string {
 }
 
 func backupRun(p backupPaths, scheduled, containers bool, stdout, stderr io.Writer) int {
-	c, err := loadBackupConfig(p)
-	if err != nil {
+	skip, err := runConfiguredBackup(p, scheduled, containers, stdout, stderr)
+	var refused errBackupRefused
+	switch {
+	case errors.As(err, &refused):
 		fmt.Fprintln(stderr, "isotope:", err)
 		return exitError
+	case errors.Is(err, errPartial):
+		fmt.Fprintf(stderr, "isotope: backed up, but %v.\n", err)
+		return exitOK
+	case err != nil:
+		fmt.Fprintln(stderr, "isotope: the backup failed:", err)
+		return exitError
+	case skip != "":
+		fmt.Fprintln(stdout, "No backup:", skip+".")
+		return exitOK
+	}
+	fmt.Fprintln(stdout, "Backed up.")
+	return exitOK
+}
+
+// errBackupRefused is a backup that did not start: the config cannot be
+// read, there is no target, or its disk is not plugged in.
+type errBackupRefused struct{ msg string }
+
+func (e errBackupRefused) Error() string { return e.msg }
+
+// runConfiguredBackup is one backup to the configured target, as
+// `isotope backup` (as root) and the daemon's BackupNow run it, with the
+// outcome recorded in the config. A scheduled run that is not due returns
+// why in skip and does nothing. errPartial means the snapshot was written
+// without some files.
+func runConfiguredBackup(p backupPaths, scheduled, containers bool, stdout, stderr io.Writer) (skip string, err error) {
+	c, err := loadBackupConfig(p)
+	if err != nil {
+		return "", errBackupRefused{err.Error()}
 	}
 	if scheduled {
 		if why := scheduledSkip(c); why != "" {
-			fmt.Fprintln(stdout, "No backup:", why+".")
-			return exitOK
+			return why, nil
 		}
 	} else {
 		if c.Target == "" {
-			fmt.Fprintln(stderr, "isotope: there is no backup target; run `isotope backup init TARGET` first.")
-			return exitError
+			return "", errBackupRefused{"there is no backup target; run `isotope backup init TARGET` first."}
 		}
 		if !targetPresent(c.Target) {
-			fmt.Fprintf(stderr, "isotope: there is no backup in %s. Is the disk plugged in?\n", c.Target)
-			return exitError
+			return "", errBackupRefused{fmt.Sprintf("there is no backup in %s. Is the disk plugged in?", c.Target)}
 		}
 	}
 	err = backupOnce(p, c.Target, p.password(), c.Containers || containers, true, stdout, stderr)
@@ -556,16 +602,7 @@ func backupRun(p backupPaths, scheduled, containers bool, stdout, stderr io.Writ
 	if serr := saveBackupConfig(p, c); serr != nil && err == nil {
 		err = serr
 	}
-	if errors.Is(err, errPartial) {
-		fmt.Fprintf(stderr, "isotope: backed up, but %v.\n", err)
-		return exitOK
-	}
-	if err != nil {
-		fmt.Fprintln(stderr, "isotope: the backup failed:", err)
-		return exitError
-	}
-	fmt.Fprintln(stdout, "Backed up.")
-	return exitOK
+	return "", err
 }
 
 // backupArgs are restic's arguments for one backup of this machine.

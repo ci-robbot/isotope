@@ -54,6 +54,9 @@ type trayApp struct {
 	// openMenu opens an entry of isotope-menu, the same one Super+Escape
 	// shows: "Extensions" is one list on every variant.
 	openMenu func(entry string) error
+	// system opens a page of Isotope System; nil (the app is not
+	// installed) keeps the terminal and the menu above.
+	system func(page string) error
 	// noIcon makes the notification point at the CLI: there is no menu.
 	noIcon bool
 
@@ -76,6 +79,9 @@ func newTrayApp(rel Release, ui trayUI, dial func() (daemonClient, error), logOu
 	}
 	a.launch = func(args ...string) error { return openTerminal(args, logOut) }
 	a.openMenu = openIsotopeMenu
+	if systemAppInstalled() {
+		a.system = openSystem
+	}
 	return a
 }
 
@@ -236,16 +242,31 @@ func (a *trayApp) render() {
 	if a.line != "" {
 		tip = a.line
 	}
-	a.ui.Show(trayView{Icon: iconFor(a.st.State), Tooltip: tip, Menu: BuildMenu(a.st, a.releases, a.rel.Flavor, a.rel.Line())})
+	menu := BuildMenu(a.st, a.releases, a.rel.Flavor, a.rel.Line())
+	if a.system != nil {
+		// Every job of the menu, and the ones it has no room for.
+		menu = append(menu, MenuItem{ID: "system", Label: "Isotope System…", Enabled: true})
+	}
+	a.ui.Show(trayView{Icon: iconFor(a.st.State), Tooltip: tip, Menu: menu})
 }
 
 // click acts on a menu item. Anything that needs details or an answer opens
-// a terminal running the CLI, which waits for Enter before closing over an
-// error (--pause-on-error); Cancel, Restart and Restart into the previous
-// system are the click itself, and polkit decides. c is nil while the service is unreachable.
+// a page of Isotope System or, on a system without it, a terminal running
+// the CLI, which waits for Enter before closing over an error
+// (--pause-on-error). Cancel, Restart and Restart into the previous system
+// are the click itself, and polkit decides. c is nil while the service is
+// unreachable.
 func (a *trayApp) click(c daemonClient, id string) {
 	var err error
+	page, toApp := systemPage(id)
 	switch {
+	case toApp && a.system != nil:
+		if err = a.system(page); err != nil {
+			err = fmt.Errorf("could not open Isotope System: %w", err)
+		}
+	case id == "system":
+		// Only offered when the app is installed (BuildMenu's caller).
+		return
 	case id == "install-latest":
 		err = a.launch("upgrade", "--pause-on-error")
 	case strings.HasPrefix(id, "releases/"):
@@ -321,7 +342,7 @@ func announce(c daemonClient, rel Release, st Status, noIcon bool, notify func(s
 
 // busyState reports whether the service is running a job.
 func busyState(s State) bool {
-	return s == StateChecking || s == StateInspecting || s == StateApplying || s == StateExtension
+	return s == StateChecking || s == StateInspecting || s == StateApplying || s == StateExtension || s == StateBackup
 }
 
 // defaultSessionFile names the variant's session settings, among them
@@ -381,4 +402,21 @@ func openTerminal(args []string, logOut io.Writer) error {
 	}
 	go cmd.Wait() // reap it; the terminal's exit status is not ours to report
 	return nil
+}
+
+// systemPage is the page of Isotope System a tray item opens when the
+// app is installed; ok is false for the items that are a click on the
+// service (cancel, restart, rollback).
+func systemPage(id string) (page string, ok bool) {
+	switch {
+	case id == "system", id == "install-latest", id == "advanced", strings.HasPrefix(id, "releases/"):
+		return "updates", true
+	case strings.HasPrefix(id, "switch/"), strings.HasPrefix(id, "gpu/"):
+		return "desktop", true
+	case id == "extensions":
+		return "extensions", true
+	case id == "recovery":
+		return "security", true
+	}
+	return "", false
 }
