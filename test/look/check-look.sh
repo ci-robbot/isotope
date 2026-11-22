@@ -150,6 +150,11 @@ if [ "$DESKTOP" = cosmic ]; then
     # CosmicTk has the window_controls_left key; at least one must read it.
     check "every ELF that reads CosmicTk knows window_controls_left (patched libcosmic)" \
         "n=0; for f in \$(find /usr/bin /usr/libexec -type f 2>/dev/null); do head -c4 \$f | grep -q ELF || continue; grep -qa com.system76.CosmicTk \$f || continue; n=\$((n+1)); grep -qa window_controls_left \$f || { echo \$f; exit 1; }; done; [ \$n -gt 0 ]"
+    # cosmic-settings-daemon runs `gsettings set ... button-layout` and, with no
+    # dconf, that user value overrides the schema default; the Isotope patch
+    # (patches/cosmic/cosmic-settings-daemon) makes it write the left layout.
+    check "cosmic-settings-daemon writes the left button layout (patched binary)" \
+        "f=\$(command -v cosmic-settings-daemon || echo /usr/bin/cosmic-settings-daemon); test -x \$f && grep -qa 'close,minimize,maximize:' \$f"
     check "CosmicTk window_controls_left is true" "grep -qx true $K/window_controls_left"
     check "gsettings button-layout default (compiled) is the left layout; not proof that apps follow it" \
         "test \"\$(gsettings get org.gnome.desktop.wm.preferences button-layout)\" = \"'close,minimize,maximize:'\""
@@ -218,7 +223,7 @@ if [ "$DESKTOP" = cosmic ]; then
         "set -- /usr/share/cosmic/com.system76.CosmicPanel.Panel/v1/plugins_* /usr/share/cosmic/com.system76.CosmicPanel.Dock/v1/plugins_*; test -f \$1 && n=0 && for id in \$(cat \"\$@\" | grep -o '\"[^\"]*\"' | tr -d '\"'); do n=\$((n+1)); test -f /usr/share/applications/\$id.desktop || { echo \$id; exit 1; }; done; [ \$n -gt 0 ]"
 fi
 
-# --- COSMIC login screen: the centred, branded cosmic-greeter --------------
+# --- COSMIC login and lock screens: the centred, branded cosmic-greeter ----
 if [ "$DESKTOP" = cosmic ]; then
     W=/usr/share/backgrounds/isotope
     # The soft wallpapers the patched greeter shows (tools/gen-wallpaper.py --blur).
@@ -240,6 +245,10 @@ if [ "$DESKTOP" = cosmic ]; then
     # marks and the soft wallpapers.
     check "cosmic-greeter is the patched, centred one (names both marks and -blur.png)" \
         "grep -qa greeter-mark.svg /usr/bin/cosmic-greeter && grep -qa greeter-mark-day.svg /usr/bin/cosmic-greeter && grep -qa -- -blur.png /usr/bin/cosmic-greeter"
+    # The same binary is COSMIC's lock screen (its locker): 0002 lays it out
+    # as the login screen and logs this tag at start.
+    check "cosmic-greeter's lock screen is the patched one (patches/cosmic/cosmic-greeter/0002)" \
+        "grep -qa isotope-lock-screen: /usr/bin/cosmic-greeter"
     # A user with no wallpaper of their own (never logged in) and the screen
     # before a user is chosen get the system default, not COSMIC's nebula:
     # the greeter reads cosmic-bg's system "all" entry, which names a picture

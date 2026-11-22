@@ -66,7 +66,7 @@ The baseline:
 | Audio | PipeWire and WirePlumber started with the session, media keys work |
 | Battery and power profiles | UPower (`upowerd`) and power-profiles-daemon on the system bus, built in the Dockerfile `upower` and `power-profiles-daemon` stages, copied in `desktop-default` and linked into `multi-user.target` (their `WantedBy=graphical.target` is never reached on Kairos). COSMIC's battery applet and Noctalia read the battery and the profile from them; waybar's `battery` module (sway) and `isotope-status` (i3) read `/sys/class/power_supply`. `test/boot-ux/check-boot-units.sh`. No `powerprofilesctl`: it needs PyGObject. Not on the server |
 | Removable disks | udisks2 2.12 (`udisksd` on the system bus, `udisksctl`) with libblockdev (plugins: fs, loop, mdraid, part, swap, crypto, nvme), built in the Dockerfile `udisks2` and `libblockdev` stages, copied in `desktop-default` and linked into `multi-user.target` (its `WantedBy=graphical.target` is never reached on Kairos). `50-isotope-udisks.rules` lets an active local session mount, eject and power off removable disks without a password (not `filesystem-mount-system`); `90-isotope-udisks-ignore.rules` hides the Kairos partitions (`COS_*`, `*_LUKS`, fixed LUKS volumes) from it. Mounts land in `/run/media/<user>/<label>`. `test/boot-ux/check-boot-units.sh`. Not on the server; the agent image removes it |
-| Screenshots and screen lock | a key binding for each. Lockers: swaylock (sway, niri), i3lock (i3), COSMIC's own; sway (swayidle) and i3 (xss-lock) also lock on idle and before suspend. i3 takes screenshots with `isotope-screenshot`. The agent overlay starts no locker |
+| Screenshots and screen lock | a key binding for each. Lockers: swaylock (sway, niri), i3lock (i3), COSMIC's own (cosmic-greeter's locker, in the login screen's look through `patches/cosmic/cosmic-greeter/0002-isotope-lock-screen.patch`); sway (swayidle) and i3 (xss-lock) also lock on idle and before suspend. i3 takes screenshots with `isotope-screenshot`. The agent overlay starts no locker |
 | Flatpak apps with working file dialogs and dark mode | flatpak, xdg-desktop-portal and a backend reporting `color-scheme`: the GTK backend with its Settings interface (plus xdg-desktop-portal-wlr on sway) on sway, i3 and niri, reading the `prefer-dark` override in gsettings-desktop-schemas; COSMIC's own portal first, with the GTK backend as a second Settings backend for `button-layout` and `icon-theme` |
 | Hardware keys | volume, mute, brightness, play/pause/next, with an on-screen level. `isotope-media-key` on sway and i3 (wpctl, logind `SetBrightness`, MPRIS, and a mako or dunst progress pop-up); Noctalia and COSMIC (cosmic-settings-daemon, cosmic-osd) handle the keys themselves, except that COSMIC's playback keys call `isotope-media-key` because Hadron has no playerctl |
 | Isotope menu on Super+Escape | one menu for apps, installing apps (Isotope Welcome's Apps page), Wi-Fi, Bluetooth, audio, capture, clipboard history, update, extensions, backup, recovery key (on an encrypted disk), Isotope Welcome again, help and power: `isotope-menu` through `isotope-pick` (fuzzel on sway, niri and COSMIC; dmenu on i3). Each entry opens what the variant uses: the `isotope-*` menus, Noctalia's panels, COSMIC Settings and cosmic-osd. COSMIC's own Super+Escape lock moves to Super+Alt+L, niri's shortcut-inhibit toggle to Super+Shift+Escape. On COSMIC the Isotope mark at the left of the top bar opens it too (`isotope-applet-mark`, panel ID `io.kairos.Isotope.Mark`, with the focused app's name beside it): Isotope's own applets are the Cargo workspace `applets/`, built by the Dockerfile `isotope-applets` stage through `cosmic-build`'s directory mode |
@@ -129,6 +129,12 @@ into `~/.config/cosmic` and so replaces the Isotope look with stock COSMIC.
 The left window buttons come from a libcosmic patch and the CosmicTk key
 `window_controls_left`. To turn them off, put `false` in
 `~/.config/cosmic/com.system76.CosmicTk/v1/window_controls_left`.
+GTK's `button-layout` follows too, but the schema default is not enough:
+cosmic-settings-daemon runs `gsettings set ... button-layout` at start and when
+the CosmicTk window buttons change, and with no dconf (GLib's keyfile backend)
+that user value in `~/.config/glib-2.0/settings/keyfile` beats the default.
+`patches/cosmic/cosmic-settings-daemon` makes it write the left layout when
+`window_controls_left` is true; `check-look.sh` greps the daemon binary for it.
 
 Flatpak GTK apps on COSMIC follow the look too: xdg-desktop-portal-cosmic
 serves only `org.freedesktop.appearance` and text scaling, so
@@ -150,6 +156,17 @@ that table and the patches against the new revisions;
 `test/cosmic-build/check-libcosmic-rev.sh` (CI, needs network) fails when the
 README table or the `Cargo.lock` of `applets/` and `tools/isotope-cosmic-theme/`
 no longer matches the upstream lock at the Dockerfile's `COSMIC_VERSION`.
+
+COSMIC's login and lock screens are one binary, cosmic-greeter: the greeter
+runs as the `cosmic-greeter` user, the locker as the logged-in user.
+`patches/cosmic/cosmic-greeter/0001` lays out the login screen, `0002` the
+lock screen in the same look; the shared pieces (glass buttons, the mark,
+the clock, the avatar, the pill field, the scrim) are functions in its
+`src/common.rs`, so change them there for both. Both show the soft copy
+(`-blur.png`) of Isotope's two wallpapers and a scrim over any other picture.
+The lock screen keeps the stock locker's actions (on-screen keyboard,
+keyboard layout, suspend). `check-look.sh` greps the binary for a string of
+each patch.
 
 `applets/` is a cargo workspace of Isotope's own panel applets:
 `isotope-mark` (the mark that opens the Isotope menu) and

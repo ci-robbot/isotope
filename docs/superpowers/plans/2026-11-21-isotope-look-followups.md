@@ -94,3 +94,16 @@ Renovate bumps `COSMIC_VERSION`, but `applets/Cargo.lock` and `tools/isotope-cos
 - [ ] Build the COSMIC image locally (`/usr/bin/make DESKTOP=cosmic LLVM_IMAGE=... COSMIC_SHELL_IMAGE=... IMAGE=cosmic-desktop:look image`), run `test/look/check-look.sh`.
 - [ ] VM: Welcome at first login fits 1280x800 with Isotope title bar; Isotope menu look; light popup; workspace pill; install Flatpak Firefox and confirm left buttons and Conflux icons (needs network in the VM).
 - [ ] Update PR #129 body (remove the follow-ups and the Flatpak limit if fixed), push.
+
+### Task 8: COSMIC lock screen in the Isotope look
+
+The maintainer asked to fold a lock screen theme into this PR. sway/niri (swaylock) and i3 (i3lock) are already themed from the palette by `tools/gen-theme.py`. COSMIC's lock screen is cosmic-greeter's locker (`src/locker.rs` at epoch-1.11.0), which `patches/cosmic/cosmic-greeter/0001-isotope-centred-login.patch` does not touch, so it still shows the stock layout.
+
+Make the COSMIC lock screen match the Isotope login screen: centred date and large clock, the user's avatar and name, the pill password field with the eye button, the Isotope mark top left (night/day mark by `is_dark`, as the login screen), the blurred copy of the user's wallpaper (`-blur.png` for Isotope's wallpapers, the scrim fallback otherwise, as the login screen does), and the same round action buttons the stock locker offers (no Restart/Shut down if the stock locker has none — keep its actions).
+
+**Files:** `patches/cosmic/cosmic-greeter/0002-isotope-lock-screen.patch` (header per `patches/cosmic/README.md`; applies after 0001; reuse the helpers 0001 adds to `src/common.rs` rather than copying them), `test/look/check-look.sh`, `AGENTS.md`, `patches/cosmic/README.md` if it lists patches.
+
+- [ ] Read 0001 and upstream `src/locker.rs`, `src/common.rs`, `src/greeter.rs` at epoch-1.11.0. Move any login-screen layout code that the locker needs into `common.rs` in 0002 (or amend 0001 if that is much cleaner — say which and why).
+- [ ] Write 0002; verify `patch -p1 --dry-run` of 0001 then 0002 on a fresh epoch-1.11.0 tarball.
+- [ ] check-look: the cosmic-greeter binary is the patched one for the locker too (a string only 0002 adds).
+- [ ] Commit. The compile check is the full image build in Task 7 (one COSMIC rebuild for both patches).

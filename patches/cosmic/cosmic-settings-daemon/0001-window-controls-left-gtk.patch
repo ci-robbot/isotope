@@ -1,0 +1,110 @@
+Isotope: GTK's window button layout follows window_controls_left.
+
+What: src/theme.rs builds the GTK `button-layout` string in a pure function,
+`gnome_button_layout`, and mirrors it when the CosmicTk key
+`window_controls_left` (added by patches/cosmic/libcosmic) is true:
+`close,minimize,maximize:`, `close,maximize:`, `close,minimize:`, `close:`.
+Upstream's right layout is unchanged when the key is false. The layout is set
+at start and again when show_maximize, show_minimize or window_controls_left
+changes. A unit test covers all eight cases.
+
+Why: at startup and on those changes cosmic-settings-daemon runs `gsettings set
+org.gnome.desktop.wm.preferences button-layout ':minimize,maximize,close'`.
+Isotope has no dconf, so GLib uses its keyfile backend and the value lands in
+~/.config/glib-2.0/settings/keyfile, which overrides the schema default
+`close,minimize,maximize:` of 91_isotope-cosmic.gschema.override. Flatpak and
+GTK apps (through xdg-desktop-portal-gtk) then got the buttons on the right
+while COSMIC's own windows had them on the left.
+
+Made against cosmic-settings-daemon epoch-1.11.0 (libcosmic 430f3d48a97d, the
+revision the libcosmic patch applies to).
+
+--- a/src/theme.rs
++++ b/src/theme.rs
+@@ -156,7 +156,7 @@
+         }
+     };
+ 
+-    set_gnome_button_layout(tk.show_maximize, tk.show_minimize);
++    set_gnome_button_layout(tk.show_maximize, tk.show_minimize, tk.window_controls_left);
+     set_gnome_icon_theme(tk.icon_theme.clone());
+     set_gnome_font_name(tk.interface_font.family.clone(), "font-name");
+     set_gnome_font_name(tk.monospace_font.family.clone(), "monospace-font-name");
+@@ -303,8 +303,15 @@
+                             set_gnome_font_name(tk.monospace_font.family.clone(), "monospace-font-name");
+                         }
+ 
+-                        if changes.contains(&"show_maximize") || changes.contains(&"show_minimize") {
+-                            set_gnome_button_layout(tk.show_maximize, tk.show_minimize);
++                        if changes.contains(&"show_maximize")
++                            || changes.contains(&"show_minimize")
++                            || changes.contains(&"window_controls_left")
++                        {
++                            set_gnome_button_layout(
++                                tk.show_maximize,
++                                tk.show_minimize,
++                                tk.window_controls_left,
++                            );
+                         }
+ 
+                         if !changes.contains(&"apply_theme_global") {
+@@ -554,14 +561,24 @@
+     }
+ }
+ 
+-fn set_gnome_button_layout(show_maximize: bool, show_minimize: bool) {
++/// GTK's `button-layout` for the window buttons: `left` mirrors upstream's
++/// layout (buttons before the colon, close first) for Isotope's left controls.
++fn gnome_button_layout(show_maximize: bool, show_minimize: bool, left: bool) -> &'static str {
++    match (left, show_maximize, show_minimize) {
++        (false, true, true) => ":minimize,maximize,close",
++        (false, true, false) => ":maximize,close",
++        (false, false, true) => ":minimize,close",
++        (false, false, false) => ":close",
++        (true, true, true) => "close,minimize,maximize:",
++        (true, true, false) => "close,maximize:",
++        (true, false, true) => "close,minimize:",
++        (true, false, false) => "close:",
++    }
++}
++
++fn set_gnome_button_layout(show_maximize: bool, show_minimize: bool, left: bool) {
+     tokio::spawn(async move {
+-        let layout = match (show_maximize, show_minimize) {
+-            (true, true) => ":minimize,maximize,close",
+-            (true, false) => ":maximize,close",
+-            (false, true) => ":minimize,close",
+-            (false, false) => ":close",
+-        };
++        let layout = gnome_button_layout(show_maximize, show_minimize, left);
+ 
+         let _res = tokio::process::Command::new("gsettings")
+             .args([
+@@ -575,6 +592,27 @@
+     });
+ }
+ 
++#[cfg(test)]
++mod button_layout_tests {
++    use super::gnome_button_layout;
++
++    #[test]
++    fn right_layout_is_upstreams() {
++        assert_eq!(gnome_button_layout(true, true, false), ":minimize,maximize,close");
++        assert_eq!(gnome_button_layout(true, false, false), ":maximize,close");
++        assert_eq!(gnome_button_layout(false, true, false), ":minimize,close");
++        assert_eq!(gnome_button_layout(false, false, false), ":close");
++    }
++
++    #[test]
++    fn left_layout_is_mirrored() {
++        assert_eq!(gnome_button_layout(true, true, true), "close,minimize,maximize:");
++        assert_eq!(gnome_button_layout(true, false, true), "close,maximize:");
++        assert_eq!(gnome_button_layout(false, true, true), "close,minimize:");
++        assert_eq!(gnome_button_layout(false, false, true), "close:");
++    }
++}
++
+ fn set_gnome_desktop_interface(is_dark: bool) {
+     let (color_scheme, adw_theme, adw_theme_path) = if is_dark {
+         (

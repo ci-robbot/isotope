@@ -2,9 +2,18 @@ package main
 
 import (
 	"errors"
+	"image"
 	"testing"
+	"time"
 
 	"gioui.org/app"
+	"gioui.org/f32"
+	"gioui.org/io/input"
+	"gioui.org/io/pointer"
+	"gioui.org/io/system"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
 
 	"github.com/kairos-community/isotope/guikit"
 )
@@ -337,5 +346,60 @@ func TestLanguageBusyHoldsSkipAndBack(t *testing.T) {
 	u.skipPage()
 	if u.flow.Current() == PLanguage {
 		t.Fatal("Skip once the call is done must move on")
+	}
+}
+
+// pressAt runs two frames of u in a router, the second with a click at pt,
+// so a button under pt acts. It returns the window actions that came out.
+func pressAt(u *UI, pt image.Point) []system.Action {
+	var got []system.Action
+	u.hooks.Window = func(a system.Action) { got = append(got, a) }
+	var r input.Router
+	size := image.Pt(1000, 700)
+	frame := func() {
+		var ops op.Ops
+		gtx := layout.Context{
+			Ops:         &ops,
+			Source:      r.Source(),
+			Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+			Constraints: layout.Exact(size),
+			Now:         time.Now(),
+		}
+		u.Layout(gtx)
+		r.Frame(&ops)
+	}
+	frame()
+	r.Queue(
+		pointer.Event{Kind: pointer.Move, Position: f32.Pt(float32(pt.X), float32(pt.Y)), Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(pt.X), float32(pt.Y)), Source: pointer.Mouse},
+		pointer.Event{Kind: pointer.Release, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(pt.X), float32(pt.Y)), Source: pointer.Mouse},
+	)
+	frame()
+	frame()
+	return got
+}
+
+// The title bar the UI draws on COSMIC is inert while the "Skip setup?"
+// question is up, as the page under it is: the close button does nothing.
+func TestTitleBarIsInertUnderTheSkipQuestion(t *testing.T) {
+	// The close button is the first of the left-hand controls: 14 dp in
+	// and 16 dp wide, in a bar 40 dp high.
+	closeBtn := image.Pt(14+8, guikit.TitleBarHeight/2)
+	newBar := func() (*UI, *recorder) {
+		u, r := newRecorded(NewFlow(Cosmic), Cosmic)
+		u.bar = &guikit.TitleBar{Title: "Welcome to Isotope", Left: true}
+		return u, r
+	}
+
+	u, _ := newBar()
+	got := pressAt(u, closeBtn)
+	if len(got) != 1 || got[0] != system.ActionClose {
+		t.Fatalf("without the question the close button asked for %v, want one close: the test misses the button", got)
+	}
+
+	u, _ = newBar()
+	u.confirming = true
+	if got := pressAt(u, closeBtn); len(got) != 0 {
+		t.Fatalf("under the question the title bar asked for %v", got)
 	}
 }

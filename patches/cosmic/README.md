@@ -15,6 +15,13 @@ Layout:
   Each checkout gets a stamp `.isotope-patched-<sha256 of these patches>` and is
   patched once; components built later in the same stage see it already patched.
 
+Current patches: `libcosmic/0001-window-controls-left.patch` (window buttons
+on the left), `cosmic-settings-daemon/0001-window-controls-left-gtk.patch`
+(GTK's `button-layout` follows that key, so Flatpak and GTK apps match) and
+`cosmic-greeter/0001-isotope-centred-login.patch` (the login screen) and
+`cosmic-greeter/0002-isotope-lock-screen.patch` (the lock screen in the same
+look; it applies after 0001).
+
 Only what `cosmic-build.sh` builds is patched: greetd and pop-launcher are built
 by their own Dockerfile stages, so patches for them are not applied.
 

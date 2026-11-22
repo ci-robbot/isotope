@@ -191,21 +191,34 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	guikit.FillRect(gtx, image.Rectangle{Max: size}, guikit.ColWindow)
 	gtx.Constraints = layout.Exact(size)
+	// The bar is part of the window under the "Skip setup?" modal, so the
+	// modal's scrim covers it too: it is dimmed, and neither its buttons nor
+	// its drag area get the pointer. Its Update still runs, to drain the
+	// events, but a request that came with the modal up is dropped.
+	full := gtx.Constraints
+	content := func(gtx layout.Context) {
+		p := u.page()
+		u.Frame(gtx, u.steps(), u.slide(p.Body), func(gtx layout.Context) layout.Dimensions {
+			lead, trail := p.Footer(u.nav())
+			return u.Footer(gtx, lead, nil, trail)
+		})
+	}
 	if u.bar != nil {
-		if acts := u.bar.Update(gtx); acts != 0 && u.hooks.Window != nil {
+		acts := u.bar.Update(gtx)
+		if acts != 0 && !u.confirming && u.hooks.Window != nil {
 			u.hooks.Window(acts)
 		}
 		h := u.bar.Layout(gtx, u.Theme).Size.Y
-		defer op.Offset(image.Pt(0, h)).Push(gtx.Ops).Pop()
+		st := op.Offset(image.Pt(0, h)).Push(gtx.Ops)
 		size.Y -= h
 		gtx.Constraints = layout.Exact(size)
+		content(gtx)
+		st.Pop()
+	} else {
+		content(gtx)
 	}
-	p := u.page()
-	u.Frame(gtx, u.steps(), u.slide(p.Body), func(gtx layout.Context) layout.Dimensions {
-		lead, trail := p.Footer(u.nav())
-		return u.Footer(gtx, lead, nil, trail)
-	})
 	if u.confirming {
+		gtx.Constraints = full
 		u.Confirm(gtx, "Skip setup?",
 			"Isotope keeps the settings it has. You can open this window again from the Isotope menu (Super+Esc → Welcome).",
 			[]guikit.Action{
@@ -216,7 +229,7 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	if !u.pageAt.IsZero() && u.now().Sub(u.pageAt) < guikit.SlideTime {
 		gtx.Execute(op.InvalidateCmd{})
 	}
-	return layout.Dimensions{Size: size}
+	return layout.Dimensions{Size: full.Max}
 }
 
 // update handles the footer's buttons, then the page's own input.

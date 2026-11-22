@@ -4281,13 +4281,17 @@ RUN d=/adwaita-cursors/usr/share/icons && mkdir -p $d/Adwaita $d/default && \
 # (rootfs-cosmic/usr/share/glib-2.0/schemas/91_isotope-cosmic.gschema.override)
 # that puts GTK's window buttons on the left, as its patched libcosmic does.
 #
-# No dconf: without it GLib uses its in-memory backend, which still reads the
-# compiled schemas with this override, so every app and portal sees the dark
-# defaults. dconf would only add per-user changes saved across logins, for a
-# daemon, a GIO module and its cache in every image. The default stage
-# compiles the schemas (glib-compile-schemas); installs under DESTDIR skip it.
-# Adding dconf would also let cosmic-settings-daemon's `gsettings set ...
-# button-layout` (run at its start) override Isotope's COSMIC default.
+# No dconf: GLib then uses its keyfile backend, which reads the compiled schemas
+# with this override (so every app and portal sees the dark defaults) and keeps
+# user changes in ~/.config/glib-2.0/settings/keyfile. dconf would only add a
+# daemon, a GIO module and its cache in every image. On COSMIC that keyfile is
+# where cosmic-settings-daemon writes its `gsettings set ...
+# button-layout` (at start and when the CosmicTk window buttons change), and
+# that user value beats the schema default. So the override alone does not keep
+# the buttons on the left: patches/cosmic/cosmic-settings-daemon makes the
+# daemon write the left layout when window_controls_left is true. The default
+# stage compiles the schemas (glib-compile-schemas); installs under DESTDIR
+# skip it.
 FROM toolchain AS gsettings-desktop-schemas
 COPY --from=glib2 /glib2 /
 COPY --from=pcre2 /pcre2 /
@@ -5824,8 +5828,10 @@ FROM desktop-default AS sway-default
 FROM desktop-default AS i3-default
 FROM desktop-default AS cosmic-default
 # The compiled schemas carry COSMIC's own override (GTK's window buttons on the
-# left). This proves the default is compiled, not that an app follows it. Host
-# GTK apps read it directly; Flatpak GTK apps read it through
+# left). This proves the default is compiled, not that an app follows it:
+# cosmic-settings-daemon writes a user value over it, which its Isotope patch
+# keeps on the left (test/look/check-look.sh greps the binary). Host GTK apps
+# read the value directly; Flatpak GTK apps read it through
 # xdg-desktop-portal-gtk, the second Settings backend (cosmic-portals.conf).
 RUN test "$(gsettings get org.gnome.desktop.wm.preferences button-layout)" = "'close,minimize,maximize:'"
 FROM desktop-default AS niri-default
