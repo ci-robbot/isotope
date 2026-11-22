@@ -86,7 +86,7 @@ case "$FLAVOR" in
         check "niri: the session starts 'isotope-welcome --login'" \
             "$active $conf | grep -qx 'spawn-at-startup \"isotope-welcome\" \"--login\"'"
         check "niri: isotope-welcome floats" \
-            "$active $conf | tr -d '\n' | grep -q 'window-rule {[[:space:]]*match app-id=\"^isotope-welcome\$\"[[:space:]]*open-floating true[[:space:]]*}'"
+            "$active $conf | tr -d '\n' | grep -q 'window-rule {[^}]*match app-id=\"[\\^]isotope-welcome[\$]\"[^}]*open-floating true[^}]*}'"
         ;;
     cosmic)
         check "COSMIC: the session starts 'isotope-welcome --login'" \
