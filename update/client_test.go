@@ -459,7 +459,7 @@ func TestUpgradeWarnsAboutAnotherLine(t *testing.T) {
 
 func TestDaemonErrorMapping(t *testing.T) {
 	for name, want := range map[string]string{
-		"NotAuthorized": "Only members of the admin group can install updates or restart the system.",
+		"NotAuthorized": "Only members of the admin group can change this system.",
 		"RebootPending": "The last update waits for a restart; restart first.",
 		"Busy":          "Another update is running.",
 	} {
@@ -984,7 +984,7 @@ func TestRollbackRefusalsAreSentences(t *testing.T) {
 		"Unfinished":    "The last update did not finish; restart before choosing a system.",
 		"Rebooting":     "The system is already restarting.",
 		"Busy":          "Another update is running.",
-		"NotAuthorized": "Only members of the admin group can install updates or restart the system.",
+		"NotAuthorized": "Only members of the admin group can change this system.",
 	} {
 		setup(t, "v0.1.0", "v0.2.0")
 		f := okDaemon()

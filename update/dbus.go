@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -35,9 +36,16 @@ const (
 	// actionSettings covers machine settings the Welcome app changes: the
 	// system language.
 	actionSettings = "io.kairos.isotope-update.settings"
-	// actionBackup covers backing up now and the backup schedule: the backup
-	// reads every file on the machine as root.
+	// actionBackup covers backing up now, the backup schedule and the backup
+	// target with its credentials: the backup reads every file on the
+	// machine as root.
 	actionBackup = "io.kairos.isotope-update.backup"
+	// actionUsers covers adding and removing users, another user's password
+	// and the admin group. A user changes their own password without it.
+	actionUsers = "io.kairos.isotope-update.users"
+	// actionRestore covers restoring a whole backup, which replaces the
+	// users and the settings, on a machine that is still new.
+	actionRestore = "io.kairos.isotope-update.restore"
 )
 
 // busIntrospection describes the interface for busctl, d-feet and friends.
@@ -57,6 +65,7 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
       <arg name="advanced" type="b" direction="in"/>
     </method>
     <method name="Cancel"/>
+    <method name="UpdateHistory"><arg name="entries" type="aa{sv}" direction="out"/></method>
     <method name="Reboot"/>
     <method name="RebootPrevious"/>
     <method name="Extensions"><arg name="extensions" type="aa{sv}" direction="out"/></method>
@@ -83,6 +92,51 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
     <method name="BackupStatus"><arg name="status" type="a{sv}" direction="out"/></method>
     <method name="BackupNow"/>
     <method name="SetBackupSchedule"><arg name="schedule" type="s" direction="in"/></method>
+    <method name="BackupInit">
+      <arg name="target" type="s" direction="in"/>
+      <arg name="options" type="a{sv}" direction="in"/>
+      <arg name="secrets" type="h" direction="in"/>
+    </method>
+    <method name="BackupSSHKey"><arg name="public_key" type="s" direction="out"/></method>
+    <method name="BackupHostKey">
+      <arg name="host" type="s" direction="in"/>
+      <arg name="port" type="u" direction="in"/>
+      <arg name="fingerprints" type="as" direction="out"/>
+    </method>
+    <method name="BackupList">
+      <arg name="source" type="s" direction="in"/>
+      <arg name="options" type="a{sv}" direction="in"/>
+      <arg name="secrets" type="h" direction="in"/>
+      <arg name="snapshots" type="aa{sv}" direction="out"/>
+    </method>
+    <method name="BackupExport"><arg name="path" type="s" direction="in"/></method>
+    <method name="BackupCancel"/>
+    <method name="Restore">
+      <arg name="source" type="s" direction="in"/>
+      <arg name="snapshot" type="s" direction="in"/>
+      <arg name="host" type="s" direction="in"/>
+      <arg name="options" type="a{sv}" direction="in"/>
+      <arg name="secrets" type="h" direction="in"/>
+    </method>
+    <method name="Users"><arg name="users" type="aa{sv}" direction="out"/></method>
+    <method name="AddUser">
+      <arg name="name" type="s" direction="in"/>
+      <arg name="full_name" type="s" direction="in"/>
+      <arg name="admin" type="b" direction="in"/>
+      <arg name="password" type="h" direction="in"/>
+    </method>
+    <method name="RemoveUser">
+      <arg name="name" type="s" direction="in"/>
+      <arg name="keep_home" type="b" direction="in"/>
+    </method>
+    <method name="SetPassword">
+      <arg name="name" type="s" direction="in"/>
+      <arg name="secrets" type="h" direction="in"/>
+    </method>
+    <method name="SetAdmin">
+      <arg name="name" type="s" direction="in"/>
+      <arg name="on" type="b" direction="in"/>
+    </method>
     <signal name="StateChanged"><arg name="status" type="a{sv}"/></signal>
     <signal name="Progress"><arg name="line" type="s"/></signal>
   </interface>` + introspect.IntrospectDataString + `</node>`
@@ -176,6 +230,8 @@ func busError(err error) *dbus.Error {
 	}
 	var name string
 	switch {
+	case errors.Is(err, ErrStopping):
+		return errExiting
 	case errors.Is(err, ErrBusy):
 		name = "Busy"
 	case errors.Is(err, ErrRebootPending):
@@ -184,11 +240,22 @@ func busError(err error) *dbus.Error {
 		name = "NotCancellable"
 	case errors.Is(err, ErrRebooting):
 		name = "Rebooting"
+	case errors.Is(err, ErrKeyPartlyChanged):
+		// The app tells the user to keep both recovery keys.
+		name = "PartlyChanged"
 	case errors.Is(err, ErrAgentImage), errors.Is(err, ErrNotIsotope), errors.Is(err, ErrNotRelease),
 		errors.Is(err, ErrServerImage), errors.Is(err, ErrDesktopImage),
 		errors.Is(err, ErrTrustedBootImage), errors.Is(err, ErrNeedsTrustedBoot),
 		errors.Is(err, ErrNeedsCredentials), errors.Is(err, ErrWrongPlatform),
-		errors.Is(err, errUnmanaged), errors.Is(err, errExtNeedsAdvanced):
+		errors.Is(err, errUnmanaged), errors.Is(err, errExtNeedsAdvanced),
+		errors.Is(err, errLastAdmin), errors.Is(err, errSystemAccount),
+		errors.Is(err, errNoSuchUser), errors.Is(err, errUserExists),
+		errors.Is(err, errSelfRemove), errors.Is(err, errLoggedIn),
+		errors.Is(err, errBadUserName), errors.Is(err, errBadFullName),
+		errors.Is(err, errEmptyPassword), errors.Is(err, errBadPassword),
+		errors.Is(err, errWrongPassword), errors.Is(err, errUnverifiable),
+		errors.Is(err, errMachineInUse), errors.Is(err, errExportNeedsPassword),
+		errors.Is(err, ErrKeyUnchanged):
 		name = "Refused"
 	default:
 		name = "Failed"
@@ -197,10 +264,10 @@ func busError(err error) *dbus.Error {
 }
 
 var errNotAuthorized = dbus.NewError(busInterface+".Error.NotAuthorized",
-	[]any{"not authorized: only members of the admin group may install updates or extensions, or reboot"})
+	[]any{"not authorized: only an administrator may change this system"})
 
 var errSandboxed = dbus.NewError(busInterface+".Error.NotAuthorized",
-	[]any{"not authorized: applications in a Flatpak sandbox may not install updates or extensions, or reboot"})
+	[]any{"not authorized: applications in a Flatpak sandbox may not change this system"})
 
 // procRoot is where the caller's process is looked up, and selfFdinfo
 // where this process's own fds are described. Variables so tests can point
@@ -389,6 +456,9 @@ type service struct {
 	// credsOf names the process behind a bus name; nil refuses every
 	// mutating call.
 	credsOf func(dbus.Sender) (callerCreds, error)
+	// uidOf names the user behind a bus name; nil refuses every call that
+	// needs the caller's user.
+	uidOf func(dbus.Sender) (uint32, error)
 
 	// netSlot admits one network-bound call (Check, Releases, Inspect) at
 	// a time. They are open to every local user, so without it any caller
@@ -486,6 +556,24 @@ func newService(d *Daemon, a Authorizer) *service {
 // user, so the admin-group rule would let any app with system-bus access
 // install an image or reboot.
 func (s *service) authorize(sender dbus.Sender, action string) *dbus.Error {
+	if err := s.notSandboxed(sender, action); err != nil {
+		return err
+	}
+	ok, err := s.auth.Allowed(sender, action)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "isotope: refusing %s for %s: %v\n", action, sender, err)
+		return errNotAuthorized
+	}
+	if !ok {
+		return errNotAuthorized
+	}
+	return nil
+}
+
+// notSandboxed is the part of authorize before polkit: it refuses a caller
+// that cannot be looked up or that runs in a Flatpak sandbox. action is
+// only for the log line.
+func (s *service) notSandboxed(sender dbus.Sender, action string) *dbus.Error {
 	if s.credsOf == nil {
 		fmt.Fprintf(os.Stderr, "isotope: refusing %s for %s: no way to look up the caller\n", action, sender)
 		return errNotAuthorized
@@ -506,15 +594,19 @@ func (s *service) authorize(sender dbus.Sender, action string) *dbus.Error {
 		fmt.Fprintf(os.Stderr, "isotope: refusing %s for %s: it runs in a Flatpak sandbox\n", action, sender)
 		return errSandboxed
 	}
-	ok, err := s.auth.Allowed(sender, action)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "isotope: refusing %s for %s: %v\n", action, sender, err)
-		return errNotAuthorized
-	}
-	if !ok {
-		return errNotAuthorized
-	}
 	return nil
+}
+
+// busUID asks the bus for the uid of the process behind sender. The bus
+// vouches for it.
+func busUID(conn *dbus.Conn) func(dbus.Sender) (uint32, error) {
+	return func(sender dbus.Sender) (uint32, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), polkitTimeout)
+		defer cancel()
+		var uid uint32
+		err := conn.BusObject().CallWithContext(ctx, "org.freedesktop.DBus.GetConnectionUnixUser", 0, string(sender)).Store(&uid)
+		return uid, err
+	}
 }
 
 // busAPI is the exported object. Every exported method is a D-Bus method,
@@ -638,6 +730,32 @@ func (a busAPI) Apply(sender dbus.Sender, ref, digest string, advanced bool) *db
 	return busError(a.s.d.Apply(context.Background(), ref, digest, advanced))
 }
 
+// UpdateHistory lists the installs and rollbacks, newest first. It needs no
+// authorization: the file holds no secret.
+func (a busAPI) UpdateHistory() ([]map[string]dbus.Variant, *dbus.Error) {
+	done, derr := a.s.enter()
+	if derr != nil {
+		return nil, derr
+	}
+	defer done()
+	h, err := readHistory()
+	if err != nil {
+		return nil, busError(err)
+	}
+	out := make([]map[string]dbus.Variant, 0, len(h))
+	for _, e := range h {
+		out = append(out, map[string]dbus.Variant{
+			"time":    dbus.MakeVariant(e.Time),
+			"kind":    dbus.MakeVariant(e.Kind),
+			"version": dbus.MakeVariant(e.Version),
+			"ref":     dbus.MakeVariant(e.Ref),
+			"digest":  dbus.MakeVariant(e.Digest),
+			"result":  dbus.MakeVariant(e.Result),
+		})
+	}
+	return out, nil
+}
+
 // Cancel shares Apply's action: whoever may start an install may stop one.
 func (a busAPI) Cancel(sender dbus.Sender) *dbus.Error {
 	done, derr := a.s.enter()
@@ -681,8 +799,28 @@ func (a busAPI) RebootPrevious(sender dbus.Sender) *dbus.Error {
 // service has been idle for idleTimeout, or with an error when the name is
 // taken or the bus goes away. It never returns while a job runs.
 func serve(conn *dbus.Conn, d *Daemon, a Authorizer) error {
+	return serveCtx(context.Background(), conn, d, a)
+}
+
+// stopWait is how long the daemon waits for its jobs after a signal. The
+// unit's TimeoutStopSec is longer.
+const stopWait = 60 * time.Second
+
+// daemonSignals stop the daemon: systemd's stop and a shutdown send
+// SIGTERM.
+var daemonSignals = []os.Signal{syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP}
+
+// daemonContext is done when the daemon gets one of daemonSignals.
+func daemonContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), daemonSignals...)
+}
+
+// serveCtx is serve until ctx is done (a signal): then the running job is
+// stopped and waited for (Daemon.Stop), and it returns.
+func serveCtx(ctx context.Context, conn *dbus.Conn, d *Daemon, a Authorizer) error {
 	s := newService(d, a)
 	s.credsOf = busCreds(conn)
+	s.uidOf = busUID(conn)
 	d.OnChange(func(st Status) {
 		s.touch()
 		if err := conn.Emit(busPath, busInterface+".StateChanged", statusDict(st)); err != nil {
@@ -717,6 +855,17 @@ func serve(conn *dbus.Conn, d *Daemon, a Authorizer) error {
 	defer tick.Stop()
 	for {
 		select {
+		case <-ctx.Done():
+			// Refuse new calls first, then let the job clean up. Stop
+			// also refuses a job from a call already in progress.
+			s.mu.Lock()
+			s.closing = true
+			s.mu.Unlock()
+			_, _ = conn.ReleaseName(busName)
+			if !d.Stop(stopWait) {
+				return fmt.Errorf("stopped by a signal; a job did not end within %s", stopWait)
+			}
+			return nil
 		case <-conn.Context().Done():
 			// Returning ends the process, and systemd then kills what is
 			// left in the unit's cgroup: kairos-agent too. Let the job end.
@@ -759,9 +908,15 @@ func cmdDaemon(args []string, stderr io.Writer) int {
 		return exitError
 	}
 	defer conn.Close()
+	// A signal does not end the process at once: the job's cleanup runs
+	// first (serveCtx).
+	ctx, stop := daemonContext()
+	defer stop()
+	// No job runs yet: remove what a killed one left.
+	sweepBackupWork(defaultBackupPaths(), stderr)
 	d := NewDaemon(kairosBackend{})
 	d.inhibitor = logindInhibitor{conn: conn}
-	if err := serve(conn, d, polkitAuthorizer{conn: conn}); err != nil {
+	if err := serveCtx(ctx, conn, d, polkitAuthorizer{conn: conn}); err != nil {
 		fmt.Fprintln(stderr, "isotope daemon:", err)
 		return exitError
 	}

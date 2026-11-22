@@ -133,7 +133,11 @@ func main() {
 		Network: nmNetwork{},
 		// The Language page asks the daemon; the group only decides
 		// whether it starts read-only.
-		Settings:     daemonSettings{},
+		Settings: daemonSettings{},
+		// Welcome's "Restore from a backup": the daemon says whether the
+		// machine is new, and decides again on Restore.
+		Backup:       busBackup{},
+		USBDisks:     USBDisksOnBus,
 		Admin:        InAdminGroup(),
 		Home:         home,
 		LayoutsDir:   CosmicLayoutsDir,

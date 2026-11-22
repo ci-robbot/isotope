@@ -124,6 +124,8 @@ if run "grep -qx FLAVOR=server /etc/isotope/release" >/dev/null 2>&1; then
 elif run "grep -qx FLAVOR=agent /etc/isotope/release" >/dev/null 2>&1; then
     check "udisks2 is removed from the agent image" \
         "! test -e /usr/lib/udisks2/udisksd && ! test -e /usr/lib/systemd/system/udisks2.service && ! test -L /etc/systemd/system/multi-user.target.wants/udisks2.service"
+    check "exfatprogs is removed from the agent image" \
+        "! test -e /usr/bin/mkfs.exfat && ! test -e /usr/bin/exfatlabel"
 else
     check "udisks2: daemon and unit are installed" \
         "test -x /usr/lib/udisks2/udisksd && grep -q '^ExecStart=/usr/lib/udisks2/udisksd' /usr/lib/systemd/system/udisks2.service"
@@ -135,6 +137,11 @@ else
         "test -f /usr/share/dbus-1/system.d/org.freedesktop.UDisks2.conf && grep -qx 'SystemdService=udisks2.service' /usr/share/dbus-1/system-services/org.freedesktop.UDisks2.service"
     check "udisks2: polkit actions and the session rule are installed" \
         "test -f /usr/share/polkit-1/actions/org.freedesktop.UDisks2.policy && r=/usr/share/polkit-1/rules.d/50-isotope-udisks.rules && grep -qF 'udisks2.filesystem-mount\"' \$r && grep -qF 'udisks2.eject-media\"' \$r && grep -qF 'udisks2.power-off-drive\"' \$r && grep -q 'subject.local && subject.active' \$r && ! (grep -v '^//' \$r | grep -q 'mount-system\\|unmount-others')"
+    check "udisks2: only a local active admin may format a disk" \
+        "r=/usr/share/polkit-1/rules.d/50-isotope-udisks.rules && grep -qF 'udisks2.modify-device\"' \$r && grep -qF 'isInGroup(\"admin\")' \$r && ! (grep -v '^//' \$r | grep -q 'modify-device-system\\|other-seat')"
+    # -V prints the version and exits 1: the check reads what it prints.
+    check "exfatprogs: mkfs.exfat and exfatlabel run" \
+        "mkfs.exfat --version 2>&1 | grep -q 'exfatprogs version' && exfatlabel --version 2>&1 | grep -q 'exfatprogs version'"
     check "udisks2: the Kairos partitions are ignored by udev" \
         "r=/usr/lib/udev/rules.d/90-isotope-udisks-ignore.rules && grep -q 'COS_\\*.*UDISKS_IGNORE' \$r && grep -q 'crypto_LUKS.*UDISKS_IGNORE' \$r && grep -q 'COS_.*UDISKS_SYSTEM' \$r"
     check "udisks2: the udev rule has no syntax errors" \

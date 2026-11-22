@@ -10,6 +10,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/kairos-community/isotope/update/recoverykey"
 )
 
 // backupPaths are the places a backup reads and a restore writes. A struct,
@@ -91,7 +94,9 @@ func (p backupPaths) stage() string { return filepath.Join(p.Persist, ".isotope-
 // variable for the tests.
 var mountinfoPath = "/proc/self/mountinfo"
 
-type mountEntry struct{ dev, root, point string }
+// mountEntry is a mountinfo line: the device number, the folder of the file
+// system that is mounted, the mount point and the mount source.
+type mountEntry struct{ dev, root, point, src string }
 
 func readMounts() []mountEntry {
 	b, err := os.ReadFile(mountinfoPath)
@@ -104,7 +109,15 @@ func readMounts() []mountEntry {
 		if len(f) < 5 {
 			continue
 		}
-		out = append(out, mountEntry{dev: f[2], root: unescapeMount(f[3]), point: unescapeMount(f[4])})
+		m := mountEntry{dev: f[2], root: unescapeMount(f[3]), point: unescapeMount(f[4])}
+		// After the optional fields and "-": the type and the source.
+		for i := 5; i+2 < len(f); i++ {
+			if f[i] == "-" {
+				m.src = unescapeMount(f[i+2])
+				break
+			}
+		}
+		out = append(out, m)
 	}
 	return out
 }
@@ -203,6 +216,7 @@ const homeContainers = ".local/share/containers"
 // `isotope status` can read it as any user.
 type backupConfig struct {
 	Target     string
+	Label      string // the name the user knows the target by: a USB disk's label
 	Schedule   string // off, daily, weekly
 	Containers bool   // also Docker's and Podman's storage
 	Last       int64  // Unix time of the last successful backup
@@ -226,6 +240,8 @@ func loadBackupConfig(p backupPaths) (backupConfig, error) {
 		switch k {
 		case "target":
 			c.Target = v
+		case "label":
+			c.Label = v
 		case "schedule":
 			if v == "daily" || v == "weekly" || v == "off" {
 				c.Schedule = v
@@ -245,8 +261,8 @@ func saveBackupConfig(p backupPaths, c backupConfig) error {
 	if err := os.MkdirAll(p.State, 0o755); err != nil {
 		return err
 	}
-	s := fmt.Sprintf("target=%s\nschedule=%s\ncontainers=%t\nlast=%d\nresult=%s\n",
-		c.Target, c.Schedule, c.Containers, c.Last, oneLine(c.Result))
+	s := fmt.Sprintf("target=%s\nlabel=%s\nschedule=%s\ncontainers=%t\nlast=%d\nresult=%s\n",
+		c.Target, oneLine(c.Label), c.Schedule, c.Containers, c.Last, oneLine(c.Result))
 	tmp := p.config() + ".tmp"
 	if err := os.WriteFile(tmp, []byte(s), 0o644); err != nil {
 		return err
@@ -268,11 +284,21 @@ func isURLTarget(t string) bool {
 }
 
 // normalizeTarget checks a target the user typed: an absolute directory
-// (also written local:/path) or a restic URL. A relative path is refused:
-// restic would put the backup in the current directory, on the internal
-// disk.
+// (also written local:/path), a folder on a disk by UUID
+// (uuid:<UUID>/<path>) or a restic URL. A relative path is refused: restic
+// would put the backup in the current directory, on the internal disk.
 func normalizeTarget(t string) (string, error) {
 	t = strings.TrimPrefix(t, "local:")
+	if strings.ContainsFunc(t, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
+		return "", errors.New("the target has a control character")
+	}
+	if strings.HasPrefix(t, "uuid:") {
+		uuid, sub, ok := parseUUIDTarget(t)
+		if !ok {
+			return "", fmt.Errorf("%q is not uuid:<UUID>/<folder>", t)
+		}
+		return "uuid:" + uuid + "/" + sub, nil
+	}
 	if isURLTarget(t) {
 		return t, nil
 	}
@@ -289,14 +315,32 @@ var onTmpfs = func(dir string) bool {
 	return unix.Statfs(dir, &st) == nil && st.Type == unix.TMPFS_MAGIC
 }
 
+// interruptHook is what a long job does on a signal: onInterrupt for the
+// CLI, nil in the daemon. The daemon must never exit in the middle of a
+// job; it stops a job through its context, and the job cleans up on the
+// way out.
+type interruptHook func(clean func()) (stop func())
+
+// install runs h, or nothing when h is nil.
+func (h interruptHook) install(clean func()) (stop func()) {
+	if h == nil {
+		return func() {}
+	}
+	return h(clean)
+}
+
+// signalNotify is signal.Notify. A variable so the tests can see who asks
+// for signals.
+var signalNotify = signal.Notify
+
 // onInterrupt runs fn and exits on SIGINT, SIGTERM or SIGHUP, until the returned
 // stop is called. restic gets the signal too, as it is in the same process
-// group, and stops.
+// group, and stops. Only for the CLI: it exits the process.
 func onInterrupt(fn func()) (stop func()) {
 	ch := make(chan os.Signal, 1)
 	done := make(chan struct{})
 	// SIGHUP too: a dropped SSH session sends it.
-	signal.Notify(ch, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	signalNotify(ch, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		select {
 		case <-ch:
@@ -308,14 +352,35 @@ func onInterrupt(fn func()) (stop func()) {
 	return func() { signal.Stop(ch); close(done) }
 }
 
-// resticCmd runs restic against target with the password in passFile.
+// resticCmd runs restic against target with the password in passFile and
+// the credentials in this machine's env file.
 func resticCmd(p backupPaths, target, passFile string, args ...string) (*exec.Cmd, error) {
+	return resticCmdEnv(p, target, passFile, p.envFile(), args...)
+}
+
+// resticCmdEnv is resticCmd with the credentials (NAME=value lines) in
+// envFile. An SFTP target whose host the backup's known_hosts has (set up
+// by initTarget) uses the backup's own SSH key and known_hosts; any other,
+// such as one set up by hand before, root's own ssh setup.
+func resticCmdEnv(p backupPaths, target, passFile, envFile string, args ...string) (*exec.Cmd, error) {
+	return resticCmdHosts(p, target, passFile, envFile, "", args...)
+}
+
+// resticCmdHosts is resticCmdEnv with the SFTP hosts in knownHosts, with
+// the backup's own key; knownHosts "" is resticCmdEnv's choice.
+func resticCmdHosts(p backupPaths, target, passFile, envFile, knownHosts string, args ...string) (*exec.Cmd, error) {
+	switch {
+	case knownHosts != "":
+		args = append(sftpArgsWith(p, knownHosts), args...)
+	case usesBackupSSH(p, target):
+		args = append(sftpArgs(p), args...)
+	}
 	c := sysCommand(restic(), args...)
 	env := append(os.Environ(),
 		"RESTIC_REPOSITORY="+target,
 		"RESTIC_PASSWORD_FILE="+passFile,
 		"RESTIC_CACHE_DIR="+filepath.Join(p.State, "cache"))
-	b, err := os.ReadFile(p.envFile())
+	b, err := os.ReadFile(envFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
@@ -346,12 +411,17 @@ Commands:
       --with-containers  also Docker's and Podman's images and volumes
   status                 the target, the schedule and the last backup
   init TARGET            back up to TARGET from now on: a directory, such as
-                         a folder on a USB disk, or a restic URL (sftp:...,
+                         a folder on a USB disk, a folder on a disk by its
+                         UUID (uuid:UUID/folder), or a restic URL (sftp:...,
                          rest:..., s3:...). Creates the backup there with a
                          new password, which is shown once
       --password-stdin   read the password instead: for a backup that
                          already exists, or a password of your own
       --with-containers  include Docker's and Podman's storage from now on
+      --host-key SHA256:...
+                         an SFTP server's host key, as checked with the
+                         server. Without it, init shows the fingerprints and
+                         the key to add to the server's authorized_keys
   list                   the backups in the target
   schedule daily|weekly|off
                          back up automatically. A USB disk that is not
@@ -393,6 +463,7 @@ func cmdBackup(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	scheduled := fs.Bool("scheduled", false, "")
 	export := fs.String("export", "", "")
 	containers := fs.Bool("with-containers", false, "")
+	hostKey := fs.String("host-key", "", "")
 	rest, err := parseInterspersed(fs, args)
 	if err != nil {
 		return exitUsage
@@ -411,7 +482,7 @@ func cmdBackup(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if len(rest) != 1 {
 			break
 		}
-		return backupInit(p, rest[0], *passStdin, *containers, in, stdout, stderr)
+		return backupInit(p, rest[0], *hostKey, *passStdin, *containers, in, stdout, stderr)
 	case "list":
 		if len(rest) != 0 {
 			break
@@ -443,7 +514,7 @@ func backupStatus(p backupPaths, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "No backup target. Run `isotope backup init TARGET` to set one, for example a folder on a USB disk.")
 		return exitOK
 	}
-	fmt.Fprintf(stdout, "Target:     %s\n", c.Target)
+	fmt.Fprintf(stdout, "Target:     %s\n", targetName(c))
 	fmt.Fprintf(stdout, "Schedule:   %s\n", c.Schedule)
 	if c.Last == 0 {
 		fmt.Fprintln(stdout, "Last:       never")
@@ -488,7 +559,7 @@ func backupSchedule(p backupPaths, s string, stdout, stderr io.Writer) int {
 	if s == "off" {
 		fmt.Fprintln(stdout, "Automatic backups are off.")
 	} else {
-		fmt.Fprintf(stdout, "This machine backs up %s to %s.\n", s, c.Target)
+		fmt.Fprintf(stdout, "This machine backs up %s to %s.\n", s, targetName(c))
 	}
 	return exitOK
 }
@@ -517,11 +588,48 @@ func setBackupSchedule(p backupPaths, s string) (backupConfig, error) {
 	return c, err
 }
 
+// stopGrace is how long restic has to stop after an interrupt before it is
+// killed. On an interrupt restic removes its lock from the repository.
+var stopGrace = 10 * time.Second
+
+// runCtx runs cmd and stops it when ctx is cancelled: first an interrupt,
+// then a kill after stopGrace. A cancelled run returns ctx's error.
+func runCtx(ctx context.Context, cmd *exec.Cmd) error {
+	// The output may go through a pipe that a child of restic keeps open.
+	cmd.WaitDelay = stopGrace
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = cmd.Process.Signal(os.Interrupt)
+			select {
+			case <-time.After(stopGrace):
+				_ = cmd.Process.Kill()
+			case <-done:
+			}
+		case <-done:
+		}
+	}()
+	err := cmd.Wait()
+	close(done)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	return err
+}
+
 // targetPresent says whether a directory target holds a restic repository
 // now. A USB disk that is not plugged in leaves the mount point missing or
 // empty; restic must then not be pointed at it, or it would write to the
-// internal disk.
+// internal disk. A uuid: target is present when its disk is plugged in;
+// whether the folder holds a backup is known only once it is mounted.
 func targetPresent(target string) bool {
+	if uuid, _, ok := parseUUIDTarget(target); ok {
+		return diskPresent(uuid)
+	}
 	return isURLTarget(target) || exists(filepath.Join(target, "config"))
 }
 
@@ -535,6 +643,8 @@ func scheduledSkip(c backupConfig) string {
 		return "automatic backups are off"
 	case c.Schedule == "weekly" && c.Last != 0 && backupNow().Sub(time.Unix(c.Last, 0)) < 7*24*time.Hour:
 		return "the last backup is less than a week old"
+	case strings.HasPrefix(c.Target, "uuid:") && !targetPresent(c.Target):
+		return diskName(c) + " is not plugged in"
 	case !targetPresent(c.Target):
 		return c.Target + " is not there (a disk that is not plugged in?)"
 	}
@@ -542,7 +652,7 @@ func scheduledSkip(c backupConfig) string {
 }
 
 func backupRun(p backupPaths, scheduled, containers bool, stdout, stderr io.Writer) int {
-	skip, err := runConfiguredBackup(p, scheduled, containers, stdout, stderr)
+	skip, err := runConfiguredBackup(context.Background(), p, scheduled, containers, stdout, stderr)
 	var refused errBackupRefused
 	switch {
 	case errors.As(err, &refused):
@@ -572,8 +682,8 @@ func (e errBackupRefused) Error() string { return e.msg }
 // `isotope backup` (as root) and the daemon's BackupNow run it, with the
 // outcome recorded in the config. A scheduled run that is not due returns
 // why in skip and does nothing. errPartial means the snapshot was written
-// without some files.
-func runConfiguredBackup(p backupPaths, scheduled, containers bool, stdout, stderr io.Writer) (skip string, err error) {
+// without some files. Cancelling ctx stops restic.
+func runConfiguredBackup(ctx context.Context, p backupPaths, scheduled, containers bool, stdout, stderr io.Writer) (skip string, err error) {
 	c, err := loadBackupConfig(p)
 	if err != nil {
 		return "", errBackupRefused{err.Error()}
@@ -586,12 +696,29 @@ func runConfiguredBackup(p backupPaths, scheduled, containers bool, stdout, stde
 		if c.Target == "" {
 			return "", errBackupRefused{"there is no backup target; run `isotope backup init TARGET` first."}
 		}
-		if !targetPresent(c.Target) {
-			return "", errBackupRefused{fmt.Sprintf("there is no backup in %s. Is the disk plugged in?", c.Target)}
-		}
 	}
-	err = backupOnce(p, c.Target, p.password(), c.Containers || containers, true, stdout, stderr)
+	// A disk by UUID is mounted when it is not, and only when it is
+	// plugged in: never a bare mount point on the internal disk.
+	repo, release, err := resolveTarget(c.Target)
 	switch {
+	case errors.Is(err, errDiskMissing) && scheduled:
+		return diskName(c) + " is not plugged in", nil
+	case errors.Is(err, errDiskMissing):
+		return "", errBackupRefused{diskName(c) + " is not plugged in."}
+	case err != nil:
+		return "", errBackupRefused{err.Error()}
+	}
+	defer release()
+	if !targetPresent(repo) {
+		if scheduled {
+			return repo + " is not there (a disk that is not plugged in?)", nil
+		}
+		return "", errBackupRefused{fmt.Sprintf("there is no backup in %s. Is the disk plugged in?", repo)}
+	}
+	err = backupOnce(ctx, p, repo, p.password(), c.Containers || containers, true, stdout, stderr)
+	switch {
+	case errors.Is(err, context.Canceled):
+		c.Result = "Cancelled"
 	case errors.Is(err, errPartial):
 		c.Result, c.Last = "partial: "+err.Error(), backupNow().Unix()
 	case err != nil:
@@ -624,7 +751,7 @@ func backupArgs(p backupPaths, target string, containers bool) []string {
 	// What a backup must not hold: its own cache and secrets, a restore's
 	// staging directory, and a target or export on this disk, which would
 	// otherwise be backed up into itself.
-	for _, f := range []string{"cache", "password", "password.new", "env", "work-*", "pending"} {
+	for _, f := range []string{"cache", "password", "password.new", "env", "ssh", "work-*", "pending"} {
 		ex(filepath.Join(p.State, f))
 	}
 	ex(p.stage())
@@ -639,8 +766,8 @@ func backupArgs(p backupPaths, target string, containers bool) []string {
 }
 
 // backupOnce writes the manifest and backs up to target. prune forgets the
-// old snapshots of this host afterwards.
-func backupOnce(p backupPaths, target, passFile string, containers, prune bool, stdout, stderr io.Writer) error {
+// old snapshots of this host afterwards. Cancelling ctx stops restic.
+func backupOnce(ctx context.Context, p backupPaths, target, passFile string, containers, prune bool, stdout, stderr io.Writer) error {
 	if !exists(p.homeState()) {
 		return fmt.Errorf("%s is missing: this is not an installed Isotope system", p.homeState())
 	}
@@ -653,7 +780,7 @@ func backupOnce(p backupPaths, target, passFile string, containers, prune bool, 
 	}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 	var partial error
-	if err := cmd.Run(); err != nil {
+	if err := runCtx(ctx, cmd); err != nil {
 		// Exit 3: some files could not be read, and the snapshot of the
 		// others was still written. Keep it and prune as usual.
 		var ee *exec.ExitError
@@ -671,7 +798,7 @@ func backupOnce(p backupPaths, target, passFile string, containers, prune bool, 
 		return err
 	}
 	cmd.Stdout, cmd.Stderr = io.Discard, stderr
-	if err := cmd.Run(); err != nil {
+	if err := runCtx(ctx, cmd); err != nil {
 		return fmt.Errorf("restic forget: %w", err)
 	}
 	return partial
@@ -827,7 +954,13 @@ func backupList(p backupPaths, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "isotope:", err)
 		return exitError
 	}
-	cmd, err := resticCmd(p, c.Target, p.password(), "snapshots", "--tag", "isotope")
+	repo, release, err := resolveTarget(c.Target)
+	if err != nil {
+		fmt.Fprintln(stderr, "isotope:", err)
+		return exitError
+	}
+	defer release()
+	cmd, err := resticCmd(p, repo, p.password(), "snapshots", "--tag", "isotope")
 	if err != nil {
 		fmt.Fprintln(stderr, "isotope:", err)
 		return exitError
@@ -861,78 +994,62 @@ func writeSecret(path, s string) error {
 	return os.Rename(tmp, path)
 }
 
-func backupInit(p backupPaths, target string, passStdin, containers bool, in *bufio.Reader, stdout, stderr io.Writer) int {
-	target, err := normalizeTarget(target)
-	if err != nil {
+func backupInit(p backupPaths, target, hostKey string, passStdin, containers bool, in *bufio.Reader, stdout, stderr io.Writer) int {
+	fail := func(err error) int {
 		fmt.Fprintln(stderr, "isotope:", err)
 		return exitError
 	}
-	if !isURLTarget(target) {
-		if err := checkOnDisk(filepath.Dir(target)); err != nil {
-			fmt.Fprintln(stderr, "isotope:", err)
-			return exitError
-		}
-		if err := os.Mkdir(target, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
-			fmt.Fprintln(stderr, "isotope:", err)
-			return exitError
+	target, err := normalizeTarget(target)
+	if err != nil {
+		return fail(err)
+	}
+	opt := initOptions{Containers: containers}
+	if host, port, ok := parseSFTPTarget(target); ok {
+		if opt.HostKey, err = cliHostKey(p, host, port, hostKey, stdout); err != nil {
+			return fail(err)
 		}
 	}
-	var password string
-	existing := targetPresent(target) && !isURLTarget(target)
-	if existing && !passStdin {
+	// Before the password is asked: whether the disk is there, and whether
+	// it holds a backup already. A disk by UUID stays mounted until the end.
+	if !isURLTarget(target) {
+		repo, release, err := resolveTarget(target)
+		if err != nil {
+			return fail(err)
+		}
+		defer release()
+		parent := filepath.Dir(repo)
+		if _, sub, ok := parseUUIDTarget(target); ok {
+			parent = strings.TrimSuffix(repo, "/"+sub)
+		}
+		if err := checkOnDisk(parent); err != nil {
+			return fail(err)
+		}
+		opt.Existing = targetPresent(repo)
+	}
+	if opt.Existing && !passStdin {
 		fmt.Fprintf(stderr, "isotope: %s already holds a backup; give its password with --password-stdin.\n", target)
 		return exitError
 	}
-	if password, err = newPassword(passStdin, in, stdout); err != nil {
-		fmt.Fprintln(stderr, "isotope:", err)
-		return exitError
+	password, err := newPassword(passStdin, in, stdout)
+	if err != nil {
+		return fail(err)
 	}
-
-	// The password goes to a new file first: an init that fails must not
-	// replace the password of a target that works.
-	tmpPass := p.password() + ".new"
-	if err := writeSecret(tmpPass, password); err != nil {
-		fmt.Fprintln(stderr, "isotope:", err)
-		return exitError
-	}
-	defer os.Remove(tmpPass)
-	op := "init"
-	if existing || (passStdin && isURLTarget(target)) {
-		// Opening, not creating: `cat config` fails on a wrong password.
-		op = "cat"
-	}
-	args := []string{"init"}
-	if op == "cat" {
-		args = []string{"cat", "config"}
-	}
-	cmd, err := resticCmd(p, target, tmpPass, args...)
-	if err == nil {
-		cmd.Stdout, cmd.Stderr = io.Discard, stderr
-		err = cmd.Run()
-	}
-	if err != nil && op == "cat" && passStdin && isURLTarget(target) {
-		// A URL target given a password may be new: create it.
-		if cmd, err = resticCmd(p, target, tmpPass, "init"); err == nil {
-			cmd.Stdout, cmd.Stderr = io.Discard, stderr
-			err = cmd.Run()
+	if passStdin && isURLTarget(target) {
+		// A URL target given a password may hold a backup or not: open it,
+		// and create it when that fails.
+		opt.Existing = true
+		if err = initTarget(p, target, opt, password, nil); err != nil {
+			opt.Existing = false
+			err = initTarget(p, target, opt, password, nil)
 		}
+	} else {
+		err = initTarget(p, target, opt, password, nil)
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "isotope: could not use %s: %v\n", target, err)
-		return exitError
-	}
-	if err := os.Rename(tmpPass, p.password()); err != nil {
-		fmt.Fprintln(stderr, "isotope:", err)
-		return exitError
+		return fail(err)
 	}
 	c, _ := loadBackupConfig(p)
-	c.Target, c.Last, c.Result = target, 0, ""
-	c.Containers = c.Containers || containers
-	if err := saveBackupConfig(p, c); err != nil {
-		fmt.Fprintln(stderr, "isotope:", err)
-		return exitError
-	}
-	fmt.Fprintf(stdout, "This machine now backs up to %s. Run `isotope backup now` for the first backup", target)
+	fmt.Fprintf(stdout, "This machine now backs up to %s. Run `isotope backup now` for the first backup", targetName(c))
 	if c.Schedule == "off" {
 		fmt.Fprint(stdout, ", and `isotope backup schedule daily` to back up every day")
 	}
@@ -941,6 +1058,31 @@ func backupInit(p backupPaths, target string, passStdin, containers bool, in *bu
 		fmt.Fprintf(stdout, "Credentials for %s go in %s, one NAME=value per line.\n", target, p.envFile())
 	}
 	return exitOK
+}
+
+// cliHostKey makes the backup's SSH key and fetches the server's host keys.
+// Without --host-key it shows the public key and the fingerprints and
+// stops: the user checks the fingerprint, then runs init again with it.
+func cliHostKey(p backupPaths, host string, port uint32, hostKey string, stdout io.Writer) (string, error) {
+	pub, err := ensureSSHKey(p)
+	if err != nil {
+		return "", err
+	}
+	fps, err := scanHostKey(p, host, port)
+	if err != nil {
+		return "", err
+	}
+	if hostKey != "" {
+		return hostKey, nil
+	}
+	fmt.Fprintf(stdout, "Add this key to %s's authorized_keys:\n\n    %s\n\n", host, pub)
+	fmt.Fprintf(stdout, "The server's host keys:\n\n")
+	for _, fp := range fps {
+		fmt.Fprintf(stdout, "    %s\n", fp)
+	}
+	fmt.Fprintln(stdout, "\nOn the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its keys with their type.")
+	fmt.Fprintln(stdout)
+	return "", errors.New("compare a key with the server's of the same type, then run this again with --host-key SHA256:... (that key)")
 }
 
 // checkOnDisk refuses a directory where a backup would not be safe. Only
@@ -959,8 +1101,10 @@ func checkOnDisk(dir string) error {
 	return nil
 }
 
-// newPassword is the password of a new backup: read from stdin, or made
-// here, shown once and confirmed.
+// newPassword is the password of a backup: read from stdin as typed, or
+// made here, shown once and confirmed. A typed password is not put in
+// canonical form here: initTarget does that, and tries the typed form too
+// for an old backup (withTypedPassword).
 func newPassword(passStdin bool, in *bufio.Reader, stdout io.Writer) (string, error) {
 	if passStdin {
 		line, err := in.ReadString('\n')
@@ -981,6 +1125,55 @@ func newPassword(passStdin bool, in *bufio.Reader, stdout io.Writer) (string, er
 		return "", errors.New("the password was not confirmed; nothing changed")
 	}
 	return key, nil
+}
+
+// backupPassword is a typed backup password as it was made. A password in
+// the recovery key format is put in its canonical form (lower case, groups
+// joined by dashes), whatever spaces or case it was typed with; any other
+// password stays as typed, because older backups may use any password.
+func backupPassword(pw string) string {
+	if c := recoverykey.Canonical(pw); c != "" {
+		return c
+	}
+	return pw
+}
+
+// resticExitWrongPassword is restic's exit status for a wrong password
+// (restic 0.17 and later).
+const resticExitWrongPassword = 12
+
+// wrongPassword says whether restic refused the password.
+func wrongPassword(err error, stderr string) bool {
+	var ee *exec.ExitError
+	if errors.As(err, &ee) && ee.ExitCode() == resticExitWrongPassword {
+		return true
+	}
+	return strings.Contains(stderr, "wrong password")
+}
+
+// withTypedPassword runs run, a restic command that reads its password
+// from passFile, which holds the canonical form of typed. When restic
+// refuses it and typed is different, it runs run once more with typed in
+// passFile: an old backup may have a password in the recovery key format
+// that was not stored in canonical form. When typed fails too, passFile
+// gets the canonical form back and the first error is returned. A failed
+// write of passFile is returned as that error, with no stderr, so the
+// caller shows it and not restic's "wrong password".
+func withTypedPassword(passFile, typed string, run func() (stderr string, err error)) (string, error) {
+	stderr, err := run()
+	if err == nil || backupPassword(typed) == typed || !wrongPassword(err, stderr) {
+		return stderr, err
+	}
+	if werr := writeSecret(passFile, typed); werr != nil {
+		return "", fmt.Errorf("could not try the password as typed: %w", werr)
+	}
+	if stderr2, err2 := run(); err2 == nil {
+		return stderr2, nil
+	}
+	if werr := writeSecret(passFile, backupPassword(typed)); werr != nil {
+		return "", fmt.Errorf("could not put the password back: %w", werr)
+	}
+	return stderr, err
 }
 
 // newBackupKey makes the password of a new backup. A variable for the tests.

@@ -4,25 +4,49 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
 // localeEnv points SetLocale at a temporary root and a fake `locale -a`.
 func localeEnv(t *testing.T, out string, runErr error) (conf, oem string) {
+	conf, oem, _ = localeEnvFake(t, out, runErr)
+	return conf, oem
+}
+
+// localeFake is the output of the fake `locale -a`. The service reads it
+// on its own goroutines, so a test changes it with set, not by setting
+// localeList again.
+type localeFake struct {
+	mu  sync.Mutex
+	out string
+	err error
+}
+
+func (l *localeFake) set(out string, err error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.out, l.err = out, err
+}
+
+func localeEnvFake(t *testing.T, out string, runErr error) (conf, oem string, fake *localeFake) {
 	t.Helper()
 	dir := t.TempDir()
 	conf = filepath.Join(dir, "etc", "locale.conf")
 	oem = filepath.Join(dir, "oem", "91_isotope_locale.yaml")
+	fake = &localeFake{out: out, err: runErr}
 	oc, oo, ol := localeConf, localeOEM, localeList
 	localeConf, localeOEM = conf, oem
 	localeList = func(name string, args []string, _ []byte) ([]byte, error) {
 		if name != "locale" || len(args) != 1 || args[0] != "-a" {
 			t.Errorf("ran %s %v", name, args)
 		}
-		return []byte(out), runErr
+		fake.mu.Lock()
+		defer fake.mu.Unlock()
+		return []byte(fake.out), fake.err
 	}
 	t.Cleanup(func() { localeConf, localeOEM, localeList = oc, oo, ol })
-	return conf, oem
+	return conf, oem, fake
 }
 
 func localeDaemon(t *testing.T) *Daemon {
@@ -59,7 +83,7 @@ func TestSetLocaleRefusedWithoutAction(t *testing.T) {
 }
 
 func TestSetLocaleRefusesUnknown(t *testing.T) {
-	conf, oem := localeEnv(t, fakeLocales, nil)
+	conf, oem, fake := localeEnvFake(t, fakeLocales, nil)
 	f := startService(t, localeDaemon(t), &fakeAuth{allow: true})
 	if c := f.call("SetLocale", "xx_YY.UTF-8"); c.Err == nil {
 		t.Fatal("an unknown locale was accepted")
@@ -67,7 +91,7 @@ func TestSetLocaleRefusesUnknown(t *testing.T) {
 	// A locale `locale -a` does not list is refused even when well formed;
 	// so is a failing `locale -a`.
 	noFile(t, conf, oem)
-	localeEnv(t, "", errors.New("no locale command"))
+	fake.set("", errors.New("no locale command"))
 	if c := f.call("SetLocale", "de_DE.UTF-8"); c.Err == nil {
 		t.Fatal("accepted with no locale list")
 	}

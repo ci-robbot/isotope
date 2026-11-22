@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+	"github.com/kairos-community/isotope/update/recoverykey"
 	"golang.org/x/sys/unix"
 )
 
@@ -102,7 +103,7 @@ type terminal interface {
 var newTerminal = func(out io.Writer) (terminal, error) {
 	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
 	if err != nil {
-		return nil, errors.New("isotope recovery needs a terminal: run it in one")
+		return nil, errors.New("this command needs a terminal: run it in one")
 	}
 	return &ttyTerminal{f: f, r: bufio.NewReader(f), out: out}, nil
 }
@@ -144,10 +145,10 @@ func (t *ttyTerminal) Secret(prompt string) (string, error) {
 // (install-ui/recoverykey.go): the key in the terminal's own font, two
 // groups per line with their numbers, then the key on one line.
 func recoveryKeyLines(key string) []string {
-	g := strings.Split(key, "-")
 	var out []string
-	for i := 0; i+1 < len(g); i += 2 {
-		out = append(out, fmt.Sprintf("  %d  %s    %s  %d", i+1, spaced(g[i]), spaced(g[i+1]), i+2))
+	for i, l := range recoverykey.Lines(key) {
+		g := strings.Split(l, "-")
+		out = append(out, fmt.Sprintf("  %d  %s    %s  %d", 2*i+1, spaced(g[0]), spaced(g[1]), 2*i+2))
 	}
 	return append(out, "", "  "+key)
 }
@@ -155,16 +156,9 @@ func recoveryKeyLines(key string) []string {
 // spaced puts a space between letters: easier to read and copy by hand.
 func spaced(s string) string { return strings.Join(strings.Split(s, ""), " ") }
 
+// confirmsGroup checks a 0-based group; the package counts from 1.
 func confirmsGroup(key string, group int, typed string) bool {
-	t := strings.NewReplacer("-", "", " ", "").Replace(strings.ToLower(strings.TrimSpace(typed)))
-	if t == "" {
-		return false
-	}
-	if t == strings.ReplaceAll(key, "-", "") {
-		return true
-	}
-	g := strings.Split(key, "-")
-	return group >= 0 && group < len(g) && t == g[group]
+	return recoverykey.ConfirmsGroup(key, group+1, typed)
 }
 
 // pickGroup chooses the group to type back. A variable for the tests.

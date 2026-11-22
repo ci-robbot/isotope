@@ -46,6 +46,8 @@ func statusLine(st Status) string {
 		return "Changing system extensions…"
 	case StateBackup:
 		return "Backing up this machine…"
+	case StateRestore:
+		return "Restoring a backup…"
 	case StateRebootPending:
 		// After a failed or interrupted install the slots may already be
 		// swapped: no retry before a restart.

@@ -67,6 +67,9 @@ check "isotope runs, and isotope-update and isotope-ext link to it" \
     "isotope help | grep -q upgrade && test \"\$(readlink /usr/bin/isotope-update)\" = isotope && test \"\$(readlink /usr/bin/isotope-ext)\" = isotope"
 check "isotope-recovery links to isotope" \
     "test \"\$(readlink /usr/bin/isotope-recovery)\" = isotope"
+check "isotope users runs" "isotope users --help"
+check "the user tools are on PATH" \
+    "for c in openssl useradd usermod userdel gpasswd chpasswd; do command -v \$c || exit 1; done"
 check "backups: restic runs and the timer is enabled" \
     "restic version | grep -q '^restic ' && test -L /etc/systemd/system/timers.target.wants/isotope-backup.timer && test -f /usr/lib/systemd/system/isotope-backup.service && test -L /etc/systemd/system/multi-user.target.wants/isotope-restore-finish.service"
 check "the installer's groups exist" \

@@ -159,3 +159,17 @@ func TestTitleBarLayoutHeight(t *testing.T) {
 		bar.Update(gtx)
 	}
 }
+
+func TestConfirmFormDrawsTheForm(t *testing.T) {
+	th := NewTheme()
+	drawn := false
+	form := func(gtx layout.Context) layout.Dimensions {
+		drawn = true
+		return layout.Dimensions{Size: image.Pt(10, 40)}
+	}
+	var c widget.Clickable
+	th.ConfirmForm(testContext(1000, 700), "T", "B", form, []Action{{Click: &c, Label: "OK"}})
+	if !drawn {
+		t.Fatal("the form was not drawn")
+	}
+}

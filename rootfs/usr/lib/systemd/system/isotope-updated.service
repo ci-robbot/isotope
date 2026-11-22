@@ -12,6 +12,9 @@ RefuseManualStop=yes
 Type=dbus
 BusName=io.kairos.IsotopeUpdate1
 ExecStart=/usr/bin/isotope-update daemon
+# On SIGTERM the daemon cancels a backup or an export and waits up to 60 s
+# for the job to remove its work files; give it longer than that.
+TimeoutStopSec=90s
 # /var/lib/isotope-update holds the pin, and where each system extension came
 # from (extensions/). The extensions themselves are kairos-agent's, in
 # /var/lib/kairos/extensions.

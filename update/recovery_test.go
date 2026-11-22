@@ -351,6 +351,52 @@ func TestNewKeyReplacesTheOldOnlyAfterTheNewWorks(t *testing.T) {
 	}
 }
 
+// TestNewKeySaysWhetherItChangedTheDisk: a refusal before any change is
+// ErrKeyUnchanged; a failure after the new key was added to a container is
+// ErrKeyPartlyChanged, and the app then tells the user to keep both keys.
+func TestNewKeySaysWhetherItChangedTheDisk(t *testing.T) {
+	recoveryEnv(t, true)
+	newKey, _ := newRecoveryKey()
+	for _, c := range []struct {
+		secret, failOn string
+		want           error
+	}{
+		{"not the key", "", ErrKeyUnchanged},           // the pre-check
+		{testKey, "luksAddKey", ErrKeyUnchanged},       // nothing written
+		{testKey, "token remove", ErrKeyPartlyChanged}, // added, old not removed
+		{testKey, "luksKillSlot", ErrKeyPartlyChanged},
+	} {
+		f := trustedBootDisk()
+		f.failOn = c.failOn
+		err := (recovery{run: f.run}).NewKey(c.secret, newKey)
+		if !errors.Is(err, c.want) {
+			t.Errorf("secret %q, failing %q: %v, want %v", c.secret, c.failOn, err, c.want)
+		}
+		if c.want == ErrKeyUnchanged && errors.Is(err, ErrKeyPartlyChanged) {
+			t.Errorf("%q: both", c.failOn)
+		}
+	}
+	// The first container is changed, the second fails at its first step:
+	// still in part.
+	f := trustedBootDisk()
+	f.failOn = "luksAddKey --batch-mode --key-file"
+	calls := 0
+	run := func(name string, args []string, stdin []byte) ([]byte, error) {
+		if name == "cryptsetup" && len(args) > 0 && args[0] == "luksAddKey" {
+			calls++
+			if calls == 1 {
+				saved := f.failOn
+				f.failOn = ""
+				defer func() { f.failOn = saved }()
+			}
+		}
+		return f.run(name, args, stdin)
+	}
+	if err := (recovery{run: run}).NewKey(testKey, newKey); !errors.Is(err, ErrKeyPartlyChanged) {
+		t.Errorf("second container failed: %v", err)
+	}
+}
+
 func TestNewKeyWithTheTPM(t *testing.T) {
 	recoveryEnv(t, true)
 	f := trustedBootDisk()
@@ -371,26 +417,6 @@ func TestNewKeyWithTheTPM(t *testing.T) {
 	}
 	if err := (recovery{run: f.run}).NewKey("", "not-a-key"); err == nil {
 		t.Error("a malformed new key was accepted")
-	}
-}
-
-func TestCanonicalAndGeneratedKeys(t *testing.T) {
-	for _, in := range []string{testKey, strings.ToUpper(testKey), strings.ReplaceAll(testKey, "-", " ")} {
-		if got := canonicalRecoveryKey(in); got != testKey {
-			t.Errorf("canonicalRecoveryKey(%q) = %q", in, got)
-		}
-	}
-	if canonicalRecoveryKey("correct horse battery") != "" {
-		t.Error("a passphrase read as a key")
-	}
-	k, err := generateRecoveryKey(bytes.NewReader(make([]byte, 32)))
-	if err != nil || k != "cccccccc-cccccccc-cccccccc-cccccccc-cccccccc-cccccccc-cccccccc-cccccccc" {
-		t.Fatalf("%q %v", k, err)
-	}
-	a, _ := newRecoveryKey()
-	b, _ := newRecoveryKey()
-	if a == b || !recoveryKeyShape.MatchString(a) {
-		t.Fatalf("%q %q", a, b)
 	}
 }
 
@@ -461,8 +487,11 @@ func TestBusRecoveryPassesSecretsByFD(t *testing.T) {
 	if err != nil || st.Edition != editionTrustedBoot || st.Containers[0].TPM != 1 {
 		t.Fatalf("%+v %v", st, err)
 	}
-	if len(fo.reseal) != 1 || fo.reseal[0] != testKey || len(fo.newKeys) != 1 || fo.newKeys[0] != [2]string{"correct horse battery", newKey} {
-		t.Fatalf("reseal %q newKeys %q", fo.reseal, fo.newKeys)
+	fo.mu.Lock()
+	reseal, newKeys := append([]string(nil), fo.reseal...), append([][2]string(nil), fo.newKeys...)
+	fo.mu.Unlock()
+	if len(reseal) != 1 || reseal[0] != testKey || len(newKeys) != 1 || newKeys[0] != [2]string{"correct horse battery", newKey} {
+		t.Fatalf("reseal %q newKeys %q", reseal, newKeys)
 	}
 	for _, q := range auth.questions() {
 		if !strings.HasSuffix(q, " "+actionRecovery) {

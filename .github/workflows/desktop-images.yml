@@ -243,6 +243,11 @@ jobs:
         shell: bash
         run: test/welcome/check-welcome-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
 
+      - name: Check Isotope System
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/system/check-system-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
+
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
         if: steps.prebuilt.outputs.skip != 'true'

@@ -78,6 +78,9 @@ func setLocale(lang string) error {
 	}
 	settingsMu.Lock()
 	defer settingsMu.Unlock()
+	if restoring {
+		return errRestoring
+	}
 	if err := writeRunFile(localeOEM, oemLocale(lang)); err != nil {
 		return err
 	}
@@ -94,6 +97,9 @@ func (a busAPI) SetLocale(sender dbus.Sender, lang string) *dbus.Error {
 	defer done()
 	if err := a.s.authorize(sender, actionSettings); err != nil {
 		return err
+	}
+	if derr := a.s.notRestoring(); derr != nil {
+		return derr
 	}
 	if err := setLocale(lang); err != nil {
 		fmt.Fprintf(os.Stderr, "isotope: SetLocale %q: %v\n", lang, err)

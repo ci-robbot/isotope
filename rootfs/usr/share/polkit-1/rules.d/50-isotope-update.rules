@@ -1,7 +1,8 @@
 // isotope-updated asks polkit without interaction, so every answer here is a
 // plain yes or no: members of admin may install updates and system
-// extensions, reboot, manage the disk recovery key, back up and change
-// system settings; nobody else may,
+// extensions, reboot, manage the disk recovery key, back up, restore a
+// backup on a new machine, manage users and change system settings; nobody
+// else may,
 // whatever the session.
 polkit.addRule(function(action, subject) {
     if (action.id.indexOf("io.kairos.isotope-update.") == 0) {

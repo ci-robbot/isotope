@@ -215,10 +215,9 @@ is not encrypted and that encryption is chosen at install time.
   or recovery key (a secret field; skipped when the TPM unlocks every
   container), the new key generated in the app with crypto/rand, shown once
   in mono two groups per line, "I saved it", type one group back, then
-  `RecoveryNewKey` with both through a pipe fd. Phase 2; until then the
-  page shows the status and `isotope recovery new-key` for the CLI.
+  `RecoveryNewKey` with both through a pipe fd. Done in phase 2.
 - **Reseal** (Trusted Boot, after a firmware update): `RecoveryReseal`.
-  Phase 2.
+  Done in phase 2.
 
 ### Network
 
@@ -241,7 +240,7 @@ connections, as from the Wi-Fi menus today.
 The NetworkManager code is a copy of Welcome's `nm.go` extended with forget,
 Wi-Fi on/off and devices. A follow-up moves both onto one shared package.
 
-### Users (phase 2)
+### Users (phase 2, done)
 
 On Kairos `/etc/passwd` and `/etc/shadow` are rebuilt at every boot from the
 cloud-configs in `/oem`: the installer writes the first user there. A user
@@ -310,7 +309,7 @@ reboot. So the page changes users through the daemon, which writes both:
   change to that build (this one too) rebuilds COSMIC, so it is made only
   after the booted test.
 
-### Disks (phase 2)
+### Disks (phase 2, done)
 
 udisks2 2.12 is in the image (Dockerfile `udisks2` stage), with
 `50-isotope-udisks.rules` (an active local session may mount, eject and
@@ -385,11 +384,11 @@ prefers COSMIC's page can go there.
 | Extensions | daemon, `.extensions` | admin |
 | Recovery key | daemon, `.recovery`, secrets as a pipe fd | admin |
 | Backup now, schedule (phase 1) | daemon, new `.backup` | admin |
-| Backup setup, restore (phase 2) | daemon, `.backup`; restore `.restore` (password asked) | admin |
-| Users (phase 2) | daemon, new `.users`, passwords as a pipe fd | admin; own password: the user |
+| Backup setup, restore (phase 2, done) | daemon, `.backup`; restore `.restore` (YES for admin, no password; see the Welcome design) | admin |
+| Users (phase 2, done) | daemon, new `.users`, passwords as a pipe fd | admin; own password: the user |
 | Network | NetworkManager, `auth-polkit=false` | any local user |
 | Disks: mount, eject | udisks2, `50-isotope-udisks.rules` | active local session |
-| Disks: format (phase 2) | udisks2, extended rule | admin, active local session |
+| Disks: format (phase 2, done) | udisks2, extended rule | admin, active local session |
 
 `50-isotope-update.rules` already answers every `io.kairos.isotope-update.*`
 action YES for `admin` and NO for others, without interaction, so the new
@@ -474,7 +473,7 @@ exits 2, as `isotope-welcome`.
   menu hand-off; Dockerfile, every variant, AGENTS.md. Users and Disks show
   in the sidebar as "coming" pages that say what they will do and which
   CLI or desktop tool does it today.
-- **Phase 2**: Users (daemon methods, `/oem` persistence), Disks (udisks2,
+- **Phase 2** (done): Users (daemon methods, `/oem` persistence), Disks (udisks2,
   format rule), Backup setup and restore (the Welcome design's API), the new
   recovery key and reseal dialogs, an update history.
 

@@ -9,7 +9,13 @@ import (
 	"github.com/kairos-community/isotope/guikit"
 )
 
-func init() { pageMakers[PageUpdates] = func(u *UI) pageView { return &updatesPage{u: u} } }
+func init() {
+	pageMakers[PageUpdates] = func(u *UI) pageView {
+		p := &updatesPage{u: u}
+		u.onJobEnd(func(string, Status) { p.loadHistory() })
+		return p
+	}
+}
 
 // updatesPage: the installed release, Check now, install the latest or
 // another release, the progress of a running install, restart, rollback,
@@ -22,6 +28,8 @@ type updatesPage struct {
 	tags     []string
 	checking bool
 	checkErr string
+	// history is UpdateHistory, oldest first, under u.mu.
+	history []HistoryEntry
 
 	check, install, cancel, restart, rollback, advanced widget.Clickable
 	others                                              []widget.Clickable
@@ -33,6 +41,24 @@ func (p *updatesPage) Shown() {
 		p.image = guikit.NewField(true)
 	}
 	p.refresh(false)
+	p.loadHistory()
+}
+
+// loadHistory reads the install history. Anyone may read it.
+func (p *updatesPage) loadHistory() {
+	u, d := p.u, p.u.hooks.Daemon
+	if d == nil {
+		return
+	}
+	u.async(func() {
+		h, err := d.UpdateHistory()
+		if err != nil {
+			return
+		}
+		u.mu.Lock()
+		p.history = h
+		u.mu.Unlock()
+	})
 }
 
 // refresh lists the releases; with check it first has the daemon check
@@ -163,6 +189,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 	lines := u.progress()
 	u.mu.Lock()
 	checkErr := p.checkErr
+	history := append([]HistoryEntry(nil), p.history...)
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -250,6 +277,21 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 						Disabled: !o.CanInstall || !u.sys.Admin})),
 				)
 			})
+		}
+		if hl := HistoryLines(history, st.Installed, u.now()); len(hl) > 0 {
+			c.gap(28)
+			c.add(u.caps("HISTORY"))
+			c.gap(10)
+			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+				var rows col
+				for i, l := range hl {
+					if i > 0 {
+						rows.gap(6)
+					}
+					rows.add(u.dim(l))
+				}
+				return rows.layout(gtx)
+			}))
 		}
 		if o.Rollback {
 			c.gap(28)

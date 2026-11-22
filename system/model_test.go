@@ -167,6 +167,19 @@ func TestBackupView(t *testing.T) {
 	if v.CanBackUp || v.Warning == "" || v.Lines[len(v.Lines)-1] != "The backup disk is not plugged in." {
 		t.Fatalf("unplugged: %+v", v)
 	}
+	// A USB disk by its UUID is named by its label, and asked for.
+	v = BackupViewOf(BackupStatus{Available: true, Target: "uuid:1234-ABCD/isotope-backup", Label: "USB", Kind: "disk"}, now)
+	if v.CanBackUp || v.Lines[0] != "Backs up to USB (USB disk)" || v.Lines[len(v.Lines)-1] != "Plug in USB to back up" {
+		t.Fatalf("USB disk unplugged: %+v", v)
+	}
+	v = BackupViewOf(BackupStatus{Available: true, Target: "uuid:1234-ABCD/isotope-backup", Kind: "disk", Present: true}, now)
+	if !v.CanBackUp || v.Lines[0] != "Backs up to uuid:1234-ABCD/isotope-backup (USB disk)" {
+		t.Fatalf("USB disk without a label: %+v", v)
+	}
+	v = BackupViewOf(BackupStatus{Available: true, Target: "uuid:1234-ABCD/isotope-backup", Kind: "disk"}, now)
+	if v.Lines[len(v.Lines)-1] != "Plug in the backup disk to back up" {
+		t.Fatalf("USB disk without a label, unplugged: %+v", v)
+	}
 	if got := ago(now, now.AddDate(0, 0, -1)); got != "yesterday at 15:00" {
 		t.Errorf("yesterday: %q", got)
 	}
@@ -181,5 +194,174 @@ func TestRecoveryLines(t *testing.T) {
 		"COS_PERSISTENT_LUKS: recovery key, TPM", "COS_OEM_LUKS: TPM (does not unlock it now)"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("%q\nwant %q", got, want)
+	}
+}
+
+func TestSnapshotRowsNewestFirst(t *testing.T) {
+	now := time.Date(2026, 11, 21, 15, 0, 0, 0, time.Local)
+	snaps := []Snapshot{
+		{ID: "aaa", Host: "old", Time: now.AddDate(0, 0, -10).Unix(), Size: 4e9},
+		{ID: "ccc", Host: "anna-laptop", Time: now.Add(-time.Hour).Unix(), Size: 5e9},
+		{ID: "bbb", Host: "anna-laptop", Time: now.AddDate(0, 0, -1).Unix()},
+	}
+	got := SnapshotRows(snaps, now)
+	want := []string{"today at 14:00 · anna-laptop · 5.0 GB", "yesterday at 15:00 · anna-laptop",
+		"11 November 2026, 15:00 · old · 4.0 GB"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("%q\nwant %q", got, want)
+	}
+	if snaps[0].ID != "aaa" {
+		t.Fatal("SnapshotRows sorted its argument")
+	}
+}
+
+func TestExportName(t *testing.T) {
+	now := time.Date(2026, 11, 22, 9, 0, 0, 0, time.Local)
+	if got := exportName("anna-laptop", now); got != "isotope-anna-laptop-2026-11-22.isotope-backup" {
+		t.Errorf("got %q", got)
+	}
+	if got := exportName("", now); got != "isotope-2026-11-22.isotope-backup" {
+		t.Errorf("no host: %q", got)
+	}
+}
+
+func TestSetupTargets(t *testing.T) {
+	usb := Block{ID: "b", Label: "USB", UUID: "1234-ABCD", FSType: "exfat", IsFilesystem: true}
+	for folder, want := range map[string]string{"isotope-backup": "uuid:1234-ABCD/isotope-backup", "/a/b/": "uuid:1234-ABCD/a/b", " x ": "uuid:1234-ABCD/x"} {
+		if got, err := usbTarget(usb, folder); err != nil || got != want {
+			t.Errorf("folder %q: %q %v", folder, got, err)
+		}
+	}
+	for _, bad := range []string{"", "/", "../x", "a/../b", "a\nb"} {
+		if _, err := usbTarget(usb, bad); err == nil {
+			t.Errorf("folder %q accepted", bad)
+		}
+	}
+
+	tg, env, err := restTarget("https://backup.example.com:8000/anna/", "anna", "pw")
+	if err != nil || tg != "rest:https://backup.example.com:8000/anna/" ||
+		!reflect.DeepEqual(env, []string{"RESTIC_REST_USERNAME=anna", "RESTIC_REST_PASSWORD=pw"}) {
+		t.Errorf("rest: %q %q %v", tg, env, err)
+	}
+	if _, env, _ := restTarget("http://nas:8000/", "", ""); len(env) != 0 {
+		t.Errorf("rest without a user: %q", env)
+	}
+	for _, bad := range []string{"", "nas:8000", "https://anna:pw@nas/", "ftp://nas/"} {
+		if _, _, err := restTarget(bad, "", ""); err == nil {
+			t.Errorf("rest %q accepted", bad)
+		}
+	}
+
+	tg, env, err = s3Target("https://s3.example.com/", "bucket", "/isotope/", "KEY", "SECRET", "eu-west-1")
+	if err != nil || tg != "s3:https://s3.example.com/bucket/isotope" ||
+		!reflect.DeepEqual(env, []string{"AWS_ACCESS_KEY_ID=KEY", "AWS_SECRET_ACCESS_KEY=SECRET", "AWS_DEFAULT_REGION=eu-west-1"}) {
+		t.Errorf("s3: %q %q %v", tg, env, err)
+	}
+	if tg, env, _ := s3Target("s3.amazonaws.com", "b", "", "K", "S", ""); tg != "s3:s3.amazonaws.com/b" || len(env) != 2 {
+		t.Errorf("s3 without a path or region: %q %q", tg, env)
+	}
+	for _, f := range [][6]string{{"", "b", "", "K", "S"}, {"e", "", "", "K", "S"}, {"e", "b", "", "", "S"}, {"e", "b", "", "K", ""}, {"e", "b/c", "", "K", "S"}} {
+		if _, _, err := s3Target(f[0], f[1], f[2], f[3], f[4], f[5]); err == nil {
+			t.Errorf("s3 %q accepted", f)
+		}
+	}
+
+	for _, c := range []struct {
+		userHost, port, path, want string
+		wantPort                   uint32
+	}{
+		{"anna@nas.local", "22", "/srv/backup", "sftp:anna@nas.local:/srv/backup", 22},
+		{"anna@nas.local", "", "backup", "sftp:anna@nas.local:backup", 22},
+		{"anna@nas.local", "2222", "/srv/backup", "sftp://anna@nas.local:2222//srv/backup", 2222},
+		{"anna@nas.local", "2222", "backup", "sftp://anna@nas.local:2222/backup", 2222},
+	} {
+		got, host, port, err := sftpTarget(c.userHost, c.port, c.path)
+		if err != nil || got != c.want || host != "nas.local" || port != c.wantPort {
+			t.Errorf("sftp %+v: %q %q %d %v", c, got, host, port, err)
+		}
+	}
+	for _, bad := range [][3]string{{"", "22", "/p"}, {"anna@", "22", "/p"}, {"anna@nas", "x", "/p"}, {"anna@nas", "70000", "/p"}, {"anna@nas", "22", ""}, {"-oProxy@nas", "22", "/p"}, {"anna@nas:22", "22", "/p"}} {
+		if _, _, _, err := sftpTarget(bad[0], bad[1], bad[2]); err == nil {
+			t.Errorf("sftp %q accepted", bad)
+		}
+	}
+}
+
+func TestHistoryLines(t *testing.T) {
+	now := time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)
+	at := func(d time.Duration) int64 { return now.Add(-d).Unix() }
+	const day = 24 * time.Hour
+	h := []HistoryEntry{
+		{Time: at(3 * day), Kind: "install", Version: "v1.1.0", Result: "installed"},
+		{Time: at(30 * time.Hour), Kind: "install", Version: "v1.2.0", Result: "failed"},
+		{Time: at(2 * time.Hour), Kind: "rollback"},
+		{Time: at(10 * day), Kind: "install", Version: "v1.0.0", Result: "installed"},
+		{Time: at(5 * day), Kind: "install", Version: "v1.1.0", Result: "cancelled"},
+		{Time: at(20 * time.Minute), Kind: "install", Result: "cancelled"},
+		{Time: at(40 * day), Kind: "install", Version: "v1.0.0", Result: "installed"},
+		{Time: at(15 * time.Minute), Kind: "install", Result: "failed"},
+	}
+	got := HistoryLines(h, "v1.1.0", now)
+	want := []string{
+		"An update failed · 15 minutes ago",
+		"An update was cancelled · 20 minutes ago",
+		"Restarted into the previous system · 2 hours ago",
+		"v1.2.0 failed · yesterday",
+		"v1.1.0 installed (running) · 3 days ago",
+		"v1.1.0 cancelled · 5 days ago",
+		"v1.0.0 installed · 10 days ago",
+		"v1.0.0 installed · 13 October 2026",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got\n%q\nwant\n%q", got, want)
+	}
+	// Only the newest 10; none for no history.
+	var many []HistoryEntry
+	for i := 0; i < 15; i++ {
+		many = append(many, HistoryEntry{Time: at(time.Duration(i) * time.Hour), Kind: "install", Version: "v2", Result: "installed"})
+	}
+	if n := len(HistoryLines(many, "", now)); n != 10 {
+		t.Errorf("%d lines", n)
+	}
+	if HistoryLines(nil, "v1", now) != nil {
+		t.Error("lines for no history")
+	}
+	// An empty installed version marks nothing.
+	if l := HistoryLines([]HistoryEntry{{Time: at(time.Hour), Kind: "install", Result: "installed"}}, "", now); strings.Contains(l[0], "running") {
+		t.Errorf("%q", l)
+	}
+}
+
+func TestHistoryLinesTiesAndLocalDays(t *testing.T) {
+	// Equal times: the later entry of the list first.
+	now := time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)
+	tm := now.Add(-time.Hour).Unix()
+	got := HistoryLines([]HistoryEntry{
+		{Time: tm, Kind: "install", Version: "v1", Result: "installed"},
+		{Time: tm, Kind: "install", Version: "v2", Result: "failed"},
+	}, "", now)
+	if !strings.HasPrefix(got[0], "v2 failed") || !strings.HasPrefix(got[1], "v1 installed") {
+		t.Errorf("ties: %q", got)
+	}
+	if l := HistoryLines([]HistoryEntry{{Time: tm, Kind: "install", Result: "weird"}}, "", now); !strings.HasPrefix(l[0], "An update: weird") {
+		t.Errorf("%q", l)
+	}
+	if l := HistoryLines([]HistoryEntry{{Time: tm, Kind: "install", Result: "installed"}}, "", now); !strings.HasPrefix(l[0], "An update was installed") {
+		t.Errorf("%q", l)
+	}
+	// UTC+13, just after local midnight: the days count by local date.
+	loc := time.FixedZone("far", 13*3600)
+	n := time.Date(2026, 11, 23, 0, 30, 0, 0, loc)
+	for _, c := range []struct {
+		t    time.Time
+		want string
+	}{
+		{time.Date(2026, 11, 22, 0, 10, 0, 0, loc), "yesterday"},
+		{time.Date(2026, 11, 21, 23, 50, 0, 0, loc), "2 days ago"},
+		{time.Date(2026, 11, 20, 12, 0, 0, 0, loc), "3 days ago"},
+	} {
+		if g := since(n, c.t); g != c.want {
+			t.Errorf("%v: %q, want %q", c.t, g, c.want)
+		}
 	}
 }

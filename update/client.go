@@ -315,7 +315,7 @@ func statusFromDict(m map[string]dbus.Variant) Status {
 func describeDaemonError(err error) string {
 	switch daemonErrName(err) {
 	case "NotAuthorized":
-		return "Only members of the admin group can install updates or restart the system."
+		return "Only members of the admin group can change this system."
 	case "RebootPending":
 		// Installed, failed or interrupted: a restart comes first in all three.
 		return "The last update waits for a restart; restart first."

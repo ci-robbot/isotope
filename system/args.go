@@ -19,8 +19,8 @@ const (
 // Pages is the sidebar, in order.
 var Pages = []Page{PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageUsers, PageDisks, PageAbout}
 
-// later are the pages listed but not there yet (phase 2 of the design).
-var later = map[Page]bool{PageUsers: true, PageDisks: true}
+// later are the pages listed but not there yet: none today.
+var later = map[Page]bool{}
 
 // Title is the page's name in the sidebar and its heading.
 func (p Page) Title() string {

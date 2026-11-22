@@ -76,10 +76,13 @@ func (b *fakeBackend) Reboot() error {
 	return b.rebootErr
 }
 
-func (b *fakeBackend) RebootPrevious() error {
+func (b *fakeBackend) RebootPrevious(selected func()) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.previous++
+	if b.previousErr == nil {
+		selected()
+	}
 	return b.previousErr
 }
 
@@ -112,6 +115,7 @@ func daemonEnv(t *testing.T, installed string) daemonDigests {
 	t.Setenv("ISOTOPE_UPDATE_RELEASE_FILE",
 		writeRelease(t, strings.Replace(goodRelease, `"v0.1.0"`, installed, 1)))
 	dir := t.TempDir()
+	historyEnv(t)
 	t.Setenv("ISOTOPE_UPDATE_PIN_FILE", filepath.Join(dir, "pin"))
 	t.Setenv("ISOTOPE_UPDATE_CONF", filepath.Join(dir, "update.conf"))
 	t.Setenv("ISOTOPE_UPDATE_RUN_DIR", filepath.Join(dir, "run"))
@@ -1245,12 +1249,21 @@ func readLog(t *testing.T, p string) string {
 
 // TestKairosBackendRebootPrevious pins the command line: kairos-agent's own
 // one-shot selection of the "fallback" (passive) entry, then the reboot.
+// selected runs between the two: the reboot can stop the daemon.
 func TestKairosBackendRebootPrevious(t *testing.T) {
 	logFile, _ := fakeRebootTools(t, 0)
-	if err := (kairosBackend{}).RebootPrevious(); err != nil {
+	selected := func() {
+		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.WriteString("selected\n")
+		f.Close()
+	}
+	if err := (kairosBackend{}).RebootPrevious(selected); err != nil {
 		t.Fatal(err)
 	}
-	want := "kairos-agent bootentry --select fallback\nsystemctl reboot\n"
+	want := "kairos-agent bootentry --select fallback\nselected\nsystemctl reboot\n"
 	if got := readLog(t, logFile); got != want {
 		t.Fatalf("ran %q, want %q", got, want)
 	}
@@ -1258,7 +1271,7 @@ func TestKairosBackendRebootPrevious(t *testing.T) {
 
 func TestKairosBackendRebootPreviousStopsWhenTheSelectionFails(t *testing.T) {
 	logFile, _ := fakeRebootTools(t, 1)
-	err := (kairosBackend{}).RebootPrevious()
+	err := (kairosBackend{}).RebootPrevious(func() { t.Error("selected ran after a failed selection") })
 	if err == nil || !strings.Contains(err.Error(), "bootentry") {
 		t.Fatalf("err %v, want the bootentry failure", err)
 	}
@@ -1273,7 +1286,7 @@ func TestKairosBackendRebootPreviousRefusesOnThePassiveSystem(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cosDir, "passive_mode"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	err := (kairosBackend{}).RebootPrevious()
+	err := (kairosBackend{}).RebootPrevious(func() {})
 	if err == nil || !strings.Contains(err.Error(), "already runs the previous system") {
 		t.Fatalf("err %v", err)
 	}
@@ -1309,7 +1322,7 @@ func TestKairosBackendRebootPreviousSaysTheSelectionStays(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(bin, "systemctl"), []byte(sc), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	err := (kairosBackend{}).RebootPrevious()
+	err := (kairosBackend{}).RebootPrevious(func() {})
 	if err == nil || !strings.HasPrefix(err.Error(), "The previous system is selected for the next boot; restarting failed: ") ||
 		!strings.Contains(err.Error(), "Failed to reboot") {
 		t.Fatalf("err %v", err)

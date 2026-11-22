@@ -3556,7 +3556,20 @@ ARG COSMIC_VERSION=1.11.0
 ENV COSMIC_VERSION=${COSMIC_VERSION} COSMIC_OUT=/cosmic
 ENV CARGO_TARGET_DIR=/cargo-target
 RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry,sharing=locked --mount=type=cache,id=cosmic-target,target=/cargo-target,sharing=locked cosmic-build xdg-desktop-portal-cosmic && rm -rf /cargo-target/*
-RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry,sharing=locked --mount=type=cache,id=cosmic-target,target=/cargo-target,sharing=locked cosmic-build cosmic-settings && rm -rf /cargo-target/*
+# COSMIC Settings without its Users page: accountsservice writes only /etc,
+# which Kairos rebuilds at every boot, so users added there are lost (booted
+# test, docs/superpowers/specs/2026-11-21-isotope-system-app-design.md,
+# "Users (phase 2)"). Isotope System's Users page is the one place users
+# change. The list is the epoch's default features without page-users;
+# check it again against cosmic-settings/Cargo.toml at every new epoch.
+RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry,sharing=locked --mount=type=cache,id=cosmic-target,target=/cargo-target,sharing=locked \
+    COSMIC_CARGO_ARGS="-p cosmic-settings --no-default-features --features a11y,avif,single-instance,wgpu,systemd,cosmic-comp-config,page-accessibility,page-about,page-bluetooth,page-date,page-default-apps,page-display,page-input,page-legacy-applications,page-networking,page-power,page-region,page-sound,page-window-management,page-workspaces,xdg-portal,wayland" \
+    cosmic-build cosmic-settings && \
+    rm -f "$COSMIC_OUT/usr/share/applications/com.system76.CosmicSettings.Users.desktop" \
+          "$COSMIC_OUT/usr/share/polkit-1/actions/com.system76.CosmicSettings.Users.policy" && \
+    ! test -e "$COSMIC_OUT/usr/share/applications/com.system76.CosmicSettings.Users.desktop" && \
+    ! test -e "$COSMIC_OUT/usr/share/polkit-1/actions/com.system76.CosmicSettings.Users.policy" && \
+    rm -rf /cargo-target/*
 # cosmic-files is built with upstream's build-release recipe, which runs one
 # cargo invocation per package. One invocation for all three packages unifies
 # the applet's desktop-applet feature into the cosmic-files app, which then
@@ -3985,6 +3998,26 @@ RUN make -j"$(nproc)" && make install DESTDIR=/libblockdev && \
     test -f /libblockdev/usr/lib/libbd_crypto.so && \
     test -f /libblockdev/usr/lib/libbd_nvme.so && \
     test -f /libblockdev/usr/lib/libbd_fs.so
+
+# exfatprogs: mkfs.exfat, fsck.exfat, tune.exfat, exfatlabel, dump.exfat and
+# exfat2img. libblockdev's fs plugin runs mkfs.exfat when udisks2 formats a
+# disk as exFAT (the Disks page of Isotope System), and exfatlabel to read or
+# set its label. No libraries. desktop-default copies the binaries to /usr/bin
+# (the base image's /usr/sbin is a link to it). -V prints the version and
+# exits 1, so the check reads what it prints.
+FROM toolchain AS exfatprogs
+# renovate: datasource=github-releases depName=exfatprogs/exfatprogs
+ARG EXFATPROGS_VERSION=1.2.9
+RUN mkdir -p /exfatprogs
+WORKDIR /build
+RUN curl -f --retry 5 --retry-delay 3 --retry-all-errors -L https://github.com/exfatprogs/exfatprogs/releases/download/${EXFATPROGS_VERSION}/exfatprogs-${EXFATPROGS_VERSION}.tar.xz -o x.tar.xz && tar -xf x.tar.xz && rm x.tar.xz && mv exfatprogs-* src
+WORKDIR /build/src
+RUN ./configure ${COMMON_CONFIGURE_ARGS} --prefix=/usr --sbindir=/usr/sbin
+RUN make -j"$(nproc)" && make install DESTDIR=/exfatprogs && rm -rf /exfatprogs/usr/share && \
+    for b in mkfs fsck tune dump; do test -x /exfatprogs/usr/sbin/$b.exfat; done && \
+    test -x /exfatprogs/usr/sbin/exfatlabel && test -x /exfatprogs/usr/sbin/exfat2img && \
+    /exfatprogs/usr/sbin/exfatlabel -V 2>&1 | grep -q "version : ${EXFATPROGS_VERSION}" && \
+    /exfatprogs/usr/sbin/mkfs.exfat -V 2>&1 | grep -q "version : ${EXFATPROGS_VERSION}"
 
 # udisks2: the org.freedesktop.UDisks2 system service that mounts and unmounts
 # removable disks for an unprivileged session (udisksctl, and the file manager
@@ -5563,6 +5596,8 @@ COPY --from=libbytesize /libbytesize /
 COPY --from=libnvme /libnvme /
 COPY --from=libblockdev /libblockdev /
 COPY --from=udisks2 /udisks2 /
+# exFAT for the Disks page's Format (libblockdev runs mkfs.exfat).
+COPY --from=exfatprogs /exfatprogs/usr/sbin/ /usr/bin/
 # XDG MIME database — required for GLib content-type detection, which appstream/
 # libxmlb rely on to decompress the gzipped Flathub catalog (fixes flatpak search).
 COPY --from=shared-mime-info /shared-mime-info /

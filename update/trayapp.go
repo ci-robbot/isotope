@@ -342,7 +342,7 @@ func announce(c daemonClient, rel Release, st Status, noIcon bool, notify func(s
 
 // busyState reports whether the service is running a job.
 func busyState(s State) bool {
-	return s == StateChecking || s == StateInspecting || s == StateApplying || s == StateExtension || s == StateBackup
+	return s == StateChecking || s == StateInspecting || s == StateApplying || s == StateExtension || s == StateBackup || s == StateRestore
 }
 
 // defaultSessionFile names the variant's session settings, among them

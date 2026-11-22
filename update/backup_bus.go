@@ -3,12 +3,13 @@ package main
 // Backups over D-Bus, for Isotope System' Backup page: the status (no
 // polkit: the config holds no secret, and `isotope status` reads it as any
 // user), back up now and the schedule (polkit's backup action, admin only).
-// They run the code `isotope backup` runs as root. Setting up a target and
-// restoring stay with the CLI for now; see
+// They run the code `isotope backup` runs as root. Setting up a target is
+// in backup_target.go; see
 // docs/superpowers/specs/2026-11-21-isotope-system-app-design.md.
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -28,13 +29,13 @@ var errBackupUnavailable = errors.New("backup is not available on this edition (
 
 // daemonBackup is the daemon's backup: `isotope backup` as root, with every
 // line restic and the backup print sent to progress.
-var daemonBackup = func(progress func(string)) (string, error) {
+var daemonBackup = func(ctx context.Context, progress func(string)) (string, error) {
 	if !exists(restic()) {
 		return "", errBackupUnavailable
 	}
 	w := &lineWriter{line: progress}
 	defer w.Flush()
-	if _, err := runConfiguredBackup(defaultBackupPaths(), false, false, w, w); err != nil {
+	if _, err := runConfiguredBackup(ctx, defaultBackupPaths(), false, false, w, w); err != nil {
 		return "", err
 	}
 	return "Backed up.", nil
@@ -86,36 +87,14 @@ func (d *Daemon) BackupNow() error {
 	switch {
 	case d.backup == nil:
 		return errBackupUnavailable
+	case d.stopping:
+		return ErrStopping
 	case d.rebooting:
 		return ErrRebooting
 	case d.busyLocked() || d.job != nil:
 		return ErrBusy
 	}
-	j := &job{cancel: func() {}, prev: d.state, prevDetail: d.detail}
-	d.job = j
-	d.backupResult, d.backupDetail = "", ""
-	d.setLocked(StateBackup, "Backing up this machine")
-	d.wg.Add(1)
-	go func() {
-		defer d.wg.Done()
-		msg, err := d.backup(d.progress)
-		d.mu.Lock()
-		defer d.mu.Unlock()
-		d.job = nil
-		switch {
-		case errors.Is(err, errPartial):
-			d.backupResult, d.backupDetail = backupResultPartial, "Backed up, but "+err.Error()+"."
-		case err != nil:
-			d.backupResult, d.backupDetail = backupResultFailed, err.Error()
-		default:
-			d.backupResult, d.backupDetail = backupResultOK, msg
-		}
-		prev, detail := j.prev, j.prevDetail
-		if prev == StateError {
-			prev, detail = StateIdle, ""
-		}
-		d.setLocked(prev, detail)
-	}()
+	d.startBackupJobLocked(StateBackup, "Backing up this machine", "Backed up", d.backup)
 	return nil
 }
 
@@ -126,6 +105,7 @@ func backupStatusDict(p backupPaths) (map[string]dbus.Variant, error) {
 	if err != nil {
 		return nil, err
 	}
+	canRestore, refusal := machineIsNew(p)
 	restore := strings.TrimSpace(readFileString(p.finishResult()))
 	if restore == "ok" {
 		restore = ""
@@ -133,6 +113,8 @@ func backupStatusDict(p backupPaths) (map[string]dbus.Variant, error) {
 	return map[string]dbus.Variant{
 		"available":  dbus.MakeVariant(exists(restic())),
 		"target":     dbus.MakeVariant(c.Target),
+		"label":      dbus.MakeVariant(c.Label),
+		"kind":       dbus.MakeVariant(targetKind(c.Target)),
 		"schedule":   dbus.MakeVariant(c.Schedule),
 		"containers": dbus.MakeVariant(c.Containers),
 		"last":       dbus.MakeVariant(c.Last),
@@ -140,6 +122,9 @@ func backupStatusDict(p backupPaths) (map[string]dbus.Variant, error) {
 		"warning":    dbus.MakeVariant(backupWarning(c)),
 		"present":    dbus.MakeVariant(c.Target != "" && targetPresent(c.Target)),
 		"restore":    dbus.MakeVariant(restore),
+
+		"can_restore":     dbus.MakeVariant(canRestore),
+		"restore_refusal": dbus.MakeVariant(refusal),
 	}, nil
 }
 
@@ -179,7 +164,7 @@ func (a busAPI) SetBackupSchedule(sender dbus.Sender, schedule string) *dbus.Err
 	}
 	// The job writes the config when it ends; a schedule change must not
 	// be lost to that write.
-	if a.s.d.Status().State == StateBackup {
+	if backupJobRunning(a.s.d.Status().State) {
 		return busError(ErrBusy)
 	}
 	_, err := setBackupSchedule(defaultBackupPaths(), schedule)

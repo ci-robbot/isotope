@@ -209,6 +209,10 @@ if [ "$DESKTOP" = cosmic ]; then
         "D=/usr/share/applications/io.kairos.Isotope.QuickSettings.desktop; grep -qx 'Exec=isotope-applet-quick' \$D && grep -qx 'X-CosmicApplet=true' \$D"
     check "the quick settings open COSMIC Settings' pages and cosmic-osd, which are on the image" \
         "grep -qa wireless $Q && grep -qa cosmic-osd $Q && test -x /usr/bin/cosmic-settings && test -x /usr/bin/cosmic-osd"
+    # Users added in COSMIC Settings are lost at reboot (/etc is in memory), so
+    # it is built without its Users page; users change in Isotope System.
+    check "COSMIC Settings has no Users page (no Users desktop file or policy)" \
+        "test -x /usr/bin/cosmic-settings && ! test -e /usr/share/applications/com.system76.CosmicSettings.Users.desktop && ! test -e /usr/share/polkit-1/actions/com.system76.CosmicSettings.Users.policy"
     check "the top bar's right side is status area, notifications, quick settings, battery, time" \
         "grep -qF '[\"com.system76.CosmicAppletStatusArea\", \"com.system76.CosmicAppletNotifications\", \"io.kairos.Isotope.QuickSettings\", \"com.system76.CosmicAppletBattery\", \"com.system76.CosmicAppletTime\"]' /usr/share/cosmic/com.system76.CosmicPanel.Panel/v1/plugins_wings"
     # The stock applets the quick settings replace stay installed, so a user

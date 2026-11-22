@@ -66,7 +66,7 @@ func iconFor(s State) string {
 	switch s {
 	case StateUpdateAvailable:
 		return "update"
-	case StateInspecting, StateApplying, StateExtension, StateBackup:
+	case StateInspecting, StateApplying, StateExtension, StateBackup, StateRestore:
 		return "busy"
 	case StateRebootPending:
 		return "reboot"

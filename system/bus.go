@@ -7,8 +7,10 @@ package main
 // job happens in the daemon, behind polkit.
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -36,6 +38,7 @@ const (
 	StateUnmanaged       = "unmanaged"
 	StateExtension       = "extension"
 	StateBackup          = "backup"
+	StateRestore         = "restore"
 )
 
 // Status.Pending: how the install behind reboot-pending ended.
@@ -57,7 +60,7 @@ type Status struct {
 // Busy says whether the daemon runs a job.
 func (s Status) Busy() bool {
 	switch s.State {
-	case StateChecking, StateInspecting, StateApplying, StateExtension, StateBackup:
+	case StateChecking, StateInspecting, StateApplying, StateExtension, StateBackup, StateRestore:
 		return true
 	}
 	return false
@@ -84,13 +87,52 @@ type CatalogEntry struct {
 	Installed, Enabled                        bool
 }
 
-// BackupStatus is the daemon's BackupStatus.
+// BackupStatus is the daemon's BackupStatus. CanRestore is false on a
+// machine in use; RestoreRefusal then says why.
 type BackupStatus struct {
 	Available                bool
-	Target, Schedule         string
+	Target, Label, Kind      string
+	Schedule                 string
 	Containers, Present      bool
 	Last                     int64
 	Result, Warning, Restore string
+	CanRestore               bool
+	RestoreRefusal           string
+}
+
+// User is one row of the daemon's Users.
+type User struct {
+	Name, FullName, Home string
+	UID                  uint32
+	Admin                bool
+}
+
+// Credentials go to the daemon through a pipe, never as a D-Bus string:
+// the backup password, then the target's NAME=value lines.
+type Credentials struct {
+	Password string
+	Env      []string // NAME=value
+}
+
+// TargetOptions are the a{sv} options of BackupInit, BackupList and
+// Restore. A zero value is not sent.
+type TargetOptions struct {
+	Containers, Existing bool
+	Label, HostKey       string
+	Port                 uint32
+}
+
+// Snapshot is one backup of BackupList.
+type Snapshot struct {
+	ID, Host string
+	Time     int64
+	Size     uint64
+}
+
+// HistoryEntry is one install or rollback of UpdateHistory.
+type HistoryEntry struct {
+	Time                               int64
+	Kind, Version, Ref, Digest, Result string
 }
 
 // Container is one LUKS container of RecoveryStatus.
@@ -132,6 +174,21 @@ type Daemon interface {
 	BackupStatus() (BackupStatus, error)
 	BackupNow() error
 	SetBackupSchedule(schedule string) error
+	Users() ([]User, error)
+	AddUser(name, fullName string, admin bool, password string) error
+	RemoveUser(name string, keepHome bool) error
+	SetPassword(name, current, password string) error
+	SetAdmin(name string, on bool) error
+	BackupInit(target string, opt TargetOptions, cred Credentials) error
+	BackupSSHKey() (string, error)
+	BackupHostKey(host string, port uint32) ([]string, error)
+	BackupList(source string, opt TargetOptions, cred Credentials) ([]Snapshot, error)
+	BackupExport(path string) error
+	BackupCancel() error
+	Restore(source, snapshot, host string, opt TargetOptions, cred Credentials) error
+	RecoveryNewKey(current, newKey string) error
+	RecoveryReseal(key string) error
+	UpdateHistory() ([]HistoryEntry, error)
 	// Watch sends the daemon's events until stop is called.
 	Watch() (events <-chan Event, stop func(), err error)
 }
@@ -180,6 +237,9 @@ func Describe(err error) string {
 		return "The update service is busy with another job; try again when it ends."
 	case "Exiting":
 		return "The update service was stopping; try again."
+	case "Refused":
+		// The daemon's own sentence says what may not be done.
+		return err.Error()
 	}
 	var dbe dbus.Error
 	if errors.As(err, &dbe) && strings.HasPrefix(dbe.Name, "org.freedesktop.DBus.Error.") {
@@ -204,21 +264,42 @@ func dialDaemon() (*busDaemon, error) {
 }
 
 func (d *busDaemon) call(flags dbus.Flags, method string, out []any, args ...any) error {
-	call := d.conn.Object(busName, busPath).Call(busInterface+"."+method, flags, args...)
-	err := call.Err
-	if err == nil && len(out) > 0 {
-		err = call.Store(out...)
-	}
-	// The service exits when idle; a call that lands during the exit is
-	// refused once with Exiting, and the next one starts a new instance.
-	if errName(wrapErr(err)) == "Exiting" {
-		call = d.conn.Object(busName, busPath).Call(busInterface+"."+method, flags, args...)
-		err = call.Err
+	return d.callCtx(context.Background(), flags, method, out, args...)
+}
+
+// Timeouts of the calls that wait for network or disk work, longer than
+// D-Bus's default 25 s. BackupInit runs a whole restic init, which takes
+// long on a slow remote; the daemon bounds BackupList at 110 s.
+const (
+	initTimeout = 10 * time.Minute
+	longTimeout = 120 * time.Second
+)
+
+// callCtx is call with a context: its deadline replaces D-Bus's default
+// timeout.
+func (d *busDaemon) callCtx(ctx context.Context, flags dbus.Flags, method string, out []any, args ...any) error {
+	once := func() error {
+		call := d.conn.Object(busName, busPath).CallWithContext(ctx, busInterface+"."+method, flags, args...)
+		err := call.Err
 		if err == nil && len(out) > 0 {
 			err = call.Store(out...)
 		}
+		return err
+	}
+	err := once()
+	// The service exits when idle; a call that lands during the exit is
+	// refused once with Exiting, and the next one starts a new instance.
+	// A fd argument is still open here: withSecrets closes it after call.
+	if errName(wrapErr(err)) == "Exiting" {
+		err = once()
 	}
 	return wrapErr(err)
+}
+
+func (d *busDaemon) callTimeout(timeout time.Duration, method string, out []any, args ...any) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return d.callCtx(ctx, 0, method, out, args...)
 }
 
 func str(m map[string]dbus.Variant, k string) string {
@@ -355,15 +436,195 @@ func (d *busDaemon) BackupStatus() (BackupStatus, error) {
 func backupFromDict(m map[string]dbus.Variant) BackupStatus {
 	last, _ := m["last"].Value().(int64)
 	return BackupStatus{
-		Available: boolean(m, "available"), Target: str(m, "target"), Schedule: str(m, "schedule"),
+		Available: boolean(m, "available"), Target: str(m, "target"), Label: str(m, "label"),
+		Kind: str(m, "kind"), Schedule: str(m, "schedule"),
 		Containers: boolean(m, "containers"), Present: boolean(m, "present"), Last: last,
 		Result: str(m, "result"), Warning: str(m, "warning"), Restore: str(m, "restore"),
+		CanRestore: boolean(m, "can_restore"), RestoreRefusal: str(m, "restore_refusal"),
 	}
 }
 
 func (d *busDaemon) BackupNow() error { return d.call(0, "BackupNow", nil) }
 func (d *busDaemon) SetBackupSchedule(s string) error {
 	return d.call(0, "SetBackupSchedule", nil, s)
+}
+
+func (d *busDaemon) Users() ([]User, error) {
+	var list []map[string]dbus.Variant
+	if err := d.call(0, "Users", []any{&list}); err != nil {
+		return nil, err
+	}
+	out := make([]User, 0, len(list))
+	for _, m := range list {
+		out = append(out, userFromDict(m))
+	}
+	return out, nil
+}
+
+func userFromDict(m map[string]dbus.Variant) User {
+	uid, _ := m["uid"].Value().(uint32)
+	return User{Name: str(m, "name"), FullName: str(m, "full_name"), Home: str(m, "home"),
+		UID: uid, Admin: boolean(m, "admin")}
+}
+
+func (d *busDaemon) AddUser(name, fullName string, admin bool, password string) error {
+	return withSecrets([]string{password}, func(fd dbus.UnixFD) error {
+		return d.call(0, "AddUser", nil, name, fullName, admin, fd)
+	})
+}
+
+func (d *busDaemon) RemoveUser(name string, keepHome bool) error {
+	return d.call(0, "RemoveUser", nil, name, keepHome)
+}
+
+// SetPassword sends the current password first, then the new one. The
+// daemon reads current only when it must (your own account from a session
+// you did not open).
+func (d *busDaemon) SetPassword(name, current, password string) error {
+	return withSecrets([]string{current, password}, func(fd dbus.UnixFD) error {
+		return d.call(0, "SetPassword", nil, name, fd)
+	})
+}
+
+func (d *busDaemon) SetAdmin(name string, on bool) error {
+	return d.call(0, "SetAdmin", nil, name, on)
+}
+
+// optionsDict is TargetOptions as the daemon's a{sv}, without the zero
+// values: BackupList and Restore refuse a key they do not take.
+func optionsDict(o TargetOptions) map[string]dbus.Variant {
+	m := map[string]dbus.Variant{}
+	if o.Containers {
+		m["containers"] = dbus.MakeVariant(true)
+	}
+	if o.Existing {
+		m["existing"] = dbus.MakeVariant(true)
+	}
+	if o.Label != "" {
+		m["label"] = dbus.MakeVariant(o.Label)
+	}
+	if o.HostKey != "" {
+		m["host_key"] = dbus.MakeVariant(o.HostKey)
+	}
+	if o.Port != 0 {
+		m["port"] = dbus.MakeVariant(o.Port)
+	}
+	return m
+}
+
+func credLines(c Credentials) []string {
+	return append([]string{c.Password}, c.Env...)
+}
+
+func (d *busDaemon) BackupInit(target string, opt TargetOptions, cred Credentials) error {
+	return withSecrets(credLines(cred), func(fd dbus.UnixFD) error {
+		return d.callTimeout(initTimeout, "BackupInit", nil, target, optionsDict(opt), fd)
+	})
+}
+
+func (d *busDaemon) BackupSSHKey() (string, error) {
+	var key string
+	err := d.call(0, "BackupSSHKey", []any{&key})
+	return key, err
+}
+
+func (d *busDaemon) BackupHostKey(host string, port uint32) ([]string, error) {
+	var fps []string
+	err := d.callTimeout(longTimeout, "BackupHostKey", []any{&fps}, host, port)
+	return fps, err
+}
+
+// BackupList lists the backups in source, newest first. Source "" is this
+// machine's target, with the daemon's own password; cred may then be empty.
+func (d *busDaemon) BackupList(source string, opt TargetOptions, cred Credentials) ([]Snapshot, error) {
+	var list []map[string]dbus.Variant
+	err := withSecrets(credLines(cred), func(fd dbus.UnixFD) error {
+		return d.callTimeout(longTimeout, "BackupList", []any{&list}, source, optionsDict(opt), fd)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return snapshotsFromDicts(list), nil
+}
+
+func snapshotsFromDicts(list []map[string]dbus.Variant) []Snapshot {
+	out := make([]Snapshot, 0, len(list))
+	for _, m := range list {
+		t, _ := m["time"].Value().(int64)
+		size, _ := m["size"].Value().(uint64)
+		out = append(out, Snapshot{ID: str(m, "id"), Host: str(m, "host"), Time: t, Size: size})
+	}
+	return out
+}
+
+func (d *busDaemon) BackupExport(path string) error { return d.call(0, "BackupExport", nil, path) }
+func (d *busDaemon) BackupCancel() error            { return d.call(0, "BackupCancel", nil) }
+
+// Restore starts a restore as a job; the daemon refuses it on a machine in
+// use.
+func (d *busDaemon) Restore(source, snapshot, host string, opt TargetOptions, cred Credentials) error {
+	return withSecrets(credLines(cred), func(fd dbus.UnixFD) error {
+		return d.call(0, "Restore", nil, source, snapshot, host, optionsDict(opt), fd)
+	})
+}
+
+// RecoveryNewKey sends the current secret (passphrase or recovery key),
+// then the new key.
+func (d *busDaemon) RecoveryNewKey(current, newKey string) error {
+	return withSecrets([]string{current, newKey}, func(fd dbus.UnixFD) error {
+		return d.call(0, "RecoveryNewKey", nil, fd)
+	})
+}
+
+func (d *busDaemon) RecoveryReseal(key string) error {
+	return withSecrets([]string{key}, func(fd dbus.UnixFD) error {
+		return d.call(0, "RecoveryReseal", nil, fd)
+	})
+}
+
+func (d *busDaemon) UpdateHistory() ([]HistoryEntry, error) {
+	var list []map[string]dbus.Variant
+	if err := d.call(0, "UpdateHistory", []any{&list}); err != nil {
+		return nil, err
+	}
+	return historyFromDicts(list), nil
+}
+
+func historyFromDicts(list []map[string]dbus.Variant) []HistoryEntry {
+	out := make([]HistoryEntry, 0, len(list))
+	for _, m := range list {
+		t, _ := m["time"].Value().(int64)
+		out = append(out, HistoryEntry{Time: t, Kind: str(m, "kind"), Version: str(m, "version"),
+			Ref: str(m, "ref"), Digest: str(m, "digest"), Result: str(m, "result")})
+	}
+	return out
+}
+
+// withSecrets passes secrets to the daemon through a pipe: the D-Bus
+// message carries the read end as an fd, never the text. It is the twin of
+// withSecrets in update/recovery_cli.go: lines joined by newlines, at most
+// 4096 bytes.
+func withSecrets(secrets []string, call func(dbus.UnixFD) error) error {
+	r, w, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	payload := []byte(strings.Join(secrets, "\n") + "\n")
+	if len(payload) > 4096 {
+		clear(payload)
+		w.Close()
+		return errors.New("the secret is too long")
+	}
+	// A pipe buffer holds at least 4096 bytes (PIPE_BUF; 64 KiB by default
+	// on Linux), so this write never blocks.
+	_, werr := w.Write(payload)
+	clear(payload)
+	w.Close()
+	if werr != nil {
+		return werr
+	}
+	return call(dbus.UnixFD(r.Fd()))
 }
 
 // retryBusy repeats a network call while the daemon's one network slot is

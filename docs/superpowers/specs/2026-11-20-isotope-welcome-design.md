@@ -175,6 +175,13 @@ action asks for the admin's password (`auth_admin_keep`), unlike the other
 backup methods. A separate action `io.kairos.isotope-update.restore` carries
 that rule.
 
+*Implementation note (phase 2):* the action is YES for `admin`, with no
+password, like the other actions. The sway, i3 and niri sessions run no
+polkit agent, so `auth_admin_keep` could never be answered there. A restore
+is protected by the machine-is-new check, the backup password and the
+confirmation instead. Also, `BackupInit` returns no password: the app
+generates it and sends it through a pipe fd.
+
 #### Restore steps
 
 1. **Where is the backup**: a USB disk (see "Disks"), a remote target

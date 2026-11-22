@@ -391,6 +391,11 @@ jobs:
         shell: bash
         run: test/welcome/check-welcome-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
 
+      - name: Check Isotope System
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/system/check-system-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
+
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
         if: matrix.desktop != 'server'

@@ -77,6 +77,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "isotope-system: the system bus: %v\n", err)
 	}
 	hooks.Network = nmNetwork{}
+	if d, err := dialDisks(); err == nil {
+		hooks.Disks = d
+	} else {
+		fmt.Fprintf(os.Stderr, "isotope-system: %v\n", err)
+	}
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate

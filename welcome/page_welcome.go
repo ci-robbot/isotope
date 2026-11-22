@@ -1,6 +1,8 @@
 package main
 
 import (
+	"sync"
+
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/widget"
@@ -11,12 +13,75 @@ import (
 func init() { pageMakers[PWelcome] = func(u *UI) page { return &welcomePage{basePage: basePage{u}} } }
 
 // welcomePage is the first page: the mark, the edition and version, and
-// how to set the machine up. "Restore from a backup" joins "Set up as new"
-// with the Restore plan.
+// how to set the machine up: "Set up as new", or "Restore from a backup",
+// which is offered only to an administrator, only in the full flow, and
+// only on a machine the daemon calls new (BackupStatus's can_restore).
 type welcomePage struct {
 	basePage
-	list        widget.List
-	asNew, quit widget.Clickable
+	list                 widget.List
+	asNew, restore, quit widget.Clickable
+
+	mu      sync.Mutex // the status call writes under it
+	wg      sync.WaitGroup
+	started bool
+	offered bool
+}
+
+// start asks the daemon whether the machine is new, in the background.
+// The page does not decide that itself; the daemon checks again on
+// Restore.
+func (p *welcomePage) start() {
+	if p.started {
+		return
+	}
+	p.started = true
+	u := p.u
+	b := u.hooks.Backup
+	if b == nil || !u.hooks.Admin || len(u.setupFlow.Pages()) < 2 || u.setupFlow.Pages()[0] != PWelcome {
+		return
+	}
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		st, err := b.BackupStatus()
+		p.mu.Lock()
+		p.offered = err == nil && st.Available && st.CanRestore
+		p.mu.Unlock()
+		if u.hooks.Invalidate != nil {
+			u.hooks.Invalidate()
+		}
+	}()
+}
+
+// wait blocks until the status call has ended (tests).
+func (p *welcomePage) wait() { p.wg.Wait() }
+
+func (p *welcomePage) restoreOffered() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.offered
+}
+
+// restoring: "Restore from a backup" is chosen.
+func (p *welcomePage) restoring() bool {
+	return p.u.restoreFlow != nil && p.u.flow == p.u.restoreFlow
+}
+
+// choose picks the flow: the restore steps, or the setup. Leaving the
+// restore drops its secrets.
+func (p *welcomePage) choose(restore bool) {
+	u := p.u
+	switch {
+	case restore && p.restoreOffered():
+		if u.restoreFlow == nil {
+			u.restoreFlow = NewRestoreFlow()
+		}
+		u.flow = u.restoreFlow
+		u.restoreState().start()
+	case !restore && p.restoring():
+		u.restoreState().leave()
+		u.flow = u.setupFlow
+	}
 }
 
 func (p *welcomePage) Footer(n nav) (leading, trailing []guikit.Action) {
@@ -28,10 +93,18 @@ func (p *welcomePage) Update(gtx layout.Context) {
 	if p.quit.Clicked(gtx) {
 		p.u.askSkip()
 	}
+	p.start()
 	if p.asNew.Clicked(gtx) {
-		// The only choice: a click on it is a Continue. With the Restore
-		// plan's second card a click selects, and Continue goes on.
-		p.u.next()
+		if p.restoreOffered() {
+			// Two choices: a click selects, and Continue goes on.
+			p.choose(false)
+		} else {
+			// The only choice: a click on it is a Continue.
+			p.u.next()
+		}
+	}
+	if p.restore.Clicked(gtx) {
+		p.choose(true)
 	}
 }
 
@@ -77,7 +150,16 @@ func (p *welcomePage) Body(gtx layout.Context) layout.Dimensions {
 				guikit.VGap(26),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 420))
-					return u.ChoiceCard(gtx, &p.asNew, true, "Set up as new", "Choose the settings step by step")
+					return u.ChoiceCard(gtx, &p.asNew, !p.restoring(), "Set up as new", "Choose the settings step by step")
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					if !p.restoreOffered() {
+						return layout.Dimensions{}
+					}
+					return layout.Inset{Top: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 420))
+						return u.ChoiceCard(gtx, &p.restore, p.restoring(), "Restore from a backup", "Bring back a machine from its Isotope backup")
+					})
 				}),
 			)
 		})

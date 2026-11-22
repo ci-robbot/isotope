@@ -26,6 +26,8 @@ type System struct {
 	Encrypted bool
 	Kernel    string
 	Hostname  string
+	// User is the name of the user who runs the app.
+	User string
 }
 
 const (
@@ -52,6 +54,9 @@ func readSystem() System {
 		s.Kernel = strings.TrimSpace(string(b))
 	}
 	s.Hostname, _ = os.Hostname()
+	if u, err := user.Current(); err == nil {
+		s.User = u.Username
+	}
 	return s
 }
 

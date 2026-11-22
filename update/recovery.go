@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/kairos-community/isotope/update/recoverykey"
 )
 
 // Recovery keys of the disk encryption, run as root by isotope-updated for
@@ -360,47 +361,68 @@ func resealArgs() []string {
 // the recovery keyslots it replaces, only once newKey has opened its own
 // slot. secret authorizes it: the passphrase or the current recovery key, or
 // empty to use the TPM on Trusted Boot.
+//
+// An error that is ErrKeyUnchanged comes before any container was changed:
+// the old key still works and the new one does not. An error that is
+// ErrKeyPartlyChanged comes after the new key was added to at least one
+// container: both keys must be kept.
 func (r recovery) NewKey(secret, newKey string) error {
 	if !recoveryKeyShape.MatchString(newKey) {
-		return errors.New("the new recovery key is not 8 groups of 8 modhex letters")
+		return sentenceErr{"the new recovery key is not 8 groups of 8 modhex letters", ErrKeyUnchanged}
 	}
 	cs, err := r.containers()
 	if err != nil {
-		return err
+		return sentenceErr{err.Error(), ErrKeyUnchanged}
 	}
 	// Check every container opens before changing any.
 	resolved := map[string]string{}
 	for _, c := range cs {
 		if secret == "" {
 			if !r.tpmWorks(c.Device) {
-				return fmt.Errorf("the TPM does not unlock %s: type the passphrase or recovery key", c.Label)
+				return sentenceErr{fmt.Sprintf("the TPM does not unlock %s: type the passphrase or recovery key", c.Label), ErrKeyUnchanged}
 			}
 			continue
 		}
 		s, ok := r.testSecret(c.Device, secret)
 		if !ok {
-			return fmt.Errorf("what you typed does not open %s", c.Label)
+			return sentenceErr{fmt.Sprintf("what you typed does not open %s", c.Label), ErrKeyUnchanged}
 		}
 		resolved[c.Device] = s
 	}
+	changed := false
 	for _, c := range cs {
-		if err := r.replaceRecoveryKey(c, resolved[c.Device], newKey); err != nil {
-			return fmt.Errorf("%s: %w", c.Label, err)
+		added, err := r.replaceRecoveryKey(c, resolved[c.Device], newKey)
+		changed = changed || added
+		if err != nil {
+			if changed {
+				return sentenceErr{fmt.Sprintf("%s: %v; the new key was already added to the disk, keep both keys", c.Label, err), ErrKeyPartlyChanged}
+			}
+			return sentenceErr{fmt.Sprintf("%s: %v", c.Label, err), ErrKeyUnchanged}
 		}
 	}
 	return nil
 }
 
-func (r recovery) replaceRecoveryKey(c ContainerStatus, secret, newKey string) error {
+var (
+	// ErrKeyUnchanged: a new recovery key was refused before any change.
+	ErrKeyUnchanged = errors.New("the recovery key was not changed")
+	// ErrKeyPartlyChanged: a new recovery key failed after it was added
+	// to at least one container.
+	ErrKeyPartlyChanged = errors.New("the recovery key was changed in part")
+)
+
+// replaceRecoveryKey adds newKey to c and removes the old recovery key.
+// added says whether newKey was added, also when a later step failed.
+func (r recovery) replaceRecoveryKey(c ContainerStatus, secret, newKey string) (added bool, err error) {
 	before, err := r.header(c.Device)
 	if err != nil {
-		return err
+		return false, err
 	}
 	oldSlots, oldTokens := before.slotsOf(recoveryTokenType)
 
 	paths, cleanup, err := secretFiles(newKey, secret)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer cleanup()
 	unlock := []string{"--token-type", tpmTokenType}
@@ -411,29 +433,31 @@ func (r recovery) replaceRecoveryKey(c ContainerStatus, secret, newKey string) e
 	args = append(args, "--pbkdf", "pbkdf2", "--hash", "sha512", "--pbkdf-force-iterations", "1000",
 		c.Device, paths[0])
 	if _, err := r.run("cryptsetup", args, nil); err != nil {
-		return fmt.Errorf("adding the new recovery key: %w", err)
+		// cryptsetup may have written the keyslot before it failed.
+		after, herr := r.header(c.Device)
+		return herr != nil || len(after.Keyslots) != len(before.Keyslots), fmt.Errorf("adding the new recovery key: %w", err)
 	}
 	after, err := r.header(c.Device)
 	if err != nil {
-		return err
+		return true, err
 	}
 	slot, err := addedSlot(before, after)
 	if err != nil {
-		return err
+		return true, err
 	}
 	token, _ := json.Marshal(map[string]any{"type": recoveryTokenType, "keyslots": []string{slot}})
 	if _, err := r.run("cryptsetup", []string{"token", "import", c.Device}, token); err != nil {
-		return fmt.Errorf("marking keyslot %s as the recovery key: %w", slot, err)
+		return true, fmt.Errorf("marking keyslot %s as the recovery key: %w", slot, err)
 	}
 	if _, err := r.run("cryptsetup", []string{"open", "--test-passphrase", "--disable-external-tokens",
 		"--key-slot", slot, "--key-file", "-", c.Device}, []byte(newKey)); err != nil {
-		return fmt.Errorf("the new recovery key does not open keyslot %s; the old one is kept: %w", slot, err)
+		return true, fmt.Errorf("the new recovery key does not open keyslot %s; the old one is kept: %w", slot, err)
 	}
 	// Only now does the old key go: its tokens first, so no token ever
 	// points at a slot that is gone.
 	for _, id := range oldTokens {
 		if _, err := r.run("cryptsetup", []string{"token", "remove", "--token-id", id, c.Device}, nil); err != nil {
-			return fmt.Errorf("removing the old recovery key token %s: %w", id, err)
+			return true, fmt.Errorf("removing the old recovery key token %s: %w", id, err)
 		}
 	}
 	for _, s := range oldSlots {
@@ -441,10 +465,10 @@ func (r recovery) replaceRecoveryKey(c ContainerStatus, secret, newKey string) e
 			continue
 		}
 		if _, err := r.run("cryptsetup", []string{"luksKillSlot", "--batch-mode", c.Device, s}, nil); err != nil {
-			return fmt.Errorf("removing the old recovery keyslot %s: %w", s, err)
+			return true, fmt.Errorf("removing the old recovery keyslot %s: %w", s, err)
 		}
 	}
-	return nil
+	return true, nil
 }
 
 func addedSlot(before, after luksHeader) (string, error) {
@@ -460,53 +484,13 @@ func addedSlot(before, after luksHeader) (string, error) {
 	return added[0], nil
 }
 
-// The recovery key format, as in install-ui/core/recoverykey.go and systemd: 32
-// random bytes, each nibble one of 16 modhex letters, 8 groups of 8.
-const modhexAlphabet = "cbdefghijklnrtuv"
+// The recovery key format lives in the recoverykey package.
+const modhexAlphabet = recoverykey.Alphabet
 
 var recoveryKeyShape = regexp.MustCompile(`^([cbdefghijklnrtuv]{8}-){7}[cbdefghijklnrtuv]{8}$`)
 
-func generateRecoveryKey(r io.Reader) (string, error) {
-	buf := make([]byte, 32)
-	if _, err := io.ReadFull(r, buf); err != nil {
-		return "", fmt.Errorf("reading random bytes for the recovery key: %w", err)
-	}
-	var b strings.Builder
-	for i, c := range buf {
-		if i > 0 && i%4 == 0 {
-			b.WriteByte('-')
-		}
-		b.WriteByte(modhexAlphabet[c>>4])
-		b.WriteByte(modhexAlphabet[c&0x0f])
-	}
-	return b.String(), nil
-}
+func generateRecoveryKey(r io.Reader) (string, error) { return recoverykey.Generate(r) }
 
-func newRecoveryKey() (string, error) { return generateRecoveryKey(rand.Reader) }
+func newRecoveryKey() (string, error) { return recoverykey.New() }
 
-// canonicalRecoveryKey returns s as a recovery key in its canonical form
-// (lower case, dashes), or "" when s is not 64 modhex letters once spaces
-// and dashes are dropped.
-func canonicalRecoveryKey(s string) string {
-	var chars []rune
-	for _, r := range strings.ToLower(s) {
-		switch {
-		case r == '-' || r == ' ' || r == '\t':
-		case strings.ContainsRune(modhexAlphabet, r):
-			chars = append(chars, r)
-		default:
-			return ""
-		}
-	}
-	if len(chars) != 64 {
-		return ""
-	}
-	var b strings.Builder
-	for i := 0; i < 64; i += 8 {
-		if i > 0 {
-			b.WriteByte('-')
-		}
-		b.WriteString(string(chars[i : i+8]))
-	}
-	return b.String()
-}
+func canonicalRecoveryKey(s string) string { return recoverykey.Canonical(s) }

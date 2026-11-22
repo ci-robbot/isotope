@@ -29,8 +29,11 @@ const (
 	StateUnmanaged       State = "unmanaged"
 	// StateExtension: an extension job runs kairos-agent sysext.
 	StateExtension State = "extension"
-	// StateBackup: a backup job runs restic (BackupNow).
+	// StateBackup: a backup job runs restic (BackupNow, BackupExport).
 	StateBackup State = "backup"
+	// StateRestore: a restore job puts a backup back (Restore). It ends in
+	// a restart.
+	StateRestore State = "restore"
 )
 
 // Status is everything a client shows: the tray menu, the CLI's status line.
@@ -79,7 +82,9 @@ type Backend interface {
 	Reboot() error
 	// RebootPrevious selects the passive (previous) system for the next boot
 	// only, then reboots. The boot after that is the active system again.
-	RebootPrevious() error
+	// selected runs once the selection is made and before the reboot, which
+	// can stop the daemon before RebootPrevious returns.
+	RebootPrevious(selected func()) error
 }
 
 var (
@@ -100,6 +105,10 @@ var (
 	// ErrRebooting refuses an install after Reboot was asked: kairos-agent
 	// must not start under a system that systemd is shutting down.
 	ErrRebooting = errors.New("the system is rebooting")
+
+	// ErrStopping refuses a job once the daemon got a stop signal. A client
+	// sees it as Exiting and can call again, which starts a new instance.
+	ErrStopping = errors.New("the update service is exiting; call again to start a new one")
 
 	errUnmanaged       = errors.New("this system has no isotope release file, so it is not updated from here")
 	errNothingToCancel = errors.New("no job to cancel")
@@ -154,6 +163,8 @@ type job struct {
 	cancel     context.CancelFunc
 	prev       State
 	prevDetail string
+	// cancelled is set by BackupCancel, so the job's outcome says so.
+	cancelled bool
 }
 
 // event is a queued callback: a status change, or a progress line.
@@ -184,6 +195,9 @@ type Daemon struct {
 	// rebooting is set from a Reboot call until backend.Reboot fails: nothing
 	// may start kairos-agent while systemd shuts the system down.
 	rebooting bool
+	// stopping is set by Stop: the process is about to exit, so no job
+	// starts, not even from a call that was already in progress.
+	stopping bool
 
 	wg sync.WaitGroup // running Apply jobs; tests wait on it
 
@@ -197,8 +211,12 @@ type Daemon struct {
 	extCat               extCache
 
 	// backup runs one backup to the configured target; nil refuses
-	// BackupNow. NewDaemon sets daemonBackup.
-	backup                     func(progress func(string)) (string, error)
+	// BackupNow. NewDaemon sets daemonBackup. export writes the backup to
+	// a file for the user uid:gid, restore puts a backup back. Variables
+	// of the daemon, so the tests fake them.
+	backup                     func(ctx context.Context, progress func(string)) (string, error)
+	export                     func(ctx context.Context, progress func(string), file string, uid, gid int) (string, error)
+	restore                    func(ctx context.Context, progress func(string), req restoreRequest) (string, error)
 	backupResult, backupDetail string // guarded by mu
 
 	relMu    sync.Mutex
@@ -211,7 +229,7 @@ type Daemon struct {
 // file the system is not an Isotope install this daemon may update, and
 // every mutating call is refused.
 func NewDaemon(b Backend) *Daemon {
-	d := &Daemon{backend: b, state: StateIdle, backup: daemonBackup}
+	d := &Daemon{backend: b, state: StateIdle, backup: daemonBackup, export: daemonExport, restore: daemonRestore}
 	if e, ok := b.(ExtBackend); ok {
 		d.ext = e
 	}
@@ -343,7 +361,7 @@ func (d *Daemon) Busy() bool {
 }
 
 func (d *Daemon) busyLocked() bool {
-	return d.state == StateChecking || d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup
+	return d.state == StateChecking || d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup || d.state == StateRestore
 }
 
 // newest is the newest published tag; FetchReleases sorts newest first.
@@ -385,6 +403,10 @@ func (d *Daemon) Check(ctx context.Context) error {
 	if !d.managed {
 		d.mu.Unlock()
 		return nil
+	}
+	if d.stopping {
+		d.mu.Unlock()
+		return ErrStopping
 	}
 	if d.busyLocked() {
 		d.mu.Unlock()
@@ -504,6 +526,8 @@ func (d *Daemon) Apply(ctx context.Context, ref, digest string, advanced bool) e
 	switch {
 	case !d.managed:
 		return errUnmanaged
+	case d.stopping:
+		return ErrStopping
 	case d.rebooting:
 		return ErrRebooting
 	case d.state == StateRebootPending:
@@ -534,6 +558,7 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 	d.mu.Lock()
 	if d.job != j {
 		d.mu.Unlock() // cancelled; Cancel restored the state
+		recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "cancelled"})
 		return
 	}
 	if err == nil && d.rebooting {
@@ -553,6 +578,7 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		d.job = nil
 		d.setLocked(StateError, err.Error())
 		d.mu.Unlock()
+		recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "failed"})
 		return
 	}
 	if l := newest(published); l != "" {
@@ -575,6 +601,7 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		// never-booted image over it. The marker stays, and so does
 		// reboot-pending, on every failure.
 		fmt.Fprintf(os.Stderr, "isotope: the upgrade to %s failed: %v (last line: %q)\n", source, err, d.lastLine())
+		recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "failed"})
 		if werr := writeRebootMarker(pendingFailed, source); werr != nil {
 			// The marker still says started: reboot-pending all the same.
 			fmt.Fprintln(os.Stderr, "isotope: could not record the failure in the marker:", werr)
@@ -591,6 +618,7 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		// state as interrupted. The install itself succeeded.
 		fmt.Fprintln(os.Stderr, "isotope: could not record the finished install in the marker:", werr)
 	}
+	recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "installed"})
 
 	var notes []string
 	// A pin keeps "update available" quiet after a deliberate choice. The
@@ -712,6 +740,8 @@ func (d *Daemon) Cancel() error {
 		return nil
 	case StateApplying, StateBackup:
 		return ErrNotCancellable
+	case StateRestore:
+		return errRestoreNotCancellable
 	case StateExtension:
 		return errExtRunning
 	default:
@@ -725,7 +755,7 @@ func (d *Daemon) Cancel() error {
 // until the reboot fails.
 func (d *Daemon) Reboot() error {
 	d.mu.Lock()
-	if d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup {
+	if d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup || d.state == StateRestore {
 		d.mu.Unlock()
 		return ErrBusy
 	}
@@ -756,7 +786,7 @@ func (d *Daemon) RebootPrevious() error {
 	case d.rebooting:
 		d.mu.Unlock()
 		return ErrRebooting
-	case d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup:
+	case d.state == StateInspecting || d.state == StateApplying || d.state == StateExtension || d.state == StateBackup || d.state == StateRestore:
 		d.mu.Unlock()
 		return ErrBusy
 	case d.state == StateRebootPending && d.pending == pendingInstalled:
@@ -769,7 +799,11 @@ func (d *Daemon) RebootPrevious() error {
 	d.rebooting = true
 	d.mu.Unlock()
 
-	if err := d.backend.RebootPrevious(); err != nil {
+	// Recorded when the previous system is selected: from then on the next
+	// boot starts it, also when the restart fails. Not after the restart,
+	// which can stop the daemon first.
+	err := d.backend.RebootPrevious(func() { recordHistory(historyEntry{Kind: "rollback"}) })
+	if err != nil {
 		d.mu.Lock()
 		d.rebooting = false
 		d.mu.Unlock()
@@ -840,7 +874,7 @@ const previousEntry = "fallback"
 // So the selection is one-shot on both: the boot after the previous system is
 // the current one again. If the selection fails nothing reboots: the restart
 // would only boot this same system.
-func (kairosBackend) RebootPrevious() error {
+func (kairosBackend) RebootPrevious(selected func()) error {
 	// Booted from passive (a fallback after a failed boot, or a rollback not
 	// restarted since), "fallback" is this very system and the restart would
 	// change nothing.
@@ -851,6 +885,7 @@ func (kairosBackend) RebootPrevious() error {
 	if err != nil {
 		return fmt.Errorf("kairos-agent bootentry --select %s: %w: %s", previousEntry, err, strings.TrimSpace(string(out)))
 	}
+	selected()
 	if err := (kairosBackend{}).Reboot(); err != nil {
 		// The one-shot selection stays: the next boot, whenever it comes,
 		// starts the previous system. The user must know that.

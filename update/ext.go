@@ -838,6 +838,8 @@ func (d *Daemon) startExt(what string, run func() (string, error)) error {
 		return errUnmanaged
 	case d.ext == nil:
 		return errExtNoBackend
+	case d.stopping:
+		return ErrStopping
 	case d.rebooting:
 		return ErrRebooting
 	case d.busyLocked() || d.job != nil:

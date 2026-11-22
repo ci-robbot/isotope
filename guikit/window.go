@@ -380,6 +380,12 @@ func WindowKeys(gtx layout.Context, scale *float32, back func()) {
 // under it cannot be clicked; the app gives the keyboard focus to one of
 // the buttons.
 func (th *Theme) Confirm(gtx layout.Context, title, body string, actions []Action) layout.Dimensions {
+	return th.ConfirmForm(gtx, title, body, nil, actions)
+}
+
+// ConfirmForm is Confirm with a form (fields, a list) between the body and
+// the buttons. The box is wider when there is a form.
+func (th *Theme) ConfirmForm(gtx layout.Context, title, body string, form layout.Widget, actions []Action) layout.Dimensions {
 	size := gtx.Constraints.Max
 	r := image.Rectangle{Max: size}
 	FillRect(gtx, r, Alpha(ColKeyBox, 0.72))
@@ -393,7 +399,11 @@ func (th *Theme) Confirm(gtx layout.Context, title, body string, actions []Actio
 	area.Pop()
 	gtx.Constraints = layout.Exact(size)
 	return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		w := min(Dp(gtx, 460), size.X-Dp(gtx, 48))
+		width := float32(460)
+		if form != nil {
+			width = 520
+		}
+		w := min(Dp(gtx, width), size.X-Dp(gtx, 48))
 		gtx.Constraints = layout.Constraints{Min: image.Pt(w, 0), Max: image.Pt(w, size.Y)}
 		b := Box{Radius: 14, Fill: ColWindow, Border: Over(ColWindow, ColText, 0.12), BorderWidth: 1}
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -403,6 +413,11 @@ func (th *Theme) Confirm(gtx layout.Context, title, body string, actions []Actio
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StTitle, ColText, title) }),
 					VGap(10),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.LabelLines(gtx, StBody, ColText2, 1.5, body) }),
+				}
+				if form != nil {
+					kids = append(kids, VGap(18), layout.Rigid(form))
+				}
+				kids = append(kids,
 					VGap(22),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
@@ -419,7 +434,7 @@ func (th *Theme) Confirm(gtx layout.Context, title, body string, actions []Actio
 						}
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx, bs...)
 					}),
-				}
+				)
 				return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)
 			})
 		})

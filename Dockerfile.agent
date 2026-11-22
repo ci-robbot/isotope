@@ -269,3 +269,10 @@ RUN rm -rf /usr/bin/udisksctl /usr/sbin/umount.udisks2 /usr/lib/udisks2 \
       /usr/share/polkit-1/rules.d/50-isotope-udisks.rules \
       /usr/lib/udev/rules.d/90-isotope-udisks-ignore.rules && \
     ! test -e /usr/bin/udisksctl && ! test -e /usr/lib/udisks2
+# exfatprogs is there only for udisks2's Format (the Disks page). The desktop
+# image copies it to /usr/bin; remove it from /usr/sbin too in case a base
+# image puts it there.
+RUN for b in mkfs.exfat fsck.exfat tune.exfat exfatlabel dump.exfat exfat2img; do \
+      rm -f /usr/sbin/$b /usr/bin/$b && \
+      ! test -e /usr/sbin/$b && ! test -e /usr/bin/$b || exit 1; \
+    done

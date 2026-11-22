@@ -56,6 +56,12 @@ type Hooks struct {
 	// AppInstalled is called, from a background goroutine, for each app
 	// that installed: main pins a browser to the COSMIC dock.
 	AppInstalled func(id string)
+	// Backup is the backup methods of isotope-updated, for "Restore from a
+	// backup". Nil offers no restore.
+	Backup Backup
+	// USBDisks lists the USB disks a backup may be on (udisks2). Nil lists
+	// none.
+	USBDisks func() ([]USBDisk, error)
 }
 
 // page is one screen of the flow. Each lives in its own page_*.go file and
@@ -88,10 +94,18 @@ var pageMakers = map[PageID]func(u *UI) page{}
 // UI is the Welcome window: the flow, the page on screen and its frame.
 type UI struct {
 	*guikit.Theme
-	flow    *Flow
-	desktop Desktop
-	hooks   Hooks
-	now     func() time.Time
+	flow *Flow
+	// setupFlow is the flow Welcome started with; restoreFlow is
+	// "Restore from a backup", made when it is chosen. flow is one of them.
+	setupFlow, restoreFlow *Flow
+	// restore is the state of the restore steps, made with restoreFlow.
+	restore *restoreState
+	// question is a page's question over the window (the restore's
+	// confirmation), nil when none is shown.
+	question *question
+	desktop  Desktop
+	hooks    Hooks
+	now      func() time.Time
 
 	// version is the sidebar's note, "Isotope v0.0.25 · sway".
 	version string
@@ -138,6 +152,7 @@ func newUI(flow *Flow, d Desktop, sh *text.Shaper, h Hooks) *UI {
 		pages:   map[PageID]page{},
 		scale:   1,
 	}
+	u.setupFlow = flow
 	u.focus = &u.cont
 	return u
 }
@@ -170,6 +185,8 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 		if u.skipNo.Clicked(gtx) {
 			u.answerSkip(false)
 		}
+	} else if q := u.question; q != nil {
+		q.update(gtx)
 	} else {
 		u.update(gtx)
 	}
@@ -179,7 +196,7 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 			u.pageAt = u.now()
 		}
 		u.shown = cur
-		if !u.confirming {
+		if !u.confirming && u.question == nil {
 			u.focus = &u.cont
 		}
 	}
@@ -191,9 +208,9 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	size := gtx.Constraints.Max
 	guikit.FillRect(gtx, image.Rectangle{Max: size}, guikit.ColWindow)
 	gtx.Constraints = layout.Exact(size)
-	// The bar is part of the window under the "Skip setup?" modal, so the
-	// modal's scrim covers it too: it is dimmed, and neither its buttons nor
-	// its drag area get the pointer. Its Update still runs, to drain the
+	// The bar is part of the window under the "Skip setup?" modal and a
+	// page's question, so the modal's scrim covers it too: it is dimmed, and
+	// neither its buttons nor its drag area get the pointer. Its Update still runs, to drain the
 	// events, but a request that came with the modal up is dropped.
 	full := gtx.Constraints
 	content := func(gtx layout.Context) {
@@ -205,7 +222,7 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	if u.bar != nil {
 		acts := u.bar.Update(gtx)
-		if acts != 0 && !u.confirming && u.hooks.Window != nil {
+		if acts != 0 && !u.confirming && u.question == nil && u.hooks.Window != nil {
 			u.hooks.Window(acts)
 		}
 		h := u.bar.Layout(gtx, u.Theme).Size.Y
@@ -216,6 +233,10 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 		st.Pop()
 	} else {
 		content(gtx)
+	}
+	if q := u.question; q != nil {
+		gtx.Constraints = full
+		u.Confirm(gtx, q.title, q.body, q.actions)
 	}
 	if u.confirming {
 		gtx.Constraints = full
@@ -294,10 +315,40 @@ func (u *UI) prev() {
 		u.answerSkip(false)
 		return
 	}
+	if q := u.question; q != nil {
+		q.esc()
+		return
+	}
 	if u.held() {
 		return
 	}
+	if b, ok := u.page().(backer); ok {
+		b.goBack()
+		return
+	}
 	u.flow.Back()
+}
+
+// backer is a page with its own Go back (the restore steps, which drop
+// the secrets they kept).
+type backer interface{ goBack() }
+
+// question is a page's question over the window: Esc runs esc, and
+// update handles its buttons while it is shown.
+type question struct {
+	title, body string
+	actions     []guikit.Action
+	update      func(gtx layout.Context)
+	esc         func()
+}
+
+// ask shows q and gives the focus to focus.
+func (u *UI) ask(q *question, focus event.Tag) {
+	u.question = q
+	u.focus = focus
+	if u.hooks.Invalidate != nil {
+		u.hooks.Invalidate()
+	}
 }
 
 // holder is a page that holds the footer's Skip and Go back for now (the
@@ -361,7 +412,10 @@ func (u *UI) appsChecking() bool {
 
 // stamp writes the stamp s, once.
 func (u *UI) stamp(s Stamp) {
-	if u.stamped {
+	// A restore that started ends with the restart: the restored homes
+	// have their own stamps, and a restore that fails leaves the machine
+	// new, so Welcome offers it again at the next login.
+	if u.stamped || u.restoreStarted() {
 		return
 	}
 	u.stamped = true
@@ -409,7 +463,7 @@ func (u *UI) answerSkip(skip bool) {
 // "Skip setup?" first. A close the UI asked for, a flow whose stamp is
 // written, and a page opened on its own close at once.
 func (u *UI) CloseRequested() (keep bool) {
-	if u.closing || u.stamped || len(u.flow.Pages()) < 2 {
+	if u.closing || u.stamped || len(u.flow.Pages()) < 2 || u.restoreStarted() {
 		return false
 	}
 	u.askSkip()

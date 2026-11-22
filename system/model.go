@@ -309,7 +309,7 @@ func BackupViewOf(b BackupStatus, now time.Time) BackupView {
 		v.Lines = []string{"This machine has no backup yet."}
 		return v
 	}
-	v.Lines = append(v.Lines, "Backs up to "+b.Target)
+	v.Lines = append(v.Lines, "Backs up to "+backupTargetName(b))
 	switch b.Schedule {
 	case "daily", "weekly":
 		v.Lines = append(v.Lines, "Automatic backups: "+b.Schedule)
@@ -331,10 +331,73 @@ func BackupViewOf(b BackupStatus, now time.Time) BackupView {
 		v.Warning = "No backup in the last 14 days."
 	}
 	v.CanBackUp = b.Present
-	if !b.Present {
+	switch {
+	case b.Present:
+	case b.Kind == "disk":
+		v.Lines = append(v.Lines, "Plug in "+backupDiskName(b)+" to back up")
+	default:
 		v.Lines = append(v.Lines, "The backup disk is not plugged in.")
 	}
 	return v
+}
+
+// backupTargetName is the target as the user knows it: a USB disk by its
+// label (the daemon's targetName).
+func backupTargetName(b BackupStatus) string {
+	if b.Kind != "disk" {
+		return b.Target
+	}
+	if b.Label != "" {
+		return b.Label + " (USB disk)"
+	}
+	return b.Target + " (USB disk)"
+}
+
+// backupDiskName names the disk of a uuid: target in a sentence.
+func backupDiskName(b BackupStatus) string {
+	if b.Label != "" {
+		return b.Label
+	}
+	return "the backup disk"
+}
+
+// SnapshotRows are the rows of the list of backups, newest first:
+// "date · host · size" (no size when restic gave none).
+func SnapshotRows(snaps []Snapshot, now time.Time) []string {
+	snaps = newestFirst(snaps)
+	rows := make([]string, len(snaps))
+	for i, s := range snaps {
+		rows[i] = snapshotTitle(s, now)
+		if s.Size > 0 {
+			rows[i] += " · " + humanSize(s.Size)
+		}
+	}
+	return rows
+}
+
+// newestFirst is a sorted copy of snaps.
+func newestFirst(snaps []Snapshot) []Snapshot {
+	out := append([]Snapshot(nil), snaps...)
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Time > out[j].Time })
+	return out
+}
+
+// snapshotTitle is "date · host".
+func snapshotTitle(s Snapshot, now time.Time) string {
+	t := ago(now, time.Unix(s.Time, 0))
+	if s.Host != "" {
+		t += " · " + s.Host
+	}
+	return t
+}
+
+// exportName is the default name of an exported backup:
+// isotope-<host>-<YYYY-MM-DD>.isotope-backup.
+func exportName(host string, now time.Time) string {
+	if host != "" {
+		host += "-"
+	}
+	return "isotope-" + host + now.Format("2006-01-02") + ".isotope-backup"
 }
 
 // ago is a date the way a person says it: "today at 14:05", "yesterday at
@@ -378,4 +441,96 @@ func RecoveryLines(st RecoveryStatus) []string {
 		out = append(out, c.Label+": "+strings.Join(keys, ", "))
 	}
 	return out
+}
+
+// HistoryLines are the newest 10 entries of the install history, newest
+// first, one line each. The newest installed entry of the running version
+// gets "(running)". An entry may have no version.
+func HistoryLines(h []HistoryEntry, installed string, now time.Time) []string {
+	if len(h) == 0 {
+		return nil
+	}
+	// Newest first; of two entries with one time, the later one in h.
+	idx := make([]int, len(h))
+	for i := range idx {
+		idx[i] = len(h) - 1 - i
+	}
+	sort.SliceStable(idx, func(i, j int) bool { return h[idx[i]].Time > h[idx[j]].Time })
+	s := make([]HistoryEntry, len(h))
+	for i, k := range idx {
+		s[i] = h[k]
+	}
+	running := -1
+	for i, e := range s {
+		if installed != "" && e.Kind == "install" && e.Result == "installed" && e.Version == installed {
+			running = i
+			break
+		}
+	}
+	if len(s) > 10 {
+		s = s[:10]
+	}
+	out := make([]string, 0, len(s))
+	for i, e := range s {
+		var l string
+		switch {
+		case e.Kind == "rollback":
+			l = "Restarted into the previous system"
+		case e.Version == "":
+			l = noVersionPhrase(e.Result)
+		default:
+			l = e.Version + " " + e.Result
+		}
+		if i == running {
+			l += " (running)"
+		}
+		out = append(out, l+" · "+since(now, time.Unix(e.Time, 0)))
+	}
+	return out
+}
+
+// since says how long before now t was: "20 minutes ago", "yesterday",
+// "3 days ago", or the date after 30 days.
+func since(now, t time.Time) string {
+	d := now.Sub(t)
+	plural := func(n int, unit string) string {
+		if n == 1 {
+			return "1 " + unit + " ago"
+		}
+		return fmt.Sprintf("%d %ss ago", n, unit)
+	}
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return plural(int(d/time.Minute), "minute")
+	case d < 24*time.Hour && now.YearDay() == t.YearDay() && now.Year() == t.Year():
+		return plural(int(d/time.Hour), "hour")
+	}
+	// Whole local days between the two dates.
+	loc := now.Location()
+	t = t.In(loc)
+	y1, m1, d1 := now.Date()
+	y2, m2, d2 := t.Date()
+	days := int(time.Date(y1, m1, d1, 12, 0, 0, 0, loc).Sub(time.Date(y2, m2, d2, 12, 0, 0, 0, loc)).Round(24*time.Hour) / (24 * time.Hour))
+	switch {
+	case days <= 1:
+		return "yesterday"
+	case days < 30:
+		return plural(days, "day")
+	}
+	return t.Format("2 January 2006")
+}
+
+// noVersionPhrase is the line of an entry without a version.
+func noVersionPhrase(result string) string {
+	switch result {
+	case "failed":
+		return "An update failed"
+	case "cancelled":
+		return "An update was cancelled"
+	case "installed":
+		return "An update was installed"
+	}
+	return "An update: " + result
 }

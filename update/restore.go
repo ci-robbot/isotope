@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,7 +115,7 @@ func cmdRestore(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	r := restorer{p: defaultBackupPaths(), snap: snap, host: *host, users: users, parts: parts,
-		in: bufio.NewReader(stdin), stdout: stdout, stderr: stderr}
+		in: bufio.NewReader(stdin), stdout: stdout, stderr: stderr, interrupt: onInterrupt}
 	if *finish {
 		if err := r.finish(); err != nil {
 			fmt.Fprintln(stderr, "isotope: restore --finish:", err)
@@ -132,18 +133,28 @@ func cmdRestore(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 type restorer struct {
 	p              backupPaths
 	target, pass   string
+	envFile        string // the target's credentials; "" is this machine's
 	snap, host     string
 	users          userMap
 	parts          map[string]bool // nil: the whole machine
 	in             *bufio.Reader
 	stdout, stderr io.Writer
-	failed         []string // what could not be restored, said at the end
+	failed         []string      // what could not be restored, said at the end
+	interrupt      interruptHook // onInterrupt for the CLI, nil in the daemon
 }
 
 func (r *restorer) whole() bool { return r.parts == nil }
 
+// env is the file with the target's credentials.
+func (r *restorer) env() string {
+	if r.envFile != "" {
+		return r.envFile
+	}
+	return r.p.envFile()
+}
+
 func (r *restorer) restic(args ...string) error {
-	cmd, err := resticCmd(r.p, r.target, r.pass, args...)
+	cmd, err := resticCmdEnv(r.p, r.target, r.pass, r.env(), args...)
 	if err != nil {
 		return err
 	}
@@ -185,7 +196,9 @@ func (r *restorer) run(from string, yes bool) error {
 	// whatever ends the restore: an error, or Ctrl-C during a long restic
 	// run.
 	var cleanup []func()
-	stop := onInterrupt(func() {
+	// typed is the password typed for --from, "" for this machine's target.
+	var typed string
+	stop := r.interrupt.install(func() {
 		for _, f := range cleanup {
 			f()
 		}
@@ -202,14 +215,13 @@ func (r *restorer) run(from string, yes bool) error {
 		}
 		r.target = from
 		fmt.Fprintf(r.stdout, "Password of the backup in %s: ", from)
-		pw, err := readSecretLine(r.in)
-		if err != nil {
+		if typed, err = readSecretLine(r.in); err != nil {
 			return err
 		}
 		// Under /run: a tmpfs, so even a killed restore leaves no password
 		// on the disk.
 		r.pass = filepath.Join(r.p.Run, "password.restore")
-		if err := writeSecret(r.pass, pw); err != nil {
+		if err := writeSecret(r.pass, backupPassword(typed)); err != nil {
 			return err
 		}
 		pass := r.pass
@@ -220,14 +232,11 @@ func (r *restorer) run(from string, yes bool) error {
 			// Under /usr/local/isotope-backup, which only root can change:
 			// next to the file, a user who owns that directory could swap
 			// ours for a link while root writes into it.
-			if err := os.MkdirAll(r.p.State, 0o755); err != nil {
-				return err
-			}
-			dir, err := os.MkdirTemp(r.p.State, "work-")
+			dir, doneWork, err := makeWorkDir(r.p)
 			if err != nil {
 				return err
 			}
-			cleanup = append(cleanup, func() { _ = os.RemoveAll(dir) })
+			cleanup = append(cleanup, doneWork)
 			fmt.Fprintf(r.stdout, "Unpacking %s...\n", from)
 			if err := unpackFile(from, dir); err != nil {
 				return err
@@ -238,18 +247,54 @@ func (r *restorer) run(from string, yes bool) error {
 	if r.target == "" {
 		return errors.New("there is no backup target; give one with --from")
 	}
+	// A disk by UUID: where it is mounted, or mounted for the restore.
+	repo, release, err := resolveTarget(r.target)
+	if err != nil {
+		return err
+	}
+	cleanup = append(cleanup, release)
+	r.target = repo
 	if !targetPresent(r.target) {
 		return fmt.Errorf("there is no backup in %s. Is the disk plugged in?", r.target)
 	}
+	if typed != "" {
+		// An old backup may have a password in the recovery key format
+		// that was not stored in canonical form: then the password as
+		// typed goes to r.pass. Errors show in the next command.
+		_, _ = withTypedPassword(r.pass, typed, func() (string, error) {
+			cmd, err := resticCmdEnv(r.p, r.target, r.pass, r.env(), "cat", "config")
+			if err != nil {
+				return "", err
+			}
+			var stderr bytes.Buffer
+			cmd.Stdout, cmd.Stderr = io.Discard, &stderr
+			err = cmd.Run()
+			return stderr.String(), err
+		})
+	}
 
+	// The stage is locked while the restore runs (see backup_work.go): an
+	// old one is removed, one that another restore holds is not.
 	stage := r.p.stage()
+	if unlock, err := lockDir(stage); err == nil {
+		unlock()
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	if err := os.RemoveAll(stage); err != nil {
 		return err
 	}
 	if err := os.Mkdir(stage, 0o700); err != nil {
 		return err
 	}
-	cleanup = append(cleanup, func() { _ = os.RemoveAll(stage) })
+	unlockStage, err := lockDir(stage)
+	if err != nil {
+		return err
+	}
+	cleanup = append(cleanup, func() {
+		_ = os.RemoveAll(stage)
+		unlockStage()
+	})
 
 	// "latest" is resolved once, so the plan and the files come from the
 	// same snapshot, and from this machine's backups when others share the
@@ -571,6 +616,8 @@ func readSecretLine(in *bufio.Reader) (string, error) {
 		}
 		return "", err
 	}
+	// As typed: run stores backupPassword(pw), and tries pw when restic
+	// refuses that.
 	return pw, nil
 }
 
@@ -803,7 +850,7 @@ func (r *restorer) resolveSnapshot() (string, error) {
 	if r.host != "" {
 		args = append(args, "--host", r.host)
 	}
-	cmd, err := resticCmd(r.p, r.target, r.pass, args...)
+	cmd, err := resticCmdEnv(r.p, r.target, r.pass, r.env(), args...)
 	if err != nil {
 		return "", err
 	}

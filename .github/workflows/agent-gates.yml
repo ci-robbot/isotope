@@ -186,6 +186,10 @@ jobs:
         shell: bash
         run: test/welcome/check-welcome-image.sh agent-desktop:dev agent
 
+      - name: No Isotope System in the image
+        shell: bash
+        run: test/system/check-system-image.sh agent-desktop:dev agent
+
       # The VM gates do not boot this ISO directly: each of them re-wraps the
       # appliance OCI image with its own freshly minted `cidata` seed. So the
       # single build is exported twice -- as the OCI image the gates consume and

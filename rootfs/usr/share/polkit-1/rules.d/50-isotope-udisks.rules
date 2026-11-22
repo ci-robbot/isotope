@@ -22,3 +22,14 @@ polkit.addRule(function(action, subject) {
         return polkit.Result.YES;
     }
 });
+
+// Formatting a removable disk (Isotope System's Disks page): an
+// administrator at the screen, without a password; nobody else, and never
+// from an inactive or remote session. System disks ask for
+// modify-device-system, which no Isotope rule grants.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.freedesktop.udisks2.modify-device") {
+        return (subject.local && subject.active && subject.isInGroup("admin"))
+            ? polkit.Result.YES : polkit.Result.NO;
+    }
+});

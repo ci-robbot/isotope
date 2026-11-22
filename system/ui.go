@@ -24,6 +24,9 @@ type Hooks struct {
 	Daemon Daemon
 	// Network is NetworkManager; nil shows no network device.
 	Network Network
+	// Disks is udisks2; nil when it is missing (the Disks page then says
+	// so).
+	Disks Disks
 	// Start runs a program and does not wait (the desktop's own settings,
 	// xdg-open).
 	Start func(argv ...string) error

@@ -15,6 +15,12 @@ const (
 	PApps          PageID = "apps"
 	PShortcuts     PageID = "shortcuts"
 	PReady         PageID = "ready"
+
+	// The steps of "Restore from a backup", after Welcome.
+	PRestoreWhere    PageID = "restore-where"
+	PRestorePassword PageID = "restore-password"
+	PRestoreBackup   PageID = "restore-backup"
+	PRestoreRun      PageID = "restore-run"
 )
 
 // Pages returns the pages for a desktop, in order. Layout, Workflow and
@@ -25,6 +31,13 @@ func Pages(d Desktop) []PageID {
 		p = append(p, PLayout, PWorkflow, PLauncher)
 	}
 	return append(p, PAccessibility, PApps, PShortcuts, PReady)
+}
+
+// RestorePages are the steps of "Restore from a backup": Welcome, where
+// the backup is, its password, which backup, then the restore and the
+// restart. The confirmation is a question over the Backup step.
+func RestorePages() []PageID {
+	return []PageID{PWelcome, PRestoreWhere, PRestorePassword, PRestoreBackup, PRestoreRun}
 }
 
 // PageTitle is the sidebar name of a page.
@@ -52,6 +65,14 @@ func PageTitle(p PageID) string {
 		return "Shortcuts"
 	case PReady:
 		return "Ready"
+	case PRestoreWhere:
+		return "Where"
+	case PRestorePassword:
+		return "Password"
+	case PRestoreBackup:
+		return "Backup"
+	case PRestoreRun:
+		return "Restore"
 	}
 	return string(p)
 }
@@ -74,6 +95,9 @@ type Flow struct {
 
 // NewFlow starts the full flow for a desktop.
 func NewFlow(d Desktop) *Flow { return &Flow{pages: Pages(d)} }
+
+// NewRestoreFlow is the flow of "Restore from a backup".
+func NewRestoreFlow() *Flow { return &Flow{pages: RestorePages()} }
 
 // Single is a flow of one page, for `isotope welcome apps`.
 func Single(p PageID) *Flow { return &Flow{pages: []PageID{p}} }

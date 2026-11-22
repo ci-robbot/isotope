@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"sync"
@@ -11,7 +12,7 @@ import (
 )
 
 // backupDaemon is a daemon whose backup is fn, for the job tests.
-func backupDaemon(t *testing.T, fn func(progress func(string)) (string, error)) *Daemon {
+func backupDaemon(t *testing.T, fn func(ctx context.Context, progress func(string)) (string, error)) *Daemon {
 	t.Helper()
 	daemonEnv(t, "v0.0.5")
 	d := NewDaemon(&fakeBackend{})
@@ -21,7 +22,7 @@ func backupDaemon(t *testing.T, fn func(progress func(string)) (string, error)) 
 
 func TestBackupNowRunsAJobAndReportsTheOutcome(t *testing.T) {
 	release := make(chan struct{})
-	d := backupDaemon(t, func(progress func(string)) (string, error) {
+	d := backupDaemon(t, func(_ context.Context, progress func(string)) (string, error) {
 		progress("Files: 10 new")
 		<-release
 		return "Backed up.", nil
@@ -77,7 +78,7 @@ func TestBackupNowSaysPartialAndFailed(t *testing.T) {
 		{errPartial, backupResultPartial, "Backed up, but " + errPartial.Error() + "."},
 		{errBackupRefused{"there is no backup target"}, backupResultFailed, "there is no backup target"},
 	} {
-		d := backupDaemon(t, func(func(string)) (string, error) { return "", c.err })
+		d := backupDaemon(t, func(context.Context, func(string)) (string, error) { return "", c.err })
 		if err := d.BackupNow(); err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +112,7 @@ func TestLineWriterSplitsOnCRAndLF(t *testing.T) {
 func TestBusBackupAsksTheBackupAction(t *testing.T) {
 	p := backupSetup(t)
 	ran := 0
-	d := backupDaemon(t, func(func(string)) (string, error) { ran++; return "ok", nil })
+	d := backupDaemon(t, func(context.Context, func(string)) (string, error) { ran++; return "ok", nil })
 	auth := &fakeAuth{allow: false}
 	f := startService(t, d, auth)
 

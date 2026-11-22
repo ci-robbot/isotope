@@ -228,6 +228,11 @@ jobs:
 
       - name: Notification keys
         run: test/notify/check-notify-keys.sh
+
+      # The real polkit rule files against a case table: who may format a
+      # disk, mount one, manage users and restore a backup.
+      - name: polkit rules
+        run: test/polkit/check-polkit-rules.sh
       # The emoji picker with a fake picker, clipboard and notifier, the
       # list generator on a fixture, and the Super+; binding per variant.
       - name: Emoji picker

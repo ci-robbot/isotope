@@ -123,6 +123,10 @@ check_image "isotope-ext is a link to isotope" 'test "$(readlink /usr/bin/isotop
 check "the polkit policy declares the recovery action" \
     'grep -q "<action id=\"io.kairos.isotope-update.recovery\">" $R/usr/share/polkit-1/actions/io.kairos.isotope-update.policy'
 check_image "isotope-recovery is a link to isotope" 'test "$(readlink /usr/bin/isotope-recovery)" = isotope'
+check "the polkit policy declares the users action" \
+    'grep -q "<action id=\"io.kairos.isotope-update.users\">" $R/usr/share/polkit-1/actions/io.kairos.isotope-update.policy'
+check "the polkit policy declares the restore action" \
+    'grep -q "<action id=\"io.kairos.isotope-update.restore\">" $R/usr/share/polkit-1/actions/io.kairos.isotope-update.policy'
 # Backups: restic and the daily timer of `isotope backup --scheduled`.
 check_image "restic runs" '/usr/bin/restic version | grep -q "^restic "'
 check "isotope-backup.timer is enabled" 'test -L $R/etc/systemd/system/timers.target.wants/isotope-backup.timer && test -f $R/usr/lib/systemd/system/isotope-backup.service'
