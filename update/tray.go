@@ -31,6 +31,11 @@ func runTray(noIcon bool, stderr io.Writer) int {
 		return exitOK
 	}
 	app := newTrayApp(rel, noUI{}, dialDaemon, stderr)
+	// The agents answer VPN passwords and incoming Bluetooth files while
+	// Isotope System is closed. --no-icon (notify) is not a session tray.
+	if !noIcon && systemAppInstalled() {
+		go startAgents(app.log)
+	}
 	if noIcon {
 		app.noIcon = true
 		app.run(context.Background())

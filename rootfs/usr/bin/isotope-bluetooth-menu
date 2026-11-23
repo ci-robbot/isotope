@@ -8,7 +8,9 @@
 # Pairing uses bluetoothctl's default agent with no one to answer it, so it
 # works for devices that pair without a code (most headphones, speakers and
 # mice). A device that asks for a PIN or passkey fails with a notification;
-# pair it once with `bluetoothctl` in a terminal.
+# pair it once with `bluetoothctl` in a terminal. "Settings…" opens the
+# Bluetooth page of Isotope System (`isotope system bluetooth`), which does
+# answer PIN and passkey requests, shows battery levels and picks the codec.
 menu() { isotope-pick "$1" "${2:-14}"; }
 
 notify() {
@@ -21,6 +23,10 @@ notify() {
 # dmenu, as the i3 menus do.
 if [ -n "${WAYLAND_DISPLAY:-}" ]; then on='● '; else on='* '; fi
 
+# The agent image has no Isotope System, so no Settings item there.
+settings=
+command -v isotope-system >/dev/null 2>&1 && settings='  Settings…'
+
 show=$(bluetoothctl show 2>/dev/null)
 case "$show" in
     *Controller*) ;;
@@ -28,7 +34,13 @@ case "$show" in
 esac
 
 if printf '%s\n' "$show" | grep -q 'Powered: no'; then
-    [ "$(printf 'Turn Bluetooth on\n' | menu 'Bluetooth is off' 1)" = "Turn Bluetooth on" ] || exit 0
+    off=$(printf 'Turn Bluetooth on\n%s\n' "$settings" | sed '/^$/d' |
+        menu 'Bluetooth is off' 2) || exit 0
+    case "$off" in
+        '  Settings…') exec isotope system bluetooth ;;
+        'Turn Bluetooth on') ;;
+        *) exit 0 ;;
+    esac
     bluetoothctl power on >/dev/null 2>&1 || notify "Could not turn Bluetooth on. Is it blocked by a switch or rfkill?"
     exit 0
 fi
@@ -55,11 +67,12 @@ list=$(bluetoothctl devices 2>/dev/null | awk -v conn="$connected" -v pair="$pai
         printf "%d %s\t%s%s  (%s)\t%s\n", rank, tolower(name), mark, name, state, mac
     }' | sort | cut -f2-)
 
-sel=$(printf '%s\n  ---------\n  Scan for devices\n  Turn Bluetooth off\n' "$(printf '%s\n' "$list" | cut -f1)" |
+sel=$(printf '%s\n  ---------\n  Scan for devices\n  Turn Bluetooth off\n%s\n' "$(printf '%s\n' "$list" | cut -f1)" "$settings" |
     sed '/^$/d' | menu 'Bluetooth') || exit 0
 
 case "$sel" in
     *'---------'|'') exit 0 ;;
+    '  Settings…') exec isotope system bluetooth ;;
     '  Turn Bluetooth off') bluetoothctl power off >/dev/null 2>&1; exit 0 ;;
     '  Scan for devices')
         notify "Scanning for devices for 10 seconds."

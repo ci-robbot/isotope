@@ -25,6 +25,10 @@ ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:${HADRON_VERSION}
 # server: see the smartmontools stage.
 # renovate: datasource=docker depName=ghcr.io/kairos-io/hadron-layers/smartmontools
 ARG SMARTMONTOOLS_LAYER_VERSION=7.5
+# The QEMU guest agent comes from its hadron-layers layer (statically linked,
+# files under /usr only), on the vm image line only: see the guest-tools stages.
+# renovate: datasource=docker depName=ghcr.io/kairos-io/hadron-layers/qemu-guest-agent
+ARG QEMU_GUEST_AGENT_LAYER_VERSION=11.1.3
 # Select the display server + window manager pair: sway, i3, cosmic or niri.
 # server builds the server edition instead, with no desktop (server-default).
 ARG DESKTOP=sway
@@ -373,7 +377,7 @@ RUN export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" LDFLAGS="$(
 # drivers through (radeonsi, r600, nouveau and virgl: /usr/lib/dri/*_drv_video.so,
 # GPU=full). DRM and Wayland only: libva's X11 part needs libX11, which the
 # Wayland images do not have, and apps on i3 use the DRM display too. Intel's
-# VA-API driver is intel-media-driver, a separate project that is not built.
+# VA-API driver is intel-media-driver, built in its own stage below.
 # GPU=vm has no VA-API and takes the empty libva-vm stage. /libva keeps the
 # headers and pkg-config file for Mesa's build; the Mesa stages copy only the
 # libraries into the images.
@@ -395,6 +399,79 @@ FROM toolchain AS libva-vm
 RUN mkdir -p /libva
 
 FROM libva-${GPU} AS libva
+
+# Intel's VA-API driver, intel-media-driver (iHD_drv_video.so), and the
+# graphics memory library it links (gmmlib, libigdgmm). Both are C++ and link
+# the libstdc++ the desktop images ship, like Mesa's megadriver. GPU=full only:
+# GPU=vm has no VA-API and takes the empty stage. /gmmlib keeps the headers and
+# pkg-config file for the driver's build; /intel-media-driver holds only the
+# two runtime files, which desktop-default copies into the image (not into
+# /mesa: that would change the Mesa stages' cache keys and make every Mesa
+# build wait for this compile).
+FROM toolchain AS gmmlib-full
+# gmmlib publishes tags, not releases.
+# renovate: datasource=github-tags depName=intel/gmmlib extractVersion=^intel-gmmlib-(?<version>\d+(\.\d+)*)$
+ARG GMMLIB_VERSION=22.10.2
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/intel/gmmlib/archive/refs/tags/intel-gmmlib-${GMMLIB_VERSION}.tar.gz -o gmmlib.tar.gz && \
+    tar -xf gmmlib.tar.gz && mv gmmlib-* src
+WORKDIR /build/src
+RUN pip3 install ninja && \
+    export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" && export CXXFLAGS="$CFLAGS" LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g')" && \
+    cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DRUN_TEST_SUITE=OFF && \
+    DESTDIR=/gmmlib ninja -C build install && \
+    install -Dm644 LICENSE.md /gmmlib/usr/share/licenses/gmmlib/LICENSE.md && \
+    test -e /gmmlib/usr/lib/libigdgmm.so.12
+
+FROM toolchain AS gmmlib-vm
+RUN mkdir -p /gmmlib
+
+FROM gmmlib-${GPU} AS gmmlib
+
+FROM toolchain AS intel-media-driver-full
+COPY --from=libdrm /libdrm /
+COPY --from=libva /libva /
+COPY --from=gmmlib /gmmlib /
+# renovate: datasource=github-releases depName=intel/media-driver extractVersion=^intel-media-(?<version>\d+(\.\d+)*)$
+ARG INTEL_MEDIA_DRIVER_VERSION=26.3.5
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/intel/media-driver/archive/refs/tags/intel-media-${INTEL_MEDIA_DRIVER_VERSION}.tar.gz -o md.tar.gz && \
+    tar -xf md.tar.gz && mv media-driver-* src
+WORKDIR /build/src
+RUN pip3 install ninja && \
+    export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" && export CXXFLAGS="$CFLAGS" LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g')" && \
+    cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
+      -DLIBVA_DRIVERS_PATH=/usr/lib/dri -DENABLE_PRODUCTION_KMD=ON -DBUILD_CMRTLIB=OFF -DMEDIA_RUN_TEST_SUITE=OFF \
+      -DMEDIA_BUILD_FATAL_WARNINGS=OFF -DINSTALL_DRIVER_SYSCONF=OFF && \
+    ninja -C build iHD_drv_video
+# Only the two runtime files and the licences (media-driver: MIT, with BSD-3
+# for the WebM parts; gmmlib: MIT); /usr/lib/libigdgmm.so* is gmmlib's install,
+# copied in above with the headers and pkg-config file that stay behind.
+RUN mkdir -p /intel-media-driver/usr/lib/dri && \
+    install -m755 build/media_driver/iHD_drv_video.so /intel-media-driver/usr/lib/dri/ && \
+    cp -a /usr/lib/libigdgmm.so* /intel-media-driver/usr/lib/ && \
+    install -Dm644 -t /intel-media-driver/usr/share/licenses/intel-media-driver LICENSE.md third-party-programs.txt && \
+    install -Dm644 /usr/share/licenses/gmmlib/LICENSE.md /intel-media-driver/usr/share/licenses/gmmlib/LICENSE.md && \
+    strip --strip-unneeded /intel-media-driver/usr/lib/dri/iHD_drv_video.so /intel-media-driver/usr/lib/libigdgmm.so.12.* && \
+    test -e /intel-media-driver/usr/lib/dri/iHD_drv_video.so && \
+    ! find /intel-media-driver -name '*.h' -o -name '*.pc' -o -name '*.cmake' | grep -q .
+
+FROM toolchain AS intel-media-driver-vm
+RUN mkdir -p /intel-media-driver
+
+FROM intel-media-driver-${GPU} AS intel-media-driver
+
+# Guest tools, GPU=vm only: qemu-ga, qemu-guest-agent.service and the udev rule
+# that starts the unit when the host presents the org.qemu.guest_agent.0 virtio
+# port. The unit is not enabled (no wants link): the port exists only in a QEMU
+# VM, so on real hardware the agent never starts. GPU=full (real hardware) gets
+# none of it. Copied in desktop-default, so the agent image (built on i3 vm)
+# has it too; the server has no vm line.
+FROM ghcr.io/kairos-io/hadron-layers/qemu-guest-agent:${QEMU_GUEST_AGENT_LAYER_VERSION} AS guest-tools-vm
+
+FROM scratch AS guest-tools-full
+
+FROM guest-tools-${GPU} AS guest-tools
 
 
 FROM toolchain AS mesa
@@ -1534,6 +1611,110 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} --sbindir=bin \
 RUN DESTDIR=/networkmanager ninja -C buildDir install
 
 
+# OpenConnect, the company VPN client (Cisco AnyConnect, Palo Alto
+# GlobalProtect, Fortinet, Juniper and Pulse): libopenconnect and the
+# `openconnect` CLI, on the toolchain's OpenSSL and libxml2. The tray's
+# NetworkManager secret agent runs `openconnect --authenticate` as the user
+# to get the login cookie, and nm-openconnect-service runs it as the tunnel.
+# The optional extras are off: libproxy, stoken (RSA SecurID), libpcsclite
+# (YubiKey OATH), libpskc and GSSAPI. Runtime files only; the stage checks it.
+# Its own stage, copied next to the networkmanager stage, so that stage and
+# the COSMIC prebuilt keys that may reach it stay as they are.
+FROM toolchain AS openconnect
+# renovate: datasource=gitlab-tags depName=openconnect/openconnect extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG OPENCONNECT_VERSION=9.21
+ARG OPENCONNECT_SHA256=5b32369467db6e5f317aa1ed12cfcbb81ed00bdbc765450b6bfcbdc300944a58
+RUN mkdir -p /openconnect
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://www.infradead.org/openconnect/download/openconnect-${OPENCONNECT_VERSION}.tar.gz -o oc.tar.gz && \
+    echo "${OPENCONNECT_SHA256}  oc.tar.gz" | sha256sum -c - && \
+    tar -xzf oc.tar.gz && rm oc.tar.gz && mv openconnect-* openconnect-src
+WORKDIR /build/openconnect-src
+# The toolchain's OpenSSL has no RC4. It is only for --allow-insecure-crypto
+# (3DES and RC4, for very old servers), which then reports itself unavailable.
+RUN sed -i 's/EVP_rc4()/NULL/' openssl.c && ! grep -q 'EVP_rc4' openssl.c
+RUN ./configure ${COMMON_CONFIGURE_ARGS} --sbindir=/usr/bin \
+      --without-gnutls --with-vpnc-script=/usr/share/vpnc-scripts/vpnc-script \
+      --without-libproxy --without-stoken --without-libpcsclite --without-libpskc \
+      --without-gssapi --without-java --with-builtin-json --disable-nls
+# /openconnect-dev is the whole install, for nm-openconnect's build (its
+# libnm plugin includes openconnect.h); /openconnect is what the images get.
+RUN make -j$(nproc) && make install DESTDIR=/openconnect-dev
+RUN mkdir -p /openconnect/usr/bin /openconnect/usr/lib /openconnect/usr/share/licenses/openconnect && \
+    cp -a /openconnect-dev/usr/bin/openconnect /openconnect/usr/bin/ && \
+    cp -a /openconnect-dev/usr/lib/libopenconnect.so.* /openconnect/usr/lib/ && \
+    cp COPYING.LGPL /openconnect/usr/share/licenses/openconnect/ && \
+    LD_LIBRARY_PATH=/openconnect/usr/lib /openconnect/usr/bin/openconnect --version 2>&1 | tee /tmp/v && \
+    grep -q 'Using OpenSSL' /tmp/v && \
+    ! find /openconnect \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' -o -name '*.la' \) | grep -q .
+
+
+# vpnc-script, the script `openconnect` runs from the terminal to set up the
+# tunnel's addresses, routes and DNS (NetworkManager uses its own helper).
+# vpnc-scripts has no release tags: bump VPNC_SCRIPTS_COMMIT and the SHA256
+# together.
+FROM toolchain AS vpnc-script
+ARG VPNC_SCRIPTS_COMMIT=ce9e961bd0f6b867e1c7c35f78f6fb973f6ff101
+ARG VPNC_SCRIPT_SHA256=f0c4d936a382f07711263242699b5e2d85d1ace37136bb78785d352997c17742
+RUN mkdir -p /vpnc-script/usr/share/vpnc-scripts && \
+    curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://gitlab.com/openconnect/vpnc-scripts/-/raw/${VPNC_SCRIPTS_COMMIT}/vpnc-script -o /vpnc-script/usr/share/vpnc-scripts/vpnc-script && \
+    echo "${VPNC_SCRIPT_SHA256}  /vpnc-script/usr/share/vpnc-scripts/vpnc-script" | sha256sum -c - && \
+    chmod 0755 /vpnc-script/usr/share/vpnc-scripts/vpnc-script
+
+
+# NetworkManager-openconnect: the VPN service plugin (nm-openconnect-service,
+# its helper, the D-Bus policy and the .name file). No GNOME editor and no
+# GTK auth dialog: the tray's secret agent (update/openconnect.go) does the
+# auth dialog's job and returns the cookie, gateway and gwcert secrets.
+# configure checks for WebKitGTK even without the auth dialog that uses it;
+# setting WEBKIT_CFLAGS/LIBS skips that check (nothing built here reads them).
+# It also wants file(1), which the toolchain lacks and the build never runs.
+# The service runs openconnect as the nm-openconnect user, which
+# /usr/lib/sysusers.d/nm-openconnect.conf creates (the kairos stage).
+FROM toolchain AS nm-openconnect
+COPY --from=libucontext /libucontext /
+COPY --from=glib2 /glib2 /
+COPY --from=pcre2 /pcre2 /
+COPY --from=networkmanager /networkmanager /
+COPY --from=openconnect /openconnect-dev /
+# renovate: datasource=gitlab-tags depName=GNOME/NetworkManager-openconnect registryUrl=https://gitlab.gnome.org extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG NM_OPENCONNECT_VERSION=1.2.10
+ARG NM_OPENCONNECT_SHA256=844b6bf64ecadb97b4a68c776db89aa5e6ee7e59bd24b0180228406863136464
+RUN mkdir -p /nm-openconnect
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://download.gnome.org/sources/NetworkManager-openconnect/${NM_OPENCONNECT_VERSION%.*}/NetworkManager-openconnect-${NM_OPENCONNECT_VERSION}.tar.xz -o nmoc.tar.xz && \
+    echo "${NM_OPENCONNECT_SHA256}  nmoc.tar.xz" | sha256sum -c - && \
+    tar -xf nmoc.tar.xz && rm nmoc.tar.xz && mv NetworkManager-openconnect-* nmoc-src
+WORKDIR /build/nmoc-src
+# The toolchain has no intltool or gettext; configure only probes them (no
+# translations are built: po/ is left out of SUBDIRS).
+RUN printf '#!/bin/sh\n[ "$1" = "--version" ] && echo "intltool-update (intltool) 0.51.0"\nexit 0\n' > /usr/bin/intltool-update \
+    && printf '#!/bin/sh\nexit 0\n' > /usr/bin/intltool-merge \
+    && printf '#!/bin/sh\nexit 0\n' > /usr/bin/intltool-extract \
+    && chmod +x /usr/bin/intltool-update /usr/bin/intltool-merge /usr/bin/intltool-extract \
+    && for t in msgfmt gmsgfmt xgettext msgmerge; do \
+        printf '#!/bin/sh\ncase "$1" in --version) echo "%s (GNU gettext-tools) 0.21" ;; esac\nexit 0\n' "$t" > /usr/bin/$t && chmod +x /usr/bin/$t; \
+    done \
+    && mkdir -p /usr/share/perl5/vendor_perl/XML \
+    && printf 'package XML::Parser;\n$VERSION = "2.46";\n1;\n' > /usr/share/perl5/vendor_perl/XML/Parser.pm
+RUN sed -i 's/^SUBDIRS = \(.*\) po$/SUBDIRS = \1/' Makefile.in && grep -q '^SUBDIRS = \.$' Makefile.in && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --sysconfdir=/etc --localstatedir=/var \
+      --without-gnome --without-authdlg --without-gtk4 --without-libnm-glib --disable-nls \
+      WEBKIT_CFLAGS=-DISOTOPE_NO_WEBKIT WEBKIT_LIBS=-DISOTOPE_NO_WEBKIT ac_cv_prog_has_file=yes
+RUN make -j$(nproc) && make install DESTDIR=/nm-openconnect
+RUN rm -rf /nm-openconnect/usr/include /nm-openconnect/usr/lib/pkgconfig /nm-openconnect/usr/share/locale \
+      /nm-openconnect/usr/share/metainfo /nm-openconnect/usr/share/doc && \
+    find /nm-openconnect -name '*.la' -delete && \
+    mkdir -p /nm-openconnect/usr/lib/sysusers.d /nm-openconnect/usr/share/licenses/NetworkManager-openconnect && \
+    printf 'u nm-openconnect - "NetworkManager OpenConnect" - -\n' > /nm-openconnect/usr/lib/sysusers.d/nm-openconnect.conf && \
+    cp COPYING /nm-openconnect/usr/share/licenses/NetworkManager-openconnect/ && \
+    test -x /nm-openconnect/usr/libexec/nm-openconnect-service && \
+    test -x /nm-openconnect/usr/libexec/nm-openconnect-service-openconnect-helper && \
+    grep -q '^program=/usr/libexec/nm-openconnect-service$' /nm-openconnect/usr/lib/NetworkManager/VPN/nm-openconnect-service.name && \
+    ! test -e /nm-openconnect/usr/libexec/nm-openconnect-auth-dialog && \
+    ! find /nm-openconnect \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q .
+
+
 # ===========================================================================
 # M3: audio — PipeWire + WirePlumber
 # ===========================================================================
@@ -1569,6 +1750,115 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://www.kernel.org/
 WORKDIR /build/sbc-src
 RUN ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking --disable-tester
 RUN make -j$(nproc) && make install DESTDIR=/sbc
+
+
+# Bluetooth audio codecs for PipeWire's bluez5 plugin: aptX, LDAC, AAC, LC3 and
+# Opus. Each stage installs the full build output to /<name>-dev (headers and
+# pkg-config files, only for building the pipewire-codecs stage) and the
+# runtime files to /<name> (the stripped shared library and its licence, the
+# only tree an image copies). A stage fails if a header or .pc file leaks
+# into /<name>.
+#
+# libfreeaptx — aptX and aptX HD (LGPL-2.1+)
+FROM toolchain AS libfreeaptx
+# renovate: datasource=github-tags depName=iamthehorker/libfreeaptx extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG LIBFREEAPTX_VERSION=0.2.2
+RUN mkdir -p /libfreeaptx /libfreeaptx-dev
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/iamthehorker/libfreeaptx/archive/refs/tags/${LIBFREEAPTX_VERSION}.tar.gz -o a.tar.gz && tar -xzf a.tar.gz && rm a.tar.gz && mv libfreeaptx-* src
+WORKDIR /build/src
+RUN make -j$(nproc) CC=gcc PREFIX=/usr LIBDIR=lib && make install CC=gcc PREFIX=/usr LIBDIR=lib DESTDIR=/libfreeaptx-dev && \
+    install -d /libfreeaptx/usr/lib && cp -a /libfreeaptx-dev/usr/lib/libfreeaptx.so* /libfreeaptx/usr/lib/ && \
+    find /libfreeaptx/usr/lib -type f -exec strip --strip-unneeded {} + && \
+    install -Dm0644 COPYING /libfreeaptx/usr/share/licenses/libfreeaptx/COPYING && \
+    ! find /libfreeaptx \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q . && \
+    ls /libfreeaptx/usr/lib/libfreeaptx.so.*
+
+
+# libldac — LDAC encoder and adaptive bitrate library (Apache-2.0). EHfive/ldacBT
+# is the CMake build of Android's libldac; its source is a git submodule, which
+# a tag tarball leaves empty, so the pinned submodule commit comes from
+# android.googlesource.com. Bump LDAC_COMMIT with the ldacBT tag (the commit the
+# tag's `libldac` submodule points to).
+FROM toolchain AS libldac
+# renovate: datasource=github-tags depName=EHfive/ldacBT extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG LDACBT_VERSION=2.0.2.6
+ARG LDAC_COMMIT=82b6a1abee84787b8fa167efe20290073f60db2d
+RUN mkdir -p /libldac /libldac-dev
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/EHfive/ldacBT/archive/refs/tags/v${LDACBT_VERSION}.tar.gz -o a.tar.gz && tar -xzf a.tar.gz && rm a.tar.gz && mv ldacBT-* src && \
+    curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://android.googlesource.com/platform/external/libldac/+archive/${LDAC_COMMIT}.tar.gz -o l.tar.gz && tar -xzf l.tar.gz -C src/libldac && rm l.tar.gz
+WORKDIR /build/src
+RUN cmake -G "Unix Makefiles" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_LIBDIR=/usr/lib && \
+    cmake --build build -j$(nproc) && DESTDIR=/libldac-dev cmake --install build && \
+    install -d /libldac/usr/lib && cp -a /libldac-dev/usr/lib/libldacBT_enc.so* /libldac-dev/usr/lib/libldacBT_abr.so* /libldac/usr/lib/ && \
+    find /libldac/usr/lib -type f -exec strip --strip-unneeded {} + && \
+    install -Dm0644 LICENSE /libldac/usr/share/licenses/libldac/LICENSE && \
+    install -Dm0644 libldac/NOTICE /libldac/usr/share/licenses/libldac/NOTICE && \
+    ! find /libldac \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q . && \
+    ls /libldac/usr/lib/libldacBT_enc.so.* /libldac/usr/lib/libldacBT_abr.so.*
+
+
+# liblc3 — LC3 and LC3plus-free low complexity codec for LE Audio (Apache-2.0)
+FROM toolchain AS liblc3
+# renovate: datasource=github-tags depName=google/liblc3 extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG LIBLC3_VERSION=1.1.3
+RUN mkdir -p /liblc3 /liblc3-dev
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/google/liblc3/archive/refs/tags/v${LIBLC3_VERSION}.tar.gz -o a.tar.gz && tar -xzf a.tar.gz && rm a.tar.gz && mv liblc3-* src
+WORKDIR /build/src
+RUN pip3 install meson ninja
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dtools=false -Dpython=false && \
+    DESTDIR=/liblc3-dev ninja -C buildDir install && \
+    install -d /liblc3/usr/lib && cp -a /liblc3-dev/usr/lib/liblc3.so* /liblc3/usr/lib/ && \
+    find /liblc3/usr/lib -type f -exec strip --strip-unneeded {} + && \
+    install -Dm0644 LICENSE /liblc3/usr/share/licenses/liblc3/LICENSE && \
+    ! find /liblc3 \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q . && \
+    ls /liblc3/usr/lib/liblc3.so.*
+
+
+# fdk-aac — AAC encoder and decoder for the AAC Bluetooth codec. This is the
+# fdk-aac-stripped source (the Android tree of the Fraunhofer FDK AAC codec,
+# which Fedora ships as fdk-aac-free), not mstorsjo/fdk-aac or a distro's
+# "nonfree" build. Its licence is the Android one: it lets us redistribute the
+# binary with the licence text, and the text is what /usr/share/licenses
+# carries (NOTICE). The PipeWire plugin is the only linker; the library itself
+# is a separate shared object, so the licence does not reach PipeWire's own
+# MIT licence. The licence grants no patent rights: AAC patent licensing is the
+# user's matter, as in every distro that ships this library.
+FROM toolchain AS fdk-aac
+# renovate: datasource=gitlab-tags depName=wtaymans/fdk-aac-stripped registryUrl=https://gitlab.freedesktop.org extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG FDK_AAC_VERSION=2.0.0
+RUN mkdir -p /fdk-aac /fdk-aac-dev
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://gitlab.freedesktop.org/wtaymans/fdk-aac-stripped/-/archive/v${FDK_AAC_VERSION}/fdk-aac-stripped-v${FDK_AAC_VERSION}.tar.gz -o a.tar.gz && tar -xzf a.tar.gz && rm a.tar.gz && mv fdk-aac-stripped-* src
+WORKDIR /build/src
+RUN autoreconf -fiv && ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking --disable-example
+RUN make -j$(nproc) && make install DESTDIR=/fdk-aac-dev && \
+    install -d /fdk-aac/usr/lib && cp -a /fdk-aac-dev/usr/lib/libfdk-aac.so* /fdk-aac/usr/lib/ && \
+    find /fdk-aac/usr/lib -type f -exec strip --strip-unneeded {} + && \
+    install -Dm0644 NOTICE /fdk-aac/usr/share/licenses/fdk-aac/NOTICE && \
+    ! find /fdk-aac \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' -o -name '*.la' \) | grep -q . && \
+    ls /fdk-aac/usr/lib/libfdk-aac.so.*
+
+
+# opus — Opus codec for the Bluetooth Opus codec and PipeWire's RTP modules (BSD-3-Clause).
+# The release tarball, not the GitHub tag: it carries the generated DNN data and package_version that a tag lacks.
+FROM toolchain AS opus
+# renovate: datasource=github-tags depName=xiph/opus extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG OPUS_VERSION=1.6.1
+RUN mkdir -p /opus /opus-dev
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://downloads.xiph.org/releases/opus/opus-${OPUS_VERSION}.tar.gz -o a.tar.gz && tar -xzf a.tar.gz && rm a.tar.gz && mv opus-* src
+WORKDIR /build/src
+RUN pip3 install meson ninja
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Ddocs=disabled -Dtests=disabled -Dextra-programs=disabled && \
+    DESTDIR=/opus-dev ninja -C buildDir install && \
+    install -d /opus/usr/lib && cp -a /opus-dev/usr/lib/libopus.so* /opus/usr/lib/ && \
+    find /opus/usr/lib -type f -exec strip --strip-unneeded {} + && \
+    install -Dm0644 COPYING /opus/usr/share/licenses/opus/COPYING && \
+    ! find /opus \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q . && \
+    ls /opus/usr/lib/libopus.so.*
 
 
 # BlueZ — bluetoothd, bluetoothctl, btvirt (virtual HCI for the test)
@@ -1621,6 +1911,40 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} \
     -Dlibpulse=disabled -Davahi=disabled -Dx11=disabled -Dlegacy-rtkit=true \
     -Dudev=enabled -Dsession-managers=[]
 RUN DESTDIR=/pipewire ninja -C buildDir install
+
+
+# PipeWire with the Bluetooth codecs. The pipewire stage stays as it is, because
+# the COSMIC prebuilt halves are looked up by the key of every stage they reach
+# and cosmic-build reaches pipewire: new codec flags there would rekey them
+# and cost a 2.5 h rebuild of each. This stage reconfigures the same source and
+# build directory with the codec options and installs the result; the images
+# copy it over /pipewire. What it ships is the runtime files: no headers,
+# pkg-config or CMake files.
+FROM toolchain AS pipewire-codecs
+COPY --from=libucontext /libucontext /
+COPY --from=alsa-lib /alsa-lib /
+COPY --from=glib2 /glib2 /
+COPY --from=pcre2 /pcre2 /
+COPY --from=sbc /sbc /
+COPY --from=bluez /bluez /
+COPY --from=libfreeaptx /libfreeaptx-dev /
+COPY --from=libldac /libldac-dev /
+COPY --from=liblc3 /liblc3-dev /
+COPY --from=fdk-aac /fdk-aac-dev /
+COPY --from=opus /opus-dev /
+COPY --from=pipewire /build/pipewire-src /build/pipewire-src
+RUN mkdir -p /pipewire-codecs
+WORKDIR /build/pipewire-src
+RUN pip3 install meson ninja
+RUN meson configure buildDir \
+    -Dbluez5-codec-aptx=enabled -Dbluez5-codec-ldac=enabled -Dbluez5-codec-lc3=enabled \
+    -Dbluez5-codec-aac=enabled -Dbluez5-codec-opus=enabled -Dbluez5-codec-lc3plus=disabled \
+    -Dopus=enabled
+RUN DESTDIR=/pipewire-codecs ninja -C buildDir install
+RUN rm -rf /pipewire-codecs/usr/include /pipewire-codecs/usr/lib/pkgconfig /pipewire-codecs/usr/lib/cmake && \
+    d=/pipewire-codecs/usr/lib/spa-0.2/bluez5 && ls $d && \
+    for c in sbc aac aptx ldac lc3 opus; do test -e $d/libspa-codec-bluez5-$c.so || { echo "missing codec plugin $c"; exit 1; }; done && \
+    ! find /pipewire-codecs \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' \) | grep -q .
 
 
 # WirePlumber (session manager; uses its bundled Lua)
@@ -4089,6 +4413,70 @@ RUN cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=l
       -DCMAKE_DISABLE_FIND_PACKAGE_ICU=ON -DCMAKE_DISABLE_FIND_PACKAGE_BerkeleyDB=ON && \
     cmake --build build && DESTDIR=/libical cmake --install build
 
+# libical 3.0.x for obexd. BlueZ's dummy phonebook plugin links libicalvcal
+# (vCard parsing), which libical 4 removed, so obexd cannot build against the
+# libical stage above. The renovate pin stays on the 3 series.
+FROM toolchain AS libical3
+# renovate: datasource=github-tags depName=libical/libical extractVersion=^v(?<version>\d+(\.\d+)*)$ versioning=regex:^(?<major>3)\.(?<minor>\d+)\.(?<patch>\d+)$
+ARG LIBICAL3_VERSION=3.0.20
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/libical/libical/archive/refs/tags/v${LIBICAL3_VERSION}.tar.gz -o i.tar.gz && tar -xzf i.tar.gz && mv libical-* src
+WORKDIR /build/src
+RUN pip3 install ninja
+RUN cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=MinSizeRel \
+      -DICAL_GLIB=OFF -DGOBJECT_INTROSPECTION=OFF -DWITH_CXX_BINDINGS=OFF -DICAL_BUILD_DOCS=OFF \
+      -DLIBICAL_BUILD_TESTING=OFF -DSHARED_ONLY=ON \
+      -DCMAKE_DISABLE_FIND_PACKAGE_ICU=ON -DCMAKE_DISABLE_FIND_PACKAGE_BerkeleyDB=ON && \
+    cmake --build build && DESTDIR=/libical3 cmake --install build && ls /libical3/usr/lib/libicalvcal.so
+
+# libical 3, runtime files only, for obexd (BlueZ's file transfer service, which
+# reads calendar and contact objects). The libical3 stage keeps its headers,
+# pkg-config and CMake files because other stages build against them; the
+# images get this stage instead.
+FROM libical3 AS libical-runtime
+RUN mkdir -p /libical-runtime/usr/lib /libical-runtime/usr/share/licenses/libical && \
+    cp -a /libical3/usr/lib/libical*.so.* /libical-runtime/usr/lib/ && \
+    cp -a /build/src/LICENSE* /libical-runtime/usr/share/licenses/libical/ && \
+    ls /libical-runtime/usr/lib/libical.so.* && ls /libical-runtime/usr/share/licenses/libical/* && \
+    ! find /libical-runtime \( -name '*.h' -o -name '*.pc' -o -name '*.cmake' -o -name '*.a' \) | grep -q .
+
+# BlueZ with OBEX (obexd and its obex.service user unit) and the LE Audio
+# profiles. The bluez stage stays unchanged because cosmic-build reaches it and
+# a change there would rekey the COSMIC prebuilt halves. This stage reconfigures
+# the same source with obex on and installs the result; the images copy it over
+# /bluez. LE Audio (bap, bass, vcp, mcp, csip, micp, ccp) is on by default in
+# 5.79: configure only has --disable-* options for them.
+FROM toolchain AS bluez-full
+COPY --from=libucontext /libucontext /
+COPY --from=glib2 /glib2 /
+COPY --from=pcre2 /pcre2 /
+COPY --from=ncurses /ncurses /
+COPY --from=libical3 /libical3 /
+COPY --from=bluez /build/bluez-src /build/bluez-src
+RUN mkdir -p /bluez-full
+WORKDIR /build/bluez-src
+RUN make distclean >/dev/null 2>&1 || true
+RUN ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking \
+    --enable-client --enable-tools --enable-deprecated --enable-library \
+    --enable-systemd --enable-udev --enable-obex --disable-mesh --disable-cups \
+    --disable-manpages --enable-testing --disable-nfc --disable-sap --disable-midi \
+    --with-dbusconfdir=/usr/share --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-systemduserunitdir=/usr/lib/systemd/user \
+    CFLAGS="-O2 -g -DMAX_INPUT=255" LIBS="-lncurses"
+RUN make -j$(nproc) && make install DESTDIR=/bluez-full
+RUN cp -f tools/btvirt /bluez-full/usr/bin/ 2>/dev/null || cp -f emulator/btvirt /bluez-full/usr/bin/ 2>/dev/null || true
+# The D-Bus activation file asks for SystemdService=dbus-org.bluez.obex.service;
+# BlueZ installs that link in the unit directory, so no per-user enable is needed.
+# Fail the stage when OBEX, that link or an LE Audio plugin is missing.
+RUN test -x /bluez-full/usr/libexec/bluetooth/obexd && \
+    test -f /bluez-full/usr/lib/systemd/user/obex.service && \
+    test -f /bluez-full/usr/share/dbus-1/services/org.bluez.obex.service && \
+    [ "$(readlink /bluez-full/usr/lib/systemd/user/dbus-org.bluez.obex.service)" = obex.service ] && \
+    for p in bap bass vcp mcp csip micp ccp; do \
+      grep -aq "__bluetooth_builtin_$p" /bluez-full/usr/libexec/bluetooth/bluetoothd || { echo "LE Audio profile $p not built"; exit 1; }; \
+    done
+
+
 FROM toolchain AS libwebp
 # renovate: datasource=github-tags depName=webmproject/libwebp extractVersion=^v(?<version>\d+(\.\d+)*)$
 ARG LIBWEBP_VERSION=1.6.0
@@ -5103,6 +5491,10 @@ COPY --from=wpa-supplicant /wpa /
 COPY --from=hostapd /hostapd /
 COPY --from=libndp /libndp /
 COPY --from=networkmanager /networkmanager /
+# Company VPN (OpenConnect): its own stages, so networkmanager keeps its key
+COPY --from=openconnect /openconnect /
+COPY --from=nm-openconnect /nm-openconnect /
+COPY --from=vpnc-script /vpnc-script /
 COPY --from=wireless-regdb /wireless-regdb /
 COPY --from=ncurses /ncurses /
 COPY --from=slang /slang /
@@ -5112,9 +5504,18 @@ COPY --from=alsa-lib /alsa-lib /
 COPY --from=alsa-ucm-conf /alsa-ucm-conf /
 COPY --from=pipewire /pipewire /
 COPY --from=wireplumber /wireplumber /
-# M4: bluetooth
+# M4: bluetooth, with the codecs (aptX, LDAC, AAC, LC3, Opus)
 COPY --from=sbc /sbc /
+COPY --from=libfreeaptx /libfreeaptx /
+COPY --from=libldac /libldac /
+COPY --from=liblc3 /liblc3 /
+COPY --from=fdk-aac /fdk-aac /
+COPY --from=opus /opus /
+COPY --from=pipewire-codecs /pipewire-codecs /
 COPY --from=bluez /bluez /
+# OBEX and LE Audio: over the bluez build, which stays as the COSMIC prebuilt keys need it
+COPY --from=bluez-full /bluez-full /
+COPY --from=libical-runtime /libical-runtime /
 # M5: desktop polish
 COPY --from=swaybg /swaybg /
 COPY --from=mako /mako /
@@ -5217,6 +5618,10 @@ COPY --from=wpa-supplicant /wpa /
 COPY --from=hostapd /hostapd /
 COPY --from=libndp /libndp /
 COPY --from=networkmanager /networkmanager /
+# Company VPN (OpenConnect): its own stages, so networkmanager keeps its key
+COPY --from=openconnect /openconnect /
+COPY --from=nm-openconnect /nm-openconnect /
+COPY --from=vpnc-script /vpnc-script /
 COPY --from=wireless-regdb /wireless-regdb /
 COPY --from=ncurses /ncurses /
 COPY --from=slang /slang /
@@ -5226,9 +5631,18 @@ COPY --from=alsa-lib /alsa-lib /
 COPY --from=alsa-ucm-conf /alsa-ucm-conf /
 COPY --from=pipewire /pipewire /
 COPY --from=wireplumber /wireplumber /
-# M4: bluetooth
+# M4: bluetooth, with the codecs (aptX, LDAC, AAC, LC3, Opus)
 COPY --from=sbc /sbc /
+COPY --from=libfreeaptx /libfreeaptx /
+COPY --from=libldac /libldac /
+COPY --from=liblc3 /liblc3 /
+COPY --from=fdk-aac /fdk-aac /
+COPY --from=opus /opus /
+COPY --from=pipewire-codecs /pipewire-codecs /
 COPY --from=bluez /bluez /
+# OBEX and LE Audio: over the bluez build, which stays as the COSMIC prebuilt keys need it
+COPY --from=bluez-full /bluez-full /
+COPY --from=libical-runtime /libical-runtime /
 # Shared visual assets + login manager.
 COPY --from=nerdfont /nerdfont /
 COPY --from=isotope-fonts /isotope-fonts /
@@ -5292,6 +5706,10 @@ COPY --from=wpa-supplicant /wpa /
 COPY --from=hostapd /hostapd /
 COPY --from=libndp /libndp /
 COPY --from=networkmanager /networkmanager /
+# Company VPN (OpenConnect): its own stages, so networkmanager keeps its key
+COPY --from=openconnect /openconnect /
+COPY --from=nm-openconnect /nm-openconnect /
+COPY --from=vpnc-script /vpnc-script /
 COPY --from=wireless-regdb /wireless-regdb /
 COPY --from=ncurses /ncurses /
 COPY --from=slang /slang /
@@ -5303,9 +5721,18 @@ COPY --from=pipewire /pipewire /
 COPY --from=wireplumber /wireplumber /
 COPY --from=libsndfile /libsndfile /
 COPY --from=libpulse /libpulse /
-# M4: bluetooth
+# M4: bluetooth, with the codecs (aptX, LDAC, AAC, LC3, Opus)
 COPY --from=sbc /sbc /
+COPY --from=libfreeaptx /libfreeaptx /
+COPY --from=libldac /libldac /
+COPY --from=liblc3 /liblc3 /
+COPY --from=fdk-aac /fdk-aac /
+COPY --from=opus /opus /
+COPY --from=pipewire-codecs /pipewire-codecs /
 COPY --from=bluez /bluez /
+# OBEX and LE Audio: over the bluez build, which stays as the COSMIC prebuilt keys need it
+COPY --from=bluez-full /bluez-full /
+COPY --from=libical-runtime /libical-runtime /
 # COSMIC and the services it talks to.
 COPY --from=duktape /duktape /
 COPY --from=polkit /polkit /
@@ -5392,6 +5819,10 @@ COPY --from=wpa-supplicant /wpa /
 COPY --from=hostapd /hostapd /
 COPY --from=libndp /libndp /
 COPY --from=networkmanager /networkmanager /
+# Company VPN (OpenConnect): its own stages, so networkmanager keeps its key
+COPY --from=openconnect /openconnect /
+COPY --from=nm-openconnect /nm-openconnect /
+COPY --from=vpnc-script /vpnc-script /
 COPY --from=wireless-regdb /wireless-regdb /
 COPY --from=ncurses /ncurses /
 COPY --from=slang /slang /
@@ -5402,9 +5833,18 @@ COPY --from=alsa-ucm-conf /alsa-ucm-conf /
 COPY --from=pipewire /pipewire /
 COPY --from=wireplumber /wireplumber /
 COPY --from=libsndfile /libsndfile /
-# M4: bluetooth
+# M4: bluetooth, with the codecs (aptX, LDAC, AAC, LC3, Opus)
 COPY --from=sbc /sbc /
+COPY --from=libfreeaptx /libfreeaptx /
+COPY --from=libldac /libldac /
+COPY --from=liblc3 /liblc3 /
+COPY --from=fdk-aac /fdk-aac /
+COPY --from=opus /opus /
+COPY --from=pipewire-codecs /pipewire-codecs /
 COPY --from=bluez /bluez /
+# OBEX and LE Audio: over the bluez build, which stays as the COSMIC prebuilt keys need it
+COPY --from=bluez-full /bluez-full /
+COPY --from=libical-runtime /libical-runtime /
 # niri, Noctalia and what Noctalia links.
 COPY --from=niri /niri /
 COPY --from=duktape /duktape /
@@ -5832,6 +6272,13 @@ RUN CGO_ENABLED=0 go test ./... \
 FROM ${BASE_IMAGE} AS desktop-default
 # Built desktop stack
 COPY --from=desktop-rootfs / /
+# Intel's VA-API driver and libigdgmm (GPU=full; empty on vm). Copied here, not
+# into /mesa, so the Mesa stages and the COSMIC builds that reach them keep
+# their cache keys; all four desktops (and the agent, built on the i3 image)
+# take it from this one place.
+COPY --from=intel-media-driver /intel-media-driver /
+# QEMU guest agent (GPU=vm; empty on full). Not enabled: the udev rule starts it.
+COPY --from=guest-tools / /
 # Runtime libraries provided by the toolchain but not the base image
 COPY --from=toolchain /usr/lib/libffi.so* /usr/lib/
 COPY --from=toolchain /usr/lib/libexpat.so* /usr/lib/
@@ -6253,6 +6700,10 @@ RUN mkdir -p /etc/kairos/branding/splash && printf '%s\n' "${VERSION}" > /etc/ka
 # running at boot. Every edition passes here.
 RUN systemd-sysusers tpm2-tss.conf && \
     grep -q '^tss:' /etc/passwd && grep -q '^tss:' /etc/group
+# The nm-openconnect user, which NetworkManager-openconnect runs the tunnel's
+# openconnect as (the desktops only; the server has no OpenConnect).
+RUN [ ! -f /usr/lib/sysusers.d/nm-openconnect.conf ] || \
+    { systemd-sysusers nm-openconnect.conf && grep -q '^nm-openconnect:' /etc/passwd; }
 # System extensions from the catalogs are unsigned; the normal install merges
 # them anyway (rootfs/etc/kairos/90_isotope_extensions.yaml and
 # rootfs/system/oem/93_isotope_extensions.yaml). A Trusted Boot image keeps

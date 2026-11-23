@@ -62,6 +62,26 @@ expect "Extensions opens its page" "$(entry Extensions)" "isotope system extensi
 expect "Backup opens its page" "$(entry Backup)" "isotope system backup"
 expect "Recovery key opens the Security page" "$(entry 'Recovery key')" "isotope system security"
 expect "System opens the app" "$(entry System)" "isotope system updates"
+# Bluetooth: Isotope System's page on sway, i3 and COSMIC; niri keeps the
+# Noctalia panel as its quick path.
+fake isotope-bluetooth-menu 'echo "bluetooth-menu" > "$T/ran"'
+fake noctalia 'echo "noctalia $*" > "$T/ran"'
+expect "Bluetooth opens its page on Sway" "$(entry Bluetooth)" "isotope system bluetooth"
+printf 'DESKTOP_NAME=COSMIC\n' > /etc/isotope/session
+expect "Bluetooth opens its page on COSMIC" "$(entry Bluetooth)" "isotope system bluetooth"
+printf 'DESKTOP_NAME=niri\n' > /etc/isotope/session
+expect "Bluetooth keeps the Noctalia panel on niri" "$(entry Bluetooth)" "noctalia msg panel-open control-center bluetooth"
+printf 'DESKTOP_NAME=Sway\n' > /etc/isotope/session
+# The quick menu's Settings item opens the page (the agent image has none).
+fake bluetoothctl 'case "$1" in show) printf "Controller 00:11:22:33:44:55 (public)\n\tPowered: yes\n" ;; esac'
+fake isotope-pick 'cat > "$T/pick.in"
+grep -x "  Settings…" "$T/pick.in" | head -n 1'
+rm -f "$T/ran"
+"$repo/rootfs/usr/bin/isotope-bluetooth-menu" >/dev/null 2>&1
+expect "the Bluetooth menu has Settings…" "$(cat "$T/ran" 2>/dev/null)" "isotope system bluetooth"
+fake isotope-pick 'cat > "$T/pick.in"
+[ -f "$T/choice" ] || exit 1
+sed -n "$(cat "$T/choice")p" "$T/pick.in"'
 rm -f "$T/choice"
 "$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "the menu lists System" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 1

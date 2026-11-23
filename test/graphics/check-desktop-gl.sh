@@ -106,6 +106,15 @@ case "$gpu" in
         for d in $va_drivers; do
             libs "the VA-API driver $d finds its libraries" "/usr/lib/dri/${d}_drv_video.so"
         done
+        # Intel's VA-API driver (intel-media-driver) and the gmm library it links.
+        libs "the VA-API driver iHD (Intel) finds its libraries" /usr/lib/dri/iHD_drv_video.so
+        libs "libigdgmm finds its libraries" /usr/lib/libigdgmm.so.12
+        check "intel-media-driver's licence (MIT, BSD-3) is there" \
+            "grep -q 'Permission is hereby granted' /usr/share/licenses/intel-media-driver/LICENSE.md && grep -q 'Redistribution and use' /usr/share/licenses/intel-media-driver/LICENSE.md"
+        check "gmmlib's licence (MIT) is there" \
+            "grep -q 'Permission is hereby granted' /usr/share/licenses/gmmlib/LICENSE.md"
+        check "the full line ships no gmmlib or media-driver headers" \
+            '! test -e /usr/include/igdgmm && ! test -e /usr/lib/pkgconfig/igdgmm.pc'
         ;;
     vm)
         # The same test the other way: it proves the stub message is still

@@ -44,10 +44,13 @@ on:
       - "test/graphics/**"
       - "test/cosmic/**"
       - "test/boot-ux/check-boot-units.sh"
+      - "test/vm/**"
       - "test/welcome/**"
       - "welcome/**"
       - "system/**"
       - "test/system/**"
+      - "test/bluetooth/**"
+      - "test/network/**"
       - "guikit/**"
       - "scripts/ci-containerd-store.sh"
       - ".github/workflows/desktop-images.yml"
@@ -124,7 +127,7 @@ jobs:
             for f in "${files[@]}"; do
               case "$f" in
                 Dockerfile|Makefile|rootfs/*|test/graphics/*|test/boot-ux/check-boot-units.sh|tools/stage-key.py|\
-                test/welcome/*|welcome/*|guikit/*|test/system/*|system/*|\
+                test/welcome/*|welcome/*|guikit/*|test/system/*|system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs-sway/*) want[sway]=1 ;;
@@ -325,6 +328,14 @@ jobs:
         shell: bash
         run: test/boot-ux/check-boot-units.sh "${DESKTOP}-desktop:dev"
 
+      # The QEMU guest agent is on the vm line only. Each line checks its own
+      # side: the vm images have it, the full images and the server (built as
+      # GPU=full on a push to main) do not.
+      - name: Check guest agent
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/vm/check-guest-agent.sh "${DESKTOP}-desktop:dev" "$GPU"
+
       # Isotope Welcome: the variant's build, the session line that starts it
       # at first login, its window rule; no cosmic-initial-setup on COSMIC.
       # The same step as in release.yml.
@@ -337,6 +348,20 @@ jobs:
         if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/system/check-system-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
+
+      # Bluetooth audio: every PipeWire bluez5 codec plugin (SBC, AAC, aptX,
+      # LDAC, LC3, Opus) and its libraries. The same step as in release.yml.
+      - name: Check Bluetooth audio codecs
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/bluetooth/check-bluetooth.sh "${DESKTOP}-desktop:dev"
+
+      # NetworkManager can do WireGuard (nmcli, libnm and the setting) and
+      # OpenConnect (the plugin, its service and the openconnect CLI).
+      - name: Check VPN support
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look

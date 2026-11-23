@@ -68,7 +68,7 @@ Commands:
                     accessibility, shortcuts
   system [PAGE]     Isotope System, the window for all of the above;
                     or one of its pages: updates, desktop, extensions,
-                    backup, security, network, users, disks, about
+                    backup, security, network, bluetooth, users, disks, about
   help              this text
 
 Started by the desktop session and by systemd, not by hand:

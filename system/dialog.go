@@ -116,3 +116,14 @@ func (d *dialog) layout(gtx layout.Context, u *UI) {
 	}
 	u.ConfirmForm(gtx, d.title, d.body, d.form, acts)
 }
+
+// closeIf closes d if it is still the open dialog; another dialog stays.
+// Safe from any goroutine.
+func (u *UI) closeIf(d *dialog) {
+	u.mu.Lock()
+	if u.dlg == d {
+		u.dlg = nil
+	}
+	u.mu.Unlock()
+	u.hooks.Invalidate()
+}

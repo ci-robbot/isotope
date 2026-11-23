@@ -69,6 +69,17 @@ panel() {
     esac
 }
 
+# bluetooth: the full settings are Isotope System's Bluetooth page on every
+# desktop that has it (sway, i3 and COSMIC; COSMIC's quick settings panel keeps
+# its own on/off row). niri keeps the Noctalia control center, its quick panel.
+# The quick menu of sway and i3 stays on Super+Shift+B and the waybar module,
+# and has a "Settings…" item for the page.
+# The agent image has no Isotope System, so it falls back to the old way.
+bluetooth() {
+    [ "$DESKTOP_NAME" = niri ] || system_page bluetooth || true
+    panel bluetooth
+}
+
 capture() {
     what=$(printf '%s\n' "Whole screen" "Area or window" | pick Capture 2) || exit 0
     case "$DESKTOP_NAME:$what" in
@@ -216,7 +227,7 @@ case "$sel" in
     "Install apps") exec isotope welcome apps ;;
     Welcome)   exec isotope welcome ;;
     Wi-Fi)     panel wifi ;;
-    Bluetooth) panel bluetooth ;;
+    Bluetooth) bluetooth ;;
     Audio)     panel audio ;;
     Capture)   capture ;;
     Emoji)     exec isotope-emoji ;;

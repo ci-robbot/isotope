@@ -403,6 +403,12 @@ jobs:
         shell: bash
         run: test/boot-ux/check-boot-units.sh "${DESKTOP}-desktop:dev"
 
+      # The QEMU guest agent is on the vm line only.
+      - name: Check guest agent
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/vm/check-guest-agent.sh "${DESKTOP}-desktop:dev" "$GPU"
+
       # Isotope Welcome: the variant's build, the session line that starts it
       # at first login, its window rule; no cosmic-initial-setup on COSMIC.
       - name: Check Isotope Welcome
@@ -414,6 +420,19 @@ jobs:
         if: matrix.desktop != 'server'
         shell: bash
         run: test/system/check-system-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
+
+      # Bluetooth audio: every PipeWire bluez5 codec plugin and its libraries.
+      - name: Check Bluetooth audio codecs
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/bluetooth/check-bluetooth.sh "${DESKTOP}-desktop:dev"
+
+      # NetworkManager can do WireGuard (nmcli, libnm and the setting) and
+      # OpenConnect (the plugin, its service and the openconnect CLI).
+      - name: Check VPN support
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
@@ -889,6 +908,12 @@ jobs:
         run: |
           set -euo pipefail
           make VERSION="$RELEASE_TAG" agent-iso
+
+      # The agent is an overlay on the i3 vm image, so it has the QEMU guest
+      # agent too.
+      - name: Check guest agent
+        shell: bash
+        run: test/vm/check-guest-agent.sh "$AGENT_IMAGE" vm
 
       # The gates below re-wrap the freshly built appliance image with their own
       # `cidata` seeds, so the appliance is built exactly once here and every

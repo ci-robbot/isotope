@@ -52,6 +52,9 @@ func handOff(conn *dbus.Conn, page Page) bool {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "ask" {
+		os.Exit(runAsk(os.Args[2:]))
+	}
 	page, ok := ParseArgs(os.Args[1:])
 	if !ok {
 		fmt.Fprintln(os.Stderr, usage)
@@ -77,6 +80,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "isotope-system: the system bus: %v\n", err)
 	}
 	hooks.Network = nmNetwork{}
+	hooks.Bluetooth = newBluez()
+	hooks.Files = newPortalFiles()
 	if d, err := dialDisks(); err == nil {
 		hooks.Disks = d
 	} else {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -339,6 +340,7 @@ type fakeNet struct {
 	mu    sync.Mutex
 	st    NetState
 	aps   []AccessPoint
+	vpns  []VPN
 	calls []string
 }
 
@@ -357,6 +359,24 @@ func (n *fakeNet) Connect(ssid, pw string, hidden bool) error {
 func (n *fakeNet) Disconnect() error        { n.rec("Disconnect"); return nil }
 func (n *fakeNet) Forget(ssid string) error { n.rec("Forget " + ssid); return nil }
 func (n *fakeNet) SetWifi(on bool) error    { n.rec("SetWifi"); return nil }
+func (n *fakeNet) VPNs() ([]VPN, error)     { return n.vpns, nil }
+func (n *fakeNet) ActivateVPN(u string) error {
+	n.rec("ActivateVPN " + u)
+	return nil
+}
+func (n *fakeNet) DeactivateVPN(u string) error {
+	n.rec("DeactivateVPN " + u)
+	return nil
+}
+func (n *fakeNet) RemoveVPN(u string) error { n.rec("RemoveVPN " + u); return nil }
+func (n *fakeNet) ImportWireGuard(name string, conf []byte) error {
+	n.rec("ImportWireGuard " + name + " " + strconv.Itoa(len(conf)))
+	return nil
+}
+func (n *fakeNet) AddOpenConnect(o OpenConnect) error {
+	n.rec("AddOpenConnect " + o.Name + "|" + o.Gateway + "|" + o.Protocol + "|" + o.User)
+	return nil
+}
 
 // fakeDisks is udisks2 for the page tests. It refuses a Format as the
 // client does (formatCheck): a system drive, a mounted filesystem.

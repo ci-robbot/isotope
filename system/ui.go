@@ -24,9 +24,13 @@ type Hooks struct {
 	Daemon Daemon
 	// Network is NetworkManager; nil shows no network device.
 	Network Network
+	// Bluetooth is BlueZ; nil shows "No Bluetooth adapter".
+	Bluetooth Bluetooth
 	// Disks is udisks2; nil when it is missing (the Disks page then says
 	// so).
 	Disks Disks
+	// Files is the file picker; nil asks for a typed path.
+	Files FileChooser
 	// Start runs a program and does not wait (the desktop's own settings,
 	// xdg-open).
 	Start func(argv ...string) error
@@ -78,6 +82,8 @@ type UI struct {
 	inst install
 	// toShow is a page asked for by a second `isotope system PAGE`.
 	toShow Page
+	// choosing is true while the file picker is open.
+	choosing bool
 }
 
 const maxLines = 200

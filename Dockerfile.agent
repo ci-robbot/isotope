@@ -284,3 +284,27 @@ RUN for b in mkfs.exfat fsck.exfat tune.exfat exfatlabel dump.exfat exfat2img; d
       rm -f /usr/sbin/$b /usr/bin/$b && \
       ! test -e /usr/sbin/$b && ! test -e /usr/bin/$b || exit 1; \
     done
+# No company VPN service and no incoming Bluetooth files: both ask their
+# questions through the tray's agents (NetworkManager's SecretAgent for the
+# OpenConnect login, obexd's Agent1 for a file), and the appliance runs no
+# tray, so a connect would wait for a password nobody is asked for, and
+# obexd would take files with nobody to accept them. NetworkManager-
+# openconnect (the plugin, its service, D-Bus policy, user and licence) and
+# obexd (its binary, user unit and D-Bus activation) go; the openconnect CLI
+# and WireGuard stay.
+RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
+      /usr/libexec/nm-openconnect-service /usr/libexec/nm-openconnect-service-openconnect-helper \
+      /usr/lib/NetworkManager/libnm-vpn-plugin-openconnect*.so \
+      /usr/share/dbus-1/system.d/nm-openconnect-service.conf /etc/dbus-1/system.d/nm-openconnect-service.conf \
+      /usr/lib/sysusers.d/nm-openconnect.conf /usr/share/licenses/NetworkManager-openconnect \
+      /usr/libexec/bluetooth/obexd /usr/lib/systemd/user/obex.service \
+      /usr/lib/systemd/user/dbus-org.bluez.obex.service /usr/share/dbus-1/services/org.bluez.obex.service && \
+    for f in /etc/passwd /etc/shadow /etc/group /etc/gshadow; do \
+      [ ! -f "$f" ] || sed -i '/^nm-openconnect:/d' "$f" || exit 1; \
+    done && \
+    ! ls /usr/libexec/nm-openconnect* /usr/lib/NetworkManager/VPN/nm-openconnect* >/dev/null 2>&1 && \
+    ! grep -rqs 'org.freedesktop.NetworkManager.openconnect' /usr/share/dbus-1 /etc/dbus-1 /usr/lib/NetworkManager && \
+    ! grep -q '^nm-openconnect:' /etc/passwd && \
+    ! test -e /usr/libexec/bluetooth/obexd && \
+    ! grep -rqs 'org.bluez.obex' /usr/share/dbus-1/services /usr/lib/systemd/user && \
+    test -x /usr/bin/openconnect

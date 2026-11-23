@@ -65,12 +65,13 @@ pub enum Detail {
 }
 
 impl Detail {
-    /// The command that opens it: COSMIC Settings' page for a row, what the
+    /// The command that opens it: COSMIC Settings' page for a row (Isotope
+    /// System's Bluetooth page for Bluetooth), what the
     /// stock power applet (and isotope-menu) runs for a power button.
     pub fn command(self) -> Vec<String> {
         let argv: &[&str] = match self {
             Detail::Wifi => &["cosmic-settings", "wireless"],
-            Detail::Bluetooth => &["cosmic-settings", "bluetooth"],
+            Detail::Bluetooth => &["isotope", "system", "bluetooth"],
             Detail::Keyboard => &["cosmic-settings", "keyboard"],
             Detail::Settings => &["cosmic-settings"],
             // cosmic-osd asks for confirmation with a countdown.

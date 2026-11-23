@@ -54,6 +54,17 @@ type Network interface {
 	Forget(ssid string) error
 	// SetWifi turns the Wi-Fi radio on or off.
 	SetWifi(on bool) error
+
+	// VPNs lists the saved VPN connections (WireGuard and OpenConnect).
+	VPNs() ([]VPN, error)
+	ActivateVPN(uuid string) error
+	DeactivateVPN(uuid string) error
+	// RemoveVPN deletes the connection, after taking it down.
+	RemoveVPN(uuid string) error
+	// ImportWireGuard saves a wg-quick file as a connection named name.
+	ImportWireGuard(name string, conf []byte) error
+	// AddOpenConnect saves a company VPN.
+	AddOpenConnect(c OpenConnect) error
 }
 
 const (

@@ -61,6 +61,13 @@ installed machine to another desktop and keeps your files.
 - **One menu for everything.** <kbd>Super</kbd>+<kbd>Esc</kbd> opens the Isotope
   menu: apps, Wi-Fi, Bluetooth, audio, screenshots, emoji, clipboard history,
   night light, updates, help and power.
+- **Better Bluetooth.** Headphones get the AAC, aptX, LDAC and LC3 codecs, with
+  a "Sound quality" choice in Isotope System. You can also send and receive
+  files.
+- **VPN in Isotope System.** Import a WireGuard file, or add a company VPN
+  (OpenConnect) with a password and a typed second factor.
+- **Video decoding on Intel graphics.** The standard images include the Intel
+  VA-API driver. The `-vm` images include the QEMU guest agent.
 - **Apps on the first login.** A short checklist installs a browser (Firefox,
   Chromium, Brave or LibreWolf) and other essential apps from Flathub. File
   dialogs and dark mode work in Flatpak apps.

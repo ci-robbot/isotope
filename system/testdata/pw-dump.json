@@ -1,0 +1,397 @@
+[
+  {
+    "_note": "Follows pw-dump.c of PipeWire 1.2.7 (dump_objects: id, type, version, permissions, then info with props and params; put_params prints each param as an array of objects with short key names). Profile names follow bluez5-device.c: \"%s-%s\" of the profile and the codec, the best codec bare. Not captured from a device. The first element is not part of pw-dump's output; the parser skips it."
+  },
+  {
+    "id": 46,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "alsa",
+        "device.name": "alsa_card.pci-0000_00_1f.3",
+        "media.class": "Audio/Device"
+      },
+      "params": {
+        "EnumProfile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off",
+            "priority": 0,
+            "available": "yes",
+            "classes": []
+          }
+        ],
+        "Profile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": 52,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "bluez5",
+        "device.name": "bluez_card.38_18_4C_AA_BB_CC",
+        "device.description": "Headset",
+        "device.form-factor": "headset",
+        "media.class": "Audio/Device",
+        "api.bluez5.address": "38:18:4C:AA:BB:CC",
+        "api.bluez5.path": "/org/bluez/hci0/dev_38_18_4C_AA_BB_CC"
+      },
+      "params": {
+        "EnumProfile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off",
+            "priority": 0,
+            "available": "yes",
+            "classes": []
+          },
+          {
+            "index": 1,
+            "name": "a2dp-sink-sbc",
+            "description": "High Fidelity Playback (A2DP Sink, codec SBC)",
+            "priority": 10,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "name": "a2dp-sink-sbc_xq",
+            "description": "High Fidelity Playback (A2DP Sink, codec SBC-XQ)",
+            "priority": 20,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "name": "a2dp-sink-aac",
+            "description": "High Fidelity Playback (A2DP Sink, codec AAC)",
+            "priority": 30,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "name": "a2dp-sink-ldac",
+            "description": "High Fidelity Playback (A2DP Sink, codec LDAC)",
+            "priority": 40,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 5,
+            "name": "headset-head-unit",
+            "description": "Headset Head Unit (HSP/HFP)",
+            "priority": 50,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 6,
+            "name": "a2dp-sink-future_codec",
+            "description": "High Fidelity Playback (A2DP Sink, codec Future)",
+            "priority": 60,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 7,
+            "name": "a2dp-sink-aptx",
+            "description": "aptX (not available)",
+            "priority": 70,
+            "available": "no",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "Profile": [
+          {
+            "index": 3,
+            "name": "a2dp-sink-aac",
+            "description": "High Fidelity Playback (A2DP Sink, codec AAC)",
+            "save": true
+          }
+        ],
+        "EnumRoute": [],
+        "Route": []
+      }
+    }
+  },
+  {
+    "id": 58,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "bluez5",
+        "device.name": "bluez_card.00_11_22_33_44_55",
+        "device.description": "Headset",
+        "device.form-factor": "headset",
+        "media.class": "Audio/Device",
+        "api.bluez5.address": "00:11:22:33:44:55",
+        "api.bluez5.path": "/org/bluez/hci0/dev_00_11_22_33_44_55"
+      },
+      "params": {
+        "EnumProfile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off",
+            "priority": 0,
+            "available": "yes",
+            "classes": []
+          },
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink, codec SBC)",
+            "priority": 10,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "name": "headset-head-unit",
+            "description": "Headset Head Unit (HSP/HFP)",
+            "priority": 20,
+            "available": "yes",
+            "classes": [
+              {
+                "class": "Audio/Sink",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "Profile": [
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink, codec SBC)",
+            "save": true
+          }
+        ],
+        "EnumRoute": [],
+        "Route": []
+      }
+    }
+  },
+  {
+    "id": 61,
+    "type": "PipeWire:Interface:Node",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "state": "running",
+      "props": {
+        "node.name": "bluez_output.38_18_4C_AA_BB_CC.1",
+        "device.id": 52
+      }
+    }
+  },
+  {
+    "id": 59,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "bluez5",
+        "device.name": "bluez_card.00_11_22_33_44_55",
+        "device.description": "Headset",
+        "device.form-factor": "headset",
+        "media.class": "Audio/Device",
+        "api.bluez5.address": "AA:BB:CC:00:00:01",
+        "api.bluez5.path": "/org/bluez/hci0/dev_00_11_22_33_44_55"
+      },
+      "params": {
+        "EnumProfile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off",
+            "priority": 0,
+            "available": "yes",
+            "classes": []
+          },
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink, codec AAC)",
+            "priority": 10,
+            "available": "yes",
+            "classes": []
+          },
+          {
+            "index": 2,
+            "name": "a2dp-sink-sbc",
+            "description": "High Fidelity Playback (A2DP Sink, codec SBC)",
+            "priority": 20,
+            "available": "yes",
+            "classes": []
+          }
+        ],
+        "Profile": [
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink, codec AAC)",
+            "save": true
+          }
+        ],
+        "EnumRoute": [],
+        "Route": []
+      }
+    }
+  },
+  {
+    "id": 60,
+    "type": "PipeWire:Interface:Device",
+    "version": 3,
+    "permissions": [
+      "r",
+      "w",
+      "x",
+      "m"
+    ],
+    "info": {
+      "change-mask": [
+        "props",
+        "params"
+      ],
+      "props": {
+        "device.api": "bluez5",
+        "device.name": "bluez_card.00_11_22_33_44_55",
+        "device.description": "Headset",
+        "device.form-factor": "headset",
+        "media.class": "Audio/Device",
+        "api.bluez5.address": "AA:BB:CC:00:00:02",
+        "api.bluez5.path": "/org/bluez/hci0/dev_00_11_22_33_44_55"
+      },
+      "params": {
+        "EnumProfile": [
+          {
+            "index": 0,
+            "name": "off",
+            "description": "Off",
+            "priority": 0,
+            "available": "yes",
+            "classes": []
+          },
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink)",
+            "priority": 10,
+            "available": "yes",
+            "classes": []
+          }
+        ],
+        "Profile": [
+          {
+            "index": 1,
+            "name": "a2dp-sink",
+            "description": "High Fidelity Playback (A2DP Sink)",
+            "save": true
+          }
+        ],
+        "EnumRoute": [],
+        "Route": []
+      }
+    }
+  }
+]
