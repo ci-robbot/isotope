@@ -31,7 +31,7 @@ new_root() {
     printf 'kairos:100000:65536\n' >"$r/etc/subuid"; cp "$r/etc/subuid" "$r/etc/subgid"
     printf 'DESKTOP_NAME=Sway\nSESSION=sway\n' >"$r/etc/isotope/session"
     printf 'root:!:1::::::\nkairos:!:1::::::\n' >"$r/etc/shadow"
-    printf '# ly\nauto_login_user = \nbox_title = Isotope\n' >"$r/etc/ly/config.ini"
+    printf '# ly\nauto_login_user = null\nbox_title = Isotope\n' >"$r/etc/ly/config.ini"
     mkdir -p "$r/usr/share/applications"
     cp /repo/rootfs/usr/share/applications/isotope-install.desktop "$r/usr/share/applications/"
     echo "$r"

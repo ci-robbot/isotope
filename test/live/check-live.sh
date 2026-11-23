@@ -65,7 +65,15 @@ else
     for p in etc system usr/bin usr/libexec usr/lib/systemd/system usr/share/wayland-sessions \
         usr/share/xsessions usr/share/applications; do
         mkdir -p "$work/image/$(dirname "$p")"
-        docker cp "$cid:/$p" "$work/image/$p" >/dev/null 2>&1 || true
+        # A path the image lacks is fine (the checks then say what is
+        # missing); a copy that fails for another reason is reported, so a
+        # half-copied tree is not read as missing files.
+        if ! err=$(docker cp "$cid:/$p" "$work/image/$p" 2>&1 >/dev/null); then
+            case "$err" in
+                *"No such container:path"*|*"Could not find the file"*) ;;
+                *) echo "WARN: docker cp /$p: $err" >&2 ;;
+            esac
+        fi
     done
     v=$(sed -n 's/^SESSION=//p' "$work/image/etc/isotope/session" 2>/dev/null | head -n 1)
     [ -n "$v" ] || { echo "FAIL: $IMAGE has no SESSION= in /etc/isotope/session"; exit 1; }
@@ -266,8 +274,15 @@ for entry in "${roots[@]}"; do
     fi
 
     # --- backup timer
-    check "$variant: the backup timer does not run on a live desktop" \
-        grep -qx 'ConditionPathExists=!/run/isotope/live-desktop' "$r/usr/lib/systemd/system/isotope-backup.timer.d/10-not-live.conf"
+    # Read in the image itself, not in the docker cp copy.
+    dropin=/usr/lib/systemd/system/isotope-backup.timer.d/10-not-live.conf
+    if [ "$mode" = repo ]; then
+        check "$variant: the backup timer does not run on a live desktop" \
+            grep -qx 'ConditionPathExists=!/run/isotope/live-desktop' "$r$dropin"
+    else
+        check "$variant: the backup timer does not run on a live desktop" \
+            docker run --rm --entrypoint grep "$IMAGE" -qx 'ConditionPathExists=!/run/isotope/live-desktop' "$dropin"
+    fi
 
     # --- autologin needs
     name=$(sed -n 's/^SESSION=//p' "$r/etc/isotope/session" 2>/dev/null | head -n 1)
@@ -293,7 +308,9 @@ for entry in "${roots[@]}"; do
 
     # --- the image is clean
     check "$variant: no live user in /etc/passwd" bash -c "! grep -qs '^live:' '$r/etc/passwd'"
-    leak=$(grep -rsE '^[[:space:]]*auto_login_user[[:space:]]*=[[:space:]]*[^[:space:]]|^\[initial_session\]' "$r/etc/ly" "$r/etc/greetd" || true)
+    # ly's own default is `auto_login_user = null`, which is no autologin.
+    leak=$(grep -rsE '^[[:space:]]*auto_login_user[[:space:]]*=[[:space:]]*[^[:space:]]|^\[initial_session\]' "$r/etc/ly" "$r/etc/greetd" \
+        | grep -vE ':[[:space:]]*auto_login_user[[:space:]]*=[[:space:]]*null[[:space:]]*$' || true)
     if [ -z "$leak" ]; then pass "$variant: no autologin value in ly or greetd config"
     else bad "$variant: autologin set in the image:"; printf '  %s\n' "$leak"; fi
     # --- the Install Isotope launcher: hidden in the image, shown by the live stage
