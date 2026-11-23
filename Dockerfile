@@ -6281,8 +6281,9 @@ FROM welcome-build AS system-build
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
+COPY pkg/shares/ pkg/shares/
 COPY cmd/isotope-system/ cmd/isotope-system/
-RUN CGO_ENABLED=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
+RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
     { /out/wayland/isotope-system --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
     CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-system ./cmd/isotope-system && \
@@ -6323,8 +6324,9 @@ COPY rootfs/common/usr/share/isotope/firewall-default.nft rootfs/common/usr/shar
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
+COPY pkg/shares/ pkg/shares/
 COPY cmd/isotope/ cmd/isotope/
-RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... \
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 

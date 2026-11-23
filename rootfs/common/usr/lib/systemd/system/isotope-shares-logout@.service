@@ -1,0 +1,22 @@
+# Unmounts the network shares of user %i (a uid) when the user's last
+# session ends. user@.service.d/50-isotope-shares-logout.conf makes every
+# user@UID.service want this unit; BindsTo stops it with that service, and
+# ExecStop unmounts what isotope-updated mounted under /run/media/<user>
+# (lazily, and NFS forced, so a server that is gone cannot hang the logout).
+# It runs as root and asks no polkit: the session is gone by then.
+[Unit]
+Description=Unmount the network shares of user %i at logout
+Documentation=https://github.com/kairos-community/isotope
+BindsTo=user@%i.service
+After=user@%i.service
+# Stopping at shutdown is fine too, and it must not hold the shutdown.
+DefaultDependencies=no
+Conflicts=shutdown.target
+Before=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/bin/isotope-update daemon --unmount-shares %i
+TimeoutStopSec=60s

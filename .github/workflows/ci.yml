@@ -104,8 +104,8 @@ jobs:
 
       - name: isotope tests
         run: |
-          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/...
-          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/...
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/...
 
       - name: install-ui tests
         run: |
@@ -152,6 +152,8 @@ jobs:
       - name: system tests
         env:
           CGO_ENABLED: "1"
+          EGL_PLATFORM: surfaceless
+          ISOTOPE_GUI_REQUIRE_SCREENSHOTS: "1"
         run: |
           test -z "$(gofmt -l cmd/isotope-system)"
           go vet -tags nox11,novulkan ./cmd/isotope-system/... && go test -race -tags nox11,novulkan ./cmd/isotope-system/...
@@ -311,6 +313,12 @@ jobs:
       # The old name of the app picker opens Isotope Welcome's Apps page.
       - name: isotope-first-run-apps link
         run: test/first-run/check-first-run-apps.sh
+
+      # Network shares and NTFS: the polkit action and rule, the udisks2
+      # mount options, the agent's removals. The images are checked in
+      # desktop-images.yml and release.yml.
+      - name: Network shares and NTFS files
+        run: test/shares/check-shares.sh --repo
 
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle

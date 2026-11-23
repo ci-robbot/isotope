@@ -88,6 +88,9 @@ func main() {
 	} else {
 		fmt.Fprintf(os.Stderr, "isotope-system: %v\n", err)
 	}
+	if st, err := newFileShares(); err == nil {
+		hooks.Shares = st
+	}
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate

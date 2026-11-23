@@ -36,6 +36,11 @@ func runTray(noIcon bool, stderr io.Writer) int {
 	if !noIcon && systemAppInstalled() {
 		go startAgents(app.log)
 	}
+	// The saved network shares marked "mount at login" (Isotope System's
+	// Disks page).
+	if !noIcon {
+		go mountSavedShares(app.log)
+	}
 	if noIcon {
 		app.noIcon = true
 		app.run(context.Background())

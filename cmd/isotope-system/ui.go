@@ -37,6 +37,9 @@ type Hooks struct {
 	// Live is true on a live desktop session (the marker exists): the
 	// pages that need an installed system then say to install first.
 	Live bool
+	// Shares is the user's saved network shares and their keyring; nil
+	// keeps no list (the Disks page still connects).
+	Shares ShareStore
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the

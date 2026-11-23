@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/shares"
 )
 
 func init() { pageMakers[PageDisks] = func(u *UI) pageView { return newDisksPage(u) } }
@@ -39,6 +40,17 @@ type disksPage struct {
 
 	driveClicks map[string]*driveClicks
 	blockClicks map[string]*blockClicks
+
+	// The NETWORK SHARES section (shares.go). Under u.mu.
+	shSaved   []shares.Saved
+	shMounted []MountedShare
+	shLoaded  bool
+	shErr     string
+	shWorking string
+	connForm  *connectForm // the open "Connect to server" form, for the tests
+	connect   widget.Clickable
+
+	shareClicks map[string]*shareClicks
 }
 
 type driveClicks struct{ eject, powerOff, format widget.Clickable }
@@ -55,13 +67,14 @@ type formatForm struct {
 
 func newDisksPage(u *UI) *disksPage {
 	return &disksPage{u: u, roots: rootDevices,
-		driveClicks: map[string]*driveClicks{}, blockClicks: map[string]*blockClicks{},
+		driveClicks: map[string]*driveClicks{}, blockClicks: map[string]*blockClicks{}, shareClicks: map[string]*shareClicks{},
 		fmtForm: formatForm{fs: "exfat", label: guikit.NewField(false)}}
 }
 
 func (p *disksPage) Shown() {
 	p.watch()
 	p.load()
+	p.loadShares()
 }
 
 // watch reloads the page on every change udisks2 signals, for the life of
@@ -445,6 +458,7 @@ func (p *disksPage) blockActions(d Drive, b Block) []guikit.Action {
 }
 
 func (p *disksPage) Update(gtx layout.Context) {
+	p.updateShares(gtx)
 	for _, d := range p.snapshot() {
 		if !p.changeable(d) {
 			continue
@@ -475,44 +489,53 @@ func (p *disksPage) Footer() (leading, trailing []guikit.Action) { return nil, n
 
 func (p *disksPage) Body(gtx layout.Context) layout.Dimensions {
 	u := p.u
+	sharesW := p.sharesSection()
+	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
+		var c col
+		c.add(u.Heading("Disks", "The disks of this computer, the ones plugged in, and network shares: space used, mount, eject and format USB disks, connect to a server."))
+		c.gap(20)
+		p.drivesPart(&c)
+		c.gap(28)
+		c.add(sharesW)
+		return c.layout(gtx)
+	})
+}
+
+// drivesPart adds the drives, or why they cannot be shown.
+func (p *disksPage) drivesPart(c *col) {
+	u := p.u
 	u.mu.Lock()
 	loaded, loadErr, rootsErr, working := p.loaded, p.loadErr, p.rootsErr, p.working
 	u.mu.Unlock()
 	drives := p.snapshot()
-	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
-		var c col
-		c.add(u.Heading("Disks", "The disks of this computer and the ones plugged in: space used, mount, eject and format USB disks."))
-		c.gap(20)
-		switch {
-		case u.hooks.Disks == nil:
-			c.add(u.errorBox("The disk service (udisks2) is not available."))
-			return c.layout(gtx)
-		case loadErr != "":
-			c.add(u.errorBox(loadErr))
-			return c.layout(gtx)
-		case !loaded:
-			c.add(u.spinnerLine("Reading the disks…"))
-			return c.layout(gtx)
+	switch {
+	case u.hooks.Disks == nil:
+		c.add(u.errorBox("The disk service (udisks2) is not available."))
+		return
+	case loadErr != "":
+		c.add(u.errorBox(loadErr))
+		return
+	case !loaded:
+		c.add(u.spinnerLine("Reading the disks…"))
+		return
+	}
+	if rootsErr != "" {
+		c.add(u.errorBox(rootsErr + ". Every disk is shown read-only."))
+		c.gap(14)
+	}
+	if working != "" {
+		c.add(u.spinnerLine(working))
+		c.gap(14)
+	}
+	if len(drives) == 0 {
+		c.add(u.dim("No disks."))
+	}
+	for i, d := range drives {
+		if i > 0 {
+			c.gap(12)
 		}
-		if rootsErr != "" {
-			c.add(u.errorBox(rootsErr + ". Every disk is shown read-only."))
-			c.gap(14)
-		}
-		if working != "" {
-			c.add(u.spinnerLine(working))
-			c.gap(14)
-		}
-		if len(drives) == 0 {
-			c.add(u.dim("No disks."))
-		}
-		for i, d := range drives {
-			if i > 0 {
-				c.gap(12)
-			}
-			c.add(p.driveCard(d))
-		}
-		return c.layout(gtx)
-	})
+		c.add(p.driveCard(d))
+	}
 }
 
 func (p *disksPage) driveCard(d Drive) layout.Widget {

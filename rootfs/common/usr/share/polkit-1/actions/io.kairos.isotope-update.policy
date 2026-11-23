@@ -98,4 +98,24 @@
       <allow_active>no</allow_active>
     </defaults>
   </action>
+
+  <action id="io.kairos.isotope-update.shares">
+    <description>Mount or unmount your own network shares</description>
+    <message>Only the person at this computer's screen can mount a network share.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+  <action id="io.kairos.isotope-update.shares-nfs">
+    <description>Mount an NFS share</description>
+    <message>Only an administrator at this computer's screen can mount an NFS share.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>no</allow_active>
+    </defaults>
+  </action>
 </policyconfig>

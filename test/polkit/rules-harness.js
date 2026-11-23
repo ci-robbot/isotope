@@ -70,6 +70,16 @@ const cases = [
     { file: "update", action: up + "firewall", groups: admin, ...here, want: "yes", what: "admin" },
     { file: "update", action: up + "firewall", groups: user, ...here, want: "no", what: "non-admin" },
     { file: "update", action: up + "firewall", groups: admin, local: false, active: false, want: "yes", what: "admin over SSH" },
+    { file: "update", action: up + "shares", groups: user, ...here, want: "yes", what: "non-admin, local, active" },
+    { file: "update", action: up + "shares", groups: admin, ...here, want: "yes", what: "admin, local, active" },
+    { file: "update", action: up + "shares", groups: user, local: true, active: false, want: "no", what: "non-admin, inactive" },
+    { file: "update", action: up + "shares", groups: admin, local: true, active: false, want: "no", what: "admin, inactive" },
+    { file: "update", action: up + "shares", groups: user, local: false, active: true, want: "no", what: "non-admin, remote" },
+    { file: "update", action: up + "shares", groups: admin, local: false, active: false, want: "no", what: "admin over SSH" },
+    { file: "update", action: up + "shares-nfs", groups: admin, ...here, want: "yes", what: "admin, local, active" },
+    { file: "update", action: up + "shares-nfs", groups: user, ...here, want: "no", what: "non-admin, local, active" },
+    { file: "update", action: up + "shares-nfs", groups: admin, local: true, active: false, want: "no", what: "admin, inactive" },
+    { file: "update", action: up + "shares-nfs", groups: admin, local: false, active: false, want: "no", what: "admin over SSH" },
 ];
 
 const files = process.argv.slice(2);

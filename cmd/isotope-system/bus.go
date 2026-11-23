@@ -18,6 +18,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/kairos-community/isotope/pkg/firewall"
+	"github.com/kairos-community/isotope/pkg/shares"
 )
 
 const (
@@ -217,6 +218,10 @@ type Daemon interface {
 	RecoveryNewKey(current, newKey string) error
 	RecoveryReseal(key string) error
 	UpdateHistory() ([]HistoryEntry, error)
+	// MountShare mounts a network share for the caller (shares.go).
+	MountShare(url string, o shares.Options, c shares.Credentials) (string, error)
+	UnmountShare(mountpoint string) error
+	MountedShares() ([]MountedShare, error)
 	// Watch sends the daemon's events until stop is called.
 	Watch() (events <-chan Event, stop func(), err error)
 }

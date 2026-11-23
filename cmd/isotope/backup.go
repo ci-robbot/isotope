@@ -95,8 +95,9 @@ func (p backupPaths) stage() string { return filepath.Join(p.Persist, ".isotope-
 var mountinfoPath = "/proc/self/mountinfo"
 
 // mountEntry is a mountinfo line: the device number, the folder of the file
-// system that is mounted, the mount point and the mount source.
-type mountEntry struct{ dev, root, point, src string }
+// system that is mounted, the mount point, the mount source and the file
+// system type.
+type mountEntry struct{ dev, root, point, src, fstype string }
 
 func readMounts() []mountEntry {
 	b, err := os.ReadFile(mountinfoPath)
@@ -113,7 +114,7 @@ func readMounts() []mountEntry {
 		// After the optional fields and "-": the type and the source.
 		for i := 5; i+2 < len(f); i++ {
 			if f[i] == "-" {
-				m.src = unescapeMount(f[i+2])
+				m.fstype, m.src = f[i+1], unescapeMount(f[i+2])
 				break
 			}
 		}

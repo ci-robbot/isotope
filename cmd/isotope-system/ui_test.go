@@ -18,6 +18,7 @@ import (
 	"github.com/kairos-community/isotope/pkg/guikit"
 	"github.com/kairos-community/isotope/pkg/isorelease"
 	"github.com/kairos-community/isotope/pkg/recoverykey"
+	"github.com/kairos-community/isotope/pkg/shares"
 )
 
 // fakeDaemon records the calls and answers from its fields.
@@ -61,6 +62,11 @@ type fakeDaemon struct {
 	// creds are the credentials of the backup calls, by call, for the
 	// tests to check (the call strings never hold one).
 	creds []Credentials
+	// mounted are the network shares MountedShares answers; MountShare
+	// and UnmountShare edit it. shareCreds are the credentials of the
+	// MountShare calls (the call strings never hold a password).
+	mounted    []MountedShare
+	shareCreds []shares.Credentials
 }
 
 func newFakeDaemon() *fakeDaemon {
@@ -389,6 +395,49 @@ func (f *fakeDaemon) UpdateHistory() ([]HistoryEntry, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]HistoryEntry(nil), f.history...), err
+}
+
+func (f *fakeDaemon) MountShare(url string, o shares.Options, c shares.Credentials) (string, error) {
+	f.rec("MountShare " + url + " " + o.Name)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.shareCreds = append(f.shareCreds, c)
+	if err := f.err["MountShare"]; err != nil {
+		return "", err
+	}
+	if f.nonAdmin && strings.HasPrefix(strings.ToLower(url), "nfs:") {
+		return "", &DaemonError{Name: "NotAuthorized", Msg: "not authorized: only an administrator can mount an NFS share, because NFS trusts this computer, not the user"}
+	}
+	l, err := shares.Parse(url)
+	if err != nil {
+		return "", &DaemonError{Name: "Refused", Msg: err.Error()}
+	}
+	mp := "/run/media/anna/" + o.Name
+	f.mounted = append(f.mounted, MountedShare{MountPoint: mp, FSType: l.FSType(), Source: l.Source()})
+	return mp, nil
+}
+
+func (f *fakeDaemon) UnmountShare(mp string) error {
+	f.rec("UnmountShare " + mp)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.err["UnmountShare"]; err != nil {
+		return err
+	}
+	var keep []MountedShare
+	for _, m := range f.mounted {
+		if m.MountPoint != mp {
+			keep = append(keep, m)
+		}
+	}
+	f.mounted = keep
+	return nil
+}
+
+func (f *fakeDaemon) MountedShares() ([]MountedShare, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]MountedShare(nil), f.mounted...), f.err["MountedShares"]
 }
 
 func (f *fakeDaemon) Watch() (<-chan Event, func(), error) {

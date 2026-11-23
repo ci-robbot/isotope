@@ -52,12 +52,14 @@ on:
       - "test/system/**"
       - "test/bluetooth/**"
       - "test/network/**"
+      - "test/shares/**"
       - "go.mod"
       - "go.sum"
       - "pkg/guikit/**"
       - "pkg/installer/**"
       - "pkg/isorelease/**"
       - "pkg/recoverykey/**"
+      - "pkg/shares/**"
       - "cmd/isotope-install-ui/**"
       - "cmd/isotope-install-gui/**"
       - "scripts/ci-containerd-store.sh"
@@ -138,7 +140,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|test/shares/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -408,3 +410,11 @@ jobs:
         if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/look/check-look.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
+
+      # Network shares and NTFS disks: mount.cifs, mount.nfs4 and the cifs,
+      # nfsv4 and ntfs3 modules from Hadron, udisks2's ntfs3 options and the
+      # shares polkit action (no udisks2 options on the server).
+      - name: Check network shares and NTFS
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/shares/check-shares.sh "${DESKTOP}-desktop:dev"

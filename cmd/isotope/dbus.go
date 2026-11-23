@@ -140,6 +140,14 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
       <arg name="name" type="s" direction="in"/>
       <arg name="on" type="b" direction="in"/>
     </method>
+    <method name="MountShare">
+      <arg name="url" type="s" direction="in"/>
+      <arg name="options" type="a{sv}" direction="in"/>
+      <arg name="secrets" type="h" direction="in"/>
+      <arg name="mountpoint" type="s" direction="out"/>
+    </method>
+    <method name="UnmountShare"><arg name="mountpoint" type="s" direction="in"/></method>
+    <method name="MountedShares"><arg name="shares" type="aa{sv}" direction="out"/></method>
     <method name="FirewallStatus">
       <arg name="status" type="a{sv}" direction="out"/>
       <arg name="rules" type="a(qss)" direction="out"/>
@@ -281,7 +289,8 @@ func busError(err error) *dbus.Error {
 		errors.Is(err, errWrongPassword), errors.Is(err, errUnverifiable),
 		errors.Is(err, errMachineInUse), errors.Is(err, errExportNeedsPassword),
 		errors.Is(err, ErrKeyUnchanged), errors.Is(err, errFirewallNotThisBoot),
-		errors.Is(err, errFirewallBroken), errors.Is(err, errFirewallNotBroken):
+		errors.Is(err, errFirewallBroken), errors.Is(err, errFirewallNotBroken),
+		errors.Is(err, errShareRefused):
 		name = "Refused"
 	default:
 		name = "Failed"
@@ -917,6 +926,7 @@ func serveCtx(ctx context.Context, conn *dbus.Conn, d *Daemon, a Authorizer) err
 // cmdDaemon is isotope-updated: the root service that owns the update job.
 func cmdDaemon(args []string, stderr io.Writer) int {
 	fs := newFlags("daemon", stderr)
+	unmountUID := fs.String("unmount-shares", "", "unmount the network shares of the user with this uid, at logout")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
@@ -930,6 +940,11 @@ func cmdDaemon(args []string, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "isotope daemon: must run as root; D-Bus activation starts it through isotope-updated.service.")
 		return exitError
 	}
+	if *unmountUID != "" {
+		return cmdUnmountShares(*unmountUID, stderr)
+	}
+	// No mount runs yet: remove a credentials file that a killed one left.
+	os.RemoveAll(sharesCredDir)
 	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
 		fmt.Fprintln(stderr, "isotope daemon: cannot connect to the system bus:", err)

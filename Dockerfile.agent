@@ -290,7 +290,10 @@ RUN rm -f /usr/bin/restic /usr/lib/systemd/system/isotope-backup.service \
 # No removable-disk service. The appliance has no desktop session to mount a
 # disk for, and a service that mounts any disk for any logged-in user is more
 # surface than an agent needs. udisks2's daemon, client, D-Bus policy and
-# activation file, polkit actions, unit, udev rules and config go.
+# activation file, polkit actions, unit, udev rules and config (with
+# Isotope's NTFS mount options) go. Nor are there network shares: their
+# polkit actions and rule went with the update service's files above (the
+# last check holds that), and their logout unit goes here.
 RUN rm -rf /usr/bin/udisksctl /usr/sbin/umount.udisks2 /usr/lib/udisks2 \
       /usr/lib/libudisks2.so* /usr/include/udisks2 /usr/lib/pkgconfig/udisks2.pc \
       /usr/lib/systemd/system/udisks2.service \
@@ -302,8 +305,12 @@ RUN rm -rf /usr/bin/udisksctl /usr/sbin/umount.udisks2 /usr/lib/udisks2 \
       /etc/udisks2 /var/lib/udisks2 \
       /etc/systemd/system/multi-user.target.wants/udisks2.service \
       /usr/share/polkit-1/rules.d/50-isotope-udisks.rules \
-      /usr/lib/udev/rules.d/90-isotope-udisks-ignore.rules && \
-    ! test -e /usr/bin/udisksctl && ! test -e /usr/lib/udisks2
+      /usr/lib/udev/rules.d/90-isotope-udisks-ignore.rules \
+      /usr/lib/systemd/system/isotope-shares-logout@.service \
+      /usr/lib/systemd/system/user@.service.d/50-isotope-shares-logout.conf && \
+    ! test -e /usr/bin/udisksctl && ! test -e /usr/lib/udisks2 && \
+    ! test -e /etc/udisks2/mount_options.conf && \
+    ! grep -rqs 'io.kairos.isotope-update.shares' /usr/share/polkit-1
 # exfatprogs is there only for udisks2's Format (the Disks page). The desktop
 # image copies it to /usr/bin; remove it from /usr/sbin too in case a base
 # image puts it there.

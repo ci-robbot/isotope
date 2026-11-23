@@ -1,5 +1,27 @@
 // isotope-updated asks polkit without interaction, so every answer here is a
-// plain yes or no: members of admin may install updates and system
+// plain yes or no.
+//
+// Network shares (the Disks page of Isotope System, and the tray at login):
+// the person at the screen mounts and unmounts their own shares, under
+// /run/media/<user>, as with removable disks (50-isotope-udisks.rules). An
+// NFS share also needs shares-nfs, an administrator at the screen: NFS
+// (AUTH_SYS) trusts this computer by its address, so any user could reach
+// an export meant for the machine and the files of whoever has their uid
+// on the server. SMB has its own credentials. No inactive or remote
+// session; the daemon refuses a Flatpak app before polkit is asked, and the
+// logout unmount (isotope-shares-logout@.service) runs as root without
+// polkit. These rules come before the admin rule below, which answers for
+// every other io.kairos.isotope-update.* action.
+polkit.addRule(function(action, subject) {
+    if (action.id == "io.kairos.isotope-update.shares") {
+        return (subject.local && subject.active) ? polkit.Result.YES : polkit.Result.NO;
+    }
+    if (action.id == "io.kairos.isotope-update.shares-nfs") {
+        return (subject.local && subject.active && subject.isInGroup("admin")) ? polkit.Result.YES : polkit.Result.NO;
+    }
+});
+
+// Everything else: members of admin may install updates and system
 // extensions, reboot, manage the disk recovery key, back up, restore a
 // backup on a new machine, manage users, change system settings and the
 // firewall; nobody else may, whatever the session.
