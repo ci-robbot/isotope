@@ -227,8 +227,11 @@ load_mode() {
     # Docker DNATs them in prerouting and they go through forward. Without
     # sudo it is a container on another Docker network, which Docker's
     # isolation may keep from the published port.
-    docker run -d --name "$web" -p 18080:80 "$box" httpd -f -p 80 >/dev/null
-    docker run -d --name "$host" --network host "$box" httpd -f -p 18081 >/dev/null
+    # busybox httpd answers 404 for an empty directory, and wget fails on a
+    # 404, so each server gets a page to serve.
+    serve='mkdir -p /www && echo ok >/www/index.html && exec httpd -f -h /www -p "$0"'
+    docker run -d --name "$web" -p 18080:80 "$box" sh -c "$serve" 80 >/dev/null
+    docker run -d --name "$host" --network host "$box" sh -c "$serve" 18081 >/dev/null
     local gw
     if sudo -n true 2>/dev/null; then
         lan=netns
@@ -260,6 +263,11 @@ load_mode() {
     sleep 1
     # What works without the firewall: the checks below need these, or they
     # would pass for the wrong reason.
+    # Wait for both servers to come up before the baseline is judged.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        local_get 18080 && local_get 18081 && break
+        sleep 1
+    done
     check "without the firewall 127.0.0.1:18080 answers" local_get 18080
     check "without the firewall the host port answers from the LAN" from_lan 18081
     local lan_published=0
