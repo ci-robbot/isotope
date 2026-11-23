@@ -24,3 +24,5 @@
 __pycache__/
 # The applets workspace build dir (cargo in the cosmic-build container)
 /applets/target/
+# The website, built by site/build.py
+/_site/

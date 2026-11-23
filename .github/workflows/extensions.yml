@@ -4,8 +4,9 @@ name: Extensions
 # on the Hadron release the image is pinned to, runs its test stage, and turns
 # it into a sysext image with AuroraBoot. On main it pushes each one to
 # $IMAGE_REPO:sysext-<name>-<version>-amd64 and publishes the catalog,
-# extensions.json, to GitHub Pages, where /etc/isotope/extensions.conf names
-# it first. A pull request builds and tests, and pushes nothing.
+# extensions.json, to GitHub Pages (through pages.yml, which deploys it with
+# the website), where /etc/isotope/extensions.conf names it first. A pull
+# request builds and tests, and pushes nothing.
 
 on:
   pull_request:
@@ -125,45 +126,16 @@ jobs:
             "${NAME}.sysext.raw:application/vnd.kairos.sysext.raw"
 
   # The catalog lists what the registry holds, so it is rebuilt even when one
-  # extension failed: the others are still published.
+  # extension failed: the others are still published. Pages is one deployment
+  # for the website and extensions.json, so pages.yml builds and deploys both;
+  # fresh-catalog makes it fail rather than keep the published catalog.
   catalog:
     needs: build
     if: ${{ !cancelled() && github.event_name != 'pull_request' }}
-    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pages: write
       id-token: write
-    concurrency:
-      group: pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy-first.outputs.page_url || steps.deploy-retry.outputs.page_url }}extensions.json
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Write extensions.json
-        run: |
-          mkdir -p _site
-          scripts/extensions-catalog.sh _site/extensions.json
-          cat _site/extensions.json
-
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: _site
-
-      # deploy-pages can list 0 artifacts right after the upload finished
-      # ("No artifacts named github-pages were found"), a race in the
-      # artifacts API (main, a05662a). Wait and try once more before failing.
-      - id: deploy-first
-        continue-on-error: true
-        uses: actions/deploy-pages@v5
-      - name: Wait before retrying the deploy
-        if: steps.deploy-first.outcome == 'failure'
-        run: sleep 30
-      - id: deploy-retry
-        if: steps.deploy-first.outcome == 'failure'
-        uses: actions/deploy-pages@v5
+    uses: ./.github/workflows/pages.yml
+    with:
+      fresh-catalog: true

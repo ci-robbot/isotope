@@ -1,0 +1,126 @@
+name: Pages
+
+# The one GitHub Pages deployment of this repository: the website (site/,
+# built by site/build.py) and the system extension catalog, extensions.json,
+# at the root. Installed systems read the catalog at
+# https://kairos-community.github.io/isotope/extensions.json
+# (rootfs/common/etc/isotope/extensions.conf, cmd/isotope/ext.go), and a Pages
+# deploy replaces the whole site, so every deploy builds both halves from the
+# same commit. See docs/superpowers/specs/2026-11-24-website-design.md.
+#
+# It runs on a site change, after a release (the download buttons are read
+# from the latest release at build time), when extensions.yml calls it with a
+# new catalog, and by hand. A pull request builds and checks, and deploys
+# nothing.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - theme/palette.toml
+      - pkg/guikit/fonts/**
+      - cmd/isotope-welcome/testdata/*.png
+      - cmd/isotope-install-gui/testdata/*.png
+      - scripts/extensions-catalog.sh
+      - .github/workflows/pages.yml
+  pull_request:
+    paths:
+      - site/**
+      - theme/palette.toml
+      - pkg/guikit/fonts/**
+      - cmd/isotope-welcome/testdata/*.png
+      - cmd/isotope-install-gui/testdata/*.png
+      - scripts/extensions-catalog.sh
+      - .github/workflows/pages.yml
+  # release.yml publishes the release with GITHUB_TOKEN, which starts no
+  # `release` workflow, so follow the workflow itself.
+  workflow_run:
+    workflows: ["Release ISOs"]
+    types: [completed]
+  workflow_call:
+    inputs:
+      fresh-catalog:
+        description: Fail when extensions.json cannot be generated, instead of keeping the published one
+        type: boolean
+        default: false
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CATALOG_URL: https://kairos-community.github.io/isotope/extensions.json
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The runner's Python (3.12; build.py needs tomllib, 3.11+). It reads
+      # the latest release with the token; without the API the buttons
+      # link to the release page and the build still succeeds.
+      - name: Build the site
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 site/build.py --out _site
+
+      # A site deploy during a registry outage keeps the catalog that is
+      # published; a deploy for new extensions (fresh-catalog) must not.
+      - name: Write extensions.json
+        env:
+          FRESH: ${{ inputs.fresh-catalog && 'true' || 'false' }}
+        run: |
+          if scripts/extensions-catalog.sh _site/extensions.json; then
+            exit 0
+          fi
+          if [ "$FRESH" = true ]; then
+            echo "::error::could not generate extensions.json" >&2
+            exit 1
+          fi
+          echo "::warning::could not generate extensions.json; keeping the published one"
+          scripts/retry.sh 5 10 curl -fsSL -o _site/extensions.json "$CATALOG_URL"
+
+      - name: Check the site and the catalog
+        run: |
+          python3 site/check.py _site --catalog
+          jq -e '.repo and (.layers | type == "array")' _site/extensions.json >/dev/null
+          jq . _site/extensions.json
+
+      - name: Upload the Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-first.outputs.page_url || steps.deploy-retry.outputs.page_url }}
+    steps:
+      # deploy-pages can list 0 artifacts right after the upload finished
+      # ("No artifacts named github-pages were found"), a race in the
+      # artifacts API (main, a05662a). Wait and try once more before failing.
+      - id: deploy-first
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Wait before retrying the deploy
+        if: steps.deploy-first.outcome == 'failure'
+        run: sleep 30
+      - id: deploy-retry
+        if: steps.deploy-first.outcome == 'failure'
+        uses: actions/deploy-pages@v5

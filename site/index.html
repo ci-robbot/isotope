@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Isotope, built on Hadron</title>
+<meta name="description" content="Isotope is an immutable Linux you install once and do not have to maintain. One signed image, A/B updates and rollback, four desktops and a server edition. Built on Hadron, by Kairos.">
+<meta name="theme-color" content="#141411">
+<meta property="og:title" content="Isotope, built on Hadron">
+<meta property="og:description" content="An immutable Linux with A/B updates and rollback. COSMIC, niri, Sway, i3 and Isotope Server.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+{{font_preload}}
+<link rel="stylesheet" href="site.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <a class="brand" href="#top" aria-label="Isotope, home">
+    <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><use href="#mark"/></svg>
+    <span class="brand-word">Isotope</span>
+  </a>
+  <nav aria-label="Sections">
+    <ul class="nav">
+      <li class="nav-wide"><a href="#desktops">Desktops</a></li>
+      <li class="nav-wide"><a href="#features">Features</a></li>
+      <li class="nav-wide"><a href="{{repo_url}}#readme">Docs</a></li>
+      <li><a href="{{repo_url}}">GitHub</a></li>
+      <li><a class="nav-cta" href="#download">Download</a></li>
+    </ul>
+  </nav>
+</header>
+
+<svg width="0" height="0" class="defs" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="mark">
+      <path fill="#e4de48" d="M423.12 171.21L423.12 376.01L245.76 478.41L68.40 376.01L68.40 171.21L245.76 68.81L245.76 104.29L99.12 188.95L99.12 358.28L245.76 442.94L392.40 358.28L392.40 188.95Z"/>
+      <path fill="#f9f1af" d="M266.24 33.34L443.60 135.74L412.88 153.48L266.24 68.81Z"/>
+      <circle fill="#f9f1af" cx="245.76" cy="273.61" r="34.82"/>
+    </g>
+  </defs>
+</svg>
+
+<main id="main">
+
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <picture class="hero-bg">
+    <source media="(max-width: 900px)" srcset="img/hydrogen-night-1200.webp">
+    <img src="img/hydrogen-night-2400.webp" alt="" width="2400" height="1350" fetchpriority="high">
+  </picture>
+  <div class="hero-inner">
+    <svg class="hero-mark" viewBox="0 0 512 512" role="img" aria-label="The Isotope mark: a hexagon with a glowing core and one lifted side">
+      <defs>
+        <radialGradient id="core-glow">
+          <stop offset="0" stop-color="#f9f1af" stop-opacity=".9"/>
+          <stop offset="1" stop-color="#f9f1af" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="m-halo" cx="245.76" cy="273.61" r="150" fill="url(#core-glow)"/>
+      <path class="m-shell" fill="#e4de48" d="M423.12 171.21L423.12 376.01L245.76 478.41L68.40 376.01L68.40 171.21L245.76 68.81L245.76 104.29L99.12 188.95L99.12 358.28L245.76 442.94L392.40 358.28L392.40 188.95Z"/>
+      <path class="m-side" fill="#f9f1af" d="M266.24 33.34L443.60 135.74L412.88 153.48L266.24 68.81Z"/>
+      <circle class="m-core" fill="#f9f1af" cx="245.76" cy="273.61" r="34.82"/>
+    </svg>
+    <h1 id="hero-title">A Linux you install once and do not have to maintain.</h1>
+    <p class="lede">Isotope is an immutable desktop. The system is one signed image that updates as a whole, and the previous version is always one reboot away. Four desktops and a server edition, built on Hadron, by Kairos.</p>
+    <div class="actions">
+      <a class="button button--primary" href="#download">Download Isotope</a>
+      <a class="button" href="{{repo_url}}">Source on GitHub</a>
+    </div>
+    <p class="version">{{version_line}}</p>
+  </div>
+</section>
+
+<section class="band what" aria-labelledby="what-title">
+  <div class="wrap what-grid">
+    <div>
+      <h2 id="what-title">One image, nothing to break</h2>
+      <p>The system lives in a read-only image. You do not install packages into it, so there is no package manager to break and no half-finished upgrade. Your files stay in <code>/home</code>, and your apps come from Flathub.</p>
+      <p>Every package is compiled from source on Hadron, a small Linux built on musl. Kairos boots it, upgrades it and encrypts its disk.</p>
+    </div>
+    <figure class="stack" aria-label="How Isotope is built">
+      <div class="stack-layer stack-layer--isotope">
+        <span class="stack-name">Isotope</span>
+        <span class="stack-job">Four desktops, the server edition, Isotope System, the installer, backups, the firewall</span>
+      </div>
+      <div class="stack-layer">
+        <span class="stack-name">Hadron</span>
+        <span class="stack-job">A minimal musl-based Linux, every package built from source</span>
+      </div>
+      <div class="stack-layer">
+        <span class="stack-name">Kairos</span>
+        <span class="stack-job">Boot, A/B upgrades, disk encryption, system extensions</span>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<section class="band updates" id="updates" aria-labelledby="updates-title">
+  <div class="wrap">
+    <h2 id="updates-title">Updates that cannot break your machine</h2>
+    <p class="section-lede">Isotope keeps two systems on the disk, A and B. An update goes to the one you are not running.</p>
+    <ol class="ab">
+      <li>
+        <svg class="ab-fig" viewBox="0 0 120 56" aria-hidden="true"><rect class="slot on" x="4" y="8" width="50" height="40" rx="4"/><rect class="slot" x="66" y="8" width="50" height="40" rx="4"/><text x="29" y="33">A</text><text x="91" y="33">B</text></svg>
+        <h3>A release is out</h3>
+        <p>A tray icon tells you. You are running system A.</p>
+      </li>
+      <li>
+        <svg class="ab-fig" viewBox="0 0 120 56" aria-hidden="true"><rect class="slot on" x="4" y="8" width="50" height="40" rx="4"/><rect class="slot new" x="66" y="8" width="50" height="40" rx="4"/><text x="29" y="33">A</text><text x="91" y="33">B</text></svg>
+        <h3>It is written to B</h3>
+        <p>Click to install. Nothing you are using changes.</p>
+      </li>
+      <li>
+        <svg class="ab-fig" viewBox="0 0 120 56" aria-hidden="true"><rect class="slot" x="4" y="8" width="50" height="40" rx="4"/><rect class="slot on" x="66" y="8" width="50" height="40" rx="4"/><text x="29" y="33">A</text><text x="91" y="33">B</text></svg>
+        <h3>Reboot when it suits you</h3>
+        <p>The computer starts the new system.</p>
+      </li>
+      <li>
+        <svg class="ab-fig" viewBox="0 0 120 56" aria-hidden="true"><rect class="slot on" x="4" y="8" width="50" height="40" rx="4"/><rect class="slot" x="66" y="8" width="50" height="40" rx="4"/><text x="29" y="33">A</text><text x="91" y="33">B</text><path class="back" d="M88 6 C 74 -4, 46 -4, 32 6 M32 6 L33.5 -0.5 M32 6 L38.5 6.5"/></svg>
+        <h3>Changed your mind?</h3>
+        <p>The previous system is still in the boot menu.</p>
+      </li>
+    </ol>
+    <pre class="term" aria-label="Update commands"><code><span class="c">isotope</span>             <span class="d"># installed version and latest release</span>
+<span class="c">isotope upgrade</span>     <span class="d"># install the latest release</span>
+<span class="c">isotope rollback</span>    <span class="d"># boot the previous system</span></code></pre>
+    <p class="fine">Only members of the <code>admin</code> group can install updates. Release images are signed with cosign.</p>
+  </div>
+</section>
+
+<section class="band desktops" id="desktops" aria-labelledby="desktops-title">
+  <div class="wrap">
+    <h2 id="desktops-title">Four desktops, the same Isotope</h2>
+    <p class="section-lede">Every desktop has the same Isotope features on the same keys: <kbd>Super</kbd>+<kbd>Esc</kbd> opens the Isotope menu, <kbd>Super</kbd>+<kbd>F1</kbd> shows the shortcuts. They differ in how they arrange your windows.</p>
+    <ul class="desk-list">
+      <li class="desk desk--cosmic">
+        <svg class="desk-fig" viewBox="0 0 280 175" role="img" aria-label="COSMIC: windows placed freely, a top panel and a dock">
+          <rect class="scr" width="280" height="175" rx="6"/>
+          <rect class="bar" width="280" height="12"/>
+          <rect class="win-focus" x="22" y="30" width="150" height="96" rx="6"/>
+          <rect class="win-title" x="22" y="30" width="150" height="14" rx="6"/>
+          <rect class="win" x="112" y="58" width="146" height="88" rx="6"/>
+          <rect class="dock" x="88" y="154" width="104" height="16" rx="8"/>
+          <circle class="dot" cx="104" cy="162" r="4"/><circle class="dot" cx="122" cy="162" r="4"/><circle class="dot" cx="140" cy="162" r="4"/><circle class="dot" cx="158" cy="162" r="4"/><circle class="dot" cx="176" cy="162" r="4"/>
+        </svg>
+        <h3>COSMIC</h3>
+        <p>Windows where you put them, a dock, a graphical login, a settings app and an app store. The one to start with if you are new to Linux.</p>
+      </li>
+      <li class="desk desk--niri">
+        <svg class="desk-fig" viewBox="0 0 280 175" role="img" aria-label="niri: a strip of window columns that runs off both sides of the screen">
+          <rect class="scr" width="280" height="175" rx="6"/>
+          <rect class="bar" width="280" height="12"/>
+          <rect class="win" x="-60" y="22" width="90" height="144" rx="8"/>
+          <rect class="win-focus" x="40" y="22" width="124" height="144" rx="8"/>
+          <rect class="win" x="174" y="22" width="80" height="68" rx="8"/>
+          <rect class="win" x="174" y="98" width="80" height="68" rx="8"/>
+          <rect class="win" x="264" y="22" width="100" height="144" rx="8"/>
+        </svg>
+        <h3>niri + Noctalia</h3>
+        <p>New windows open to the right, and you scroll through them. Noctalia adds a bar, a dock, a launcher and a control center.</p>
+      </li>
+      <li class="desk desk--sway">
+        <svg class="desk-fig" viewBox="0 0 280 175" role="img" aria-label="Sway: tiled windows under a top bar">
+          <rect class="scr" width="280" height="175" rx="6"/>
+          <rect class="bar" width="280" height="14"/>
+          <rect class="win-focus" x="6" y="20" width="132" height="149" rx="3"/>
+          <rect class="win" x="144" y="20" width="130" height="72" rx="3"/>
+          <rect class="win" x="144" y="97" width="130" height="72" rx="3"/>
+        </svg>
+        <h3>Sway</h3>
+        <p>Tiling on Wayland, for people who drive the computer from the keyboard.</p>
+      </li>
+      <li class="desk desk--i3">
+        <svg class="desk-fig" viewBox="0 0 280 175" role="img" aria-label="i3: three tiled columns over a bottom bar">
+          <rect class="scr" width="280" height="175" rx="6"/>
+          <rect class="win" x="6" y="6" width="86" height="149" rx="3"/>
+          <rect class="win-focus" x="97" y="6" width="86" height="149" rx="3"/>
+          <rect class="win" x="188" y="6" width="86" height="149" rx="3"/>
+          <rect class="bar" y="161" width="280" height="14"/>
+        </svg>
+        <h3>i3</h3>
+        <p>The classic tiling window manager, on the XLibre X server.</p>
+      </li>
+    </ul>
+    <p class="switch">Changed your mind later? <code>isotope switch niri</code> moves an installed machine to another desktop and keeps your files.</p>
+  </div>
+</section>
+
+<section class="band features" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <h2 id="features-title">What comes with it</h2>
+
+    <div class="show">
+      <div class="show-text">
+        <h3>Try it before you install</h3>
+        <p>The desktop ISOs start a live desktop from the USB stick. Check that the Wi-Fi, the screen and the sound work. Nothing is written to your disks until you choose "Install Isotope", and the installer then opens as a window.</p>
+      </div>
+      <img class="shot" src="img/live-welcome.png" width="1440" height="900" loading="lazy" alt="The live desktop's welcome window: Install Isotope or Try it out, with the language and keyboard at the bottom.">
+    </div>
+
+    <div class="show show--flip">
+      <div class="show-text">
+        <h3>Encrypt your files</h3>
+        <p>The installer offers to encrypt the disk. You type a passphrase at every start, and you can add a recovery key in case you forget it. Encryption is off unless you choose it.</p>
+      </div>
+      <img class="shot" src="img/installer-encryption.png" width="1440" height="900" loading="lazy" alt="The graphical installer's encryption step: Don't encrypt or Encrypt my files, a passphrase typed twice, and a recovery key option.">
+    </div>
+
+    <div class="show">
+      <div class="show-text">
+        <h3>Apps on the first login</h3>
+        <p>A short checklist installs a browser and other essential apps from Flathub. File dialogs and dark mode work in Flatpak apps.</p>
+      </div>
+      <img class="shot" src="img/welcome-apps.png" width="1440" height="900" loading="lazy" alt="Isotope Welcome's Install apps page: pick a browser, and essentials such as an image viewer, a media player and a PDF viewer.">
+    </div>
+
+    <dl class="more">
+      <div>
+        <dt>Backups</dt>
+        <dd>
+          <p>Everything that survives a reboot, encrypted, to a USB disk or a remote target: files, users, settings and the list of your apps. After the first backup only the changes are copied.</p>
+          <code>isotope backup schedule daily</code>
+        </dd>
+      </div>
+      <div>
+        <dt>System extensions</dt>
+        <dd>
+          <p>Add tools to the system without rebuilding its image. Browse, install and remove extensions in Isotope System or from the command line.</p>
+          <code>isotope ext list</code>
+        </dd>
+      </div>
+      <div>
+        <dt>A firewall, on by default</dt>
+        <dd>
+          <p>New incoming connections are blocked, except SSH and what a network needs (DHCP, mDNS, ping). Allow or remove ports in Isotope System, or from a terminal.</p>
+          <code>isotope firewall allow 8080/tcp</code>
+        </dd>
+      </div>
+      <div>
+        <dt>Programs built for glibc <span class="soon">Coming soon</span></dt>
+        <dd>
+          <p>Isotope is built on musl. Running glibc programs directly is not released yet. Today, use Flatpak apps, or Distrobox, which is included and gives you a normal Linux in a container.</p>
+          <code>distrobox create</code>
+        </dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<section class="band server" aria-labelledby="server-title">
+  <div class="wrap server-grid">
+    <div>
+      <h2 id="server-title">Isotope Server</h2>
+      <p>The same base with no desktop at all: the installer with disk encryption, A/B updates, system extensions, backups, the firewall, NetworkManager, an SSH server and Docker. Log in on the console or over SSH.</p>
+    </div>
+    <pre class="term" aria-label="Server commands"><code><span class="c">isotope upgrade</span>          <span class="d"># the latest server release</span>
+<span class="c">isotope backup</span>           <span class="d"># back up the whole machine</span>
+<span class="c">sudo nmtui</span>               <span class="d"># the network, in a text UI</span>
+<span class="c">docker run --rm hello-world</span></code></pre>
+  </div>
+</section>
+
+<section class="band download" id="download" aria-labelledby="download-title" data-state="{{downloads_state}}">
+  <div class="wrap">
+    <h2 id="download-title">Download</h2>
+    <p class="section-lede">{{version_line}}</p>
+
+    <form class="picker" id="picker" hidden aria-labelledby="picker-title">
+      <h3 id="picker-title">Which one do I pick?</h3>
+      <fieldset>
+        <legend>Where will it run?</legend>
+        <label><input type="radio" name="machine" value="full" checked> <span><b>A laptop or desktop PC</b> The full image, with the graphics drivers, Wi-Fi, Bluetooth and audio firmware.</span></label>
+        <label><input type="radio" name="machine" value="vm"> <span><b>A virtual machine</b> The vm image: about 0.3 GB smaller, with the QEMU guest agent.</span></label>
+        <label><input type="radio" name="machine" value="server"> <span><b>A server</b> Isotope Server, no desktop.</span></label>
+      </fieldset>
+      <fieldset class="picker-desk">
+        <legend>Which desktop?</legend>
+        <label><input type="radio" name="desktop" value="cosmic" checked> <span><b>COSMIC</b> New to Linux, or want a dock and a settings app.</span></label>
+        <label><input type="radio" name="desktop" value="niri"> <span><b>niri</b> A scrolling strip of windows.</span></label>
+        <label><input type="radio" name="desktop" value="sway"> <span><b>Sway</b> Keyboard tiling on Wayland.</span></label>
+        <label><input type="radio" name="desktop" value="i3"> <span><b>i3</b> Keyboard tiling on X11.</span></label>
+      </fieldset>
+      <div class="pick" aria-live="polite">
+        <p class="pick-label">Your ISO</p>
+        <a class="button button--primary pick-button" href="{{latest_url}}">Download</a>
+        <p class="pick-file"></p>
+      </div>
+    </form>
+
+    <div class="matrix" aria-label="All ISOs">
+      <div class="matrix-head" aria-hidden="true"><span></span><span>PCs and laptops (full)</span><span>Virtual machines (vm)</span></div>
+{{downloads}}
+    </div>
+
+    <ol class="steps">
+      <li><b>Check the download.</b> <code>sha256sum --check isotope-*.iso.sha256</code></li>
+      <li><b>Write it to a USB stick</b>, for example with Fedora Media Writer, or with <code>dd</code>.</li>
+      <li><b>Boot it.</b> The desktop ISOs start the live desktop first; choose "Install Isotope" when you are ready. In a VM, give it UEFI firmware, 4 GB of RAM and a disk of 20 GB or more.</li>
+    </ol>
+    <p class="fine">Every ISO comes with an SPDX SBOM and a build manifest that names every source it was built from. The Trusted Boot ISOs and the agent appliance are on the <a href="{{latest_url}}">release page</a>.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-grid">
+    <div class="foot-brand">
+      <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><use href="#mark"/></svg>
+      <p><b>Isotope</b><br>Built on Hadron, by Kairos.</p>
+    </div>
+    <ul class="foot-links">
+      <li><a href="{{repo_url}}">GitHub</a></li>
+      <li><a href="{{repo_url}}#readme">Documentation</a></li>
+      <li><a href="{{repo_url}}/blob/main/docs/DEVELOPMENT.md">Build it yourself</a></li>
+      <li><a href="{{repo_url}}/releases">All releases</a></li>
+      <li><a href="https://github.com/kairos-io/hadron">Hadron</a></li>
+      <li><a href="https://kairos.io">Kairos</a></li>
+    </ul>
+    <p class="foot-licence">Isotope is licensed under the <a href="LICENSE.txt">Apache License 2.0</a>. Its COSMIC panel applets are GPL-3.0-only. The fonts are under the <a href="fonts/OFL-Urbanist.txt">SIL Open Font Licence</a>.</p>
+  </div>
+</footer>
+</body>
+</html>
