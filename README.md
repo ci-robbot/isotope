@@ -81,6 +81,10 @@ installed machine to another desktop and keeps your files.
   keys and do not disturb. Night light is not on COSMIC yet.
 - **For developers too.** Docker and [Distrobox](https://distrobox.it/) are
   included. Distrobox gives you a normal, changeable Linux inside a container.
+- **Programs built for other Linux systems.** Isotope uses musl, not glibc. A
+  downloaded program or AppImage built for glibc still starts the usual way:
+  `isotope glibc` runs it in an Ubuntu LTS container for you. See
+  [Programs built for glibc](docs/glibc-programs.md).
 - **A coherent look.** The boot menu, the boot animation, the login, the
   installer and the desktop all use the same Isotope mark and colors.
 

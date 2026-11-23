@@ -32,6 +32,14 @@ ARG SMARTMONTOOLS_LAYER_VERSION=7.5
 # files under /usr only), on the vm image line only: see the guest-tools stages.
 # renovate: datasource=docker depName=ghcr.io/kairos-io/hadron-layers/qemu-guest-agent
 ARG QEMU_GUEST_AGENT_LAYER_VERSION=11.1.3
+# The image of the glibc container (`isotope glibc`, the Distrobox named
+# isotope-glibc), written to /usr/share/isotope/glibc.conf in desktop-default.
+# cmd/isotope/glibc.go's glibcDefaultImage falls back to the same value.
+# Ubuntu LTS only: renovate.json allows even-year .04 tags, and the next LTS
+# is a major update that waits on the dependency dashboard. A box that exists
+# keeps its image until `isotope glibc reset`.
+# renovate: datasource=docker depName=docker.io/library/ubuntu
+ARG GLIBC_BOX_IMAGE=docker.io/library/ubuntu:26.04
 # Select the display server + window manager pair: sway, i3, cosmic or niri.
 # server builds the server edition instead, with no desktop (server-default).
 ARG DESKTOP=sway
@@ -6134,6 +6142,35 @@ RUN mkdir -p /isotope-gpu-probe/usr/bin && \
     cc -O2 -Wall -Wextra -Werror /build/isotope-gpu-probe.c -o /isotope-gpu-probe/usr/bin/isotope-gpu-probe && \
     ! ldd /isotope-gpu-probe/usr/bin/isotope-gpu-probe | grep 'not found'
 
+# isotope-glibc-loader: the stand-in for glibc's dynamic loader. A program
+# built for glibc names /lib64/ld-linux-x86-64.so.2 as its interpreter; the
+# kernel runs this file and it hands the program to `isotope glibc run`. It
+# must be static with no PT_INTERP and link no library, so it builds against
+# Alpine's musl-dev (Hadron's toolchain has no libc.a). Static-pie, so it loads
+# at a free address even under a non-PIE program. The test hook is compiled in
+# only with -DTESTING, so the production binary must not contain it.
+FROM alpine:3.22 AS glibc-loader
+RUN apk add --no-cache gcc musl-dev binutils
+COPY tools/isotope-glibc-loader.c /build/isotope-glibc-loader.c
+RUN mkdir -p /glibc-loader/usr/lib && \
+    cc -static-pie -O2 -Wall -Wextra -Werror /build/isotope-glibc-loader.c -o /glibc-loader/usr/lib/ld-linux-x86-64.so.2 && \
+    ! readelf -lW /glibc-loader/usr/lib/ld-linux-x86-64.so.2 | grep -q INTERP && \
+    ! grep -q ISOTOPE_GLIBC_LOADER_TEST_ROOT /glibc-loader/usr/lib/ld-linux-x86-64.so.2
+
+# isotope-appimage: the binfmt_misc handler for type 2 AppImages
+# (rootfs/common/usr/lib/binfmt.d/isotope-appimage.conf). On the host it hands
+# the AppImage to `isotope glibc run --appimage`; in a container, where the
+# rule applies too, it runs the AppImage's own runtime from a memfd copy
+# without the magic. Built like the loader: static-pie against musl, no
+# PT_INTERP, and no test hook in this build.
+FROM alpine:3.22 AS appimage-handler
+RUN apk add --no-cache gcc musl-dev binutils
+COPY tools/isotope-appimage.c /build/isotope-appimage.c
+RUN mkdir -p /appimage-handler/usr/libexec && \
+    cc -static-pie -O2 -Wall -Wextra -Werror /build/isotope-appimage.c -o /appimage-handler/usr/libexec/isotope-appimage && \
+    ! readelf -lW /appimage-handler/usr/libexec/isotope-appimage | grep -q INTERP && \
+    ! grep -q ISOTOPE_APPIMAGE_TEST_ROOT /appimage-handler/usr/libexec/isotope-appimage
+
 # cage, with wlroots linked in from source (a meson subproject), so it needs no
 # libwlroots on cosmic, niri and i3, whose desktops do not use wlroots. cage's
 # releases follow wlroots series (0.2.0 is the wlroots 0.18 one); the
@@ -6618,6 +6655,32 @@ COPY --from=cage /cage/usr/bin/cage /usr/bin/cage
 # The GPU probe, for the sessions' and the installer's software fallback
 # (rootfs/common/usr/libexec/isotope-gpu-env).
 COPY --from=isotope-gpu-probe /isotope-gpu-probe /
+# Programs built for glibc. The stand-in loader (tools/isotope-glibc-loader.c)
+# at /usr/lib/ld-linux-x86-64.so.2, which is also /lib64's (a link to usr/lib
+# on Hadron), hands such a program to `isotope glibc run`; glibc.conf names the
+# container's image. AppImages reach /usr/libexec/isotope-appimage
+# (tools/isotope-appimage.c, the appimage-handler stage) through the binfmt
+# rule in rootfs/common/usr/lib/binfmt.d/isotope-appimage.conf, which
+# systemd-binfmt.service registers at boot. Hadron's systemd already links that
+# unit and proc-sys-fs-binfmt_misc.automount into sysinit.target (statically,
+# under /usr/lib), and binfmt_misc is a module the automount loads; stop here
+# if a base ever drops one of them. Not on the server (server-default copies
+# none of this) and not on the agent (Dockerfile.agent removes it).
+# The help page ships too, so `isotope glibc --help` can name it offline.
+# test/glibc/check-glibc.sh checks the image.
+COPY --from=glibc-loader /glibc-loader /
+COPY --from=appimage-handler /appimage-handler /
+COPY docs/glibc-programs.md /usr/share/doc/isotope/glibc-programs.md
+ARG GLIBC_BOX_IMAGE
+RUN printf 'image=%s\n' "${GLIBC_BOX_IMAGE}" > /usr/share/isotope/glibc.conf && \
+    test "$(readlink /lib64)" = usr/lib && \
+    test -L /usr/lib/systemd/system/sysinit.target.wants/systemd-binfmt.service && \
+    test -L /usr/lib/systemd/system/sysinit.target.wants/proc-sys-fs-binfmt_misc.automount && \
+    { ls /usr/lib/modules/*/kernel/fs/binfmt_misc.ko* >/dev/null 2>&1 || \
+      grep -qs '/binfmt_misc.ko$' /usr/lib/modules/*/modules.builtin; } && \
+    test -f /usr/lib/binfmt.d/isotope-appimage.conf && \
+    test -x /usr/libexec/isotope-appimage && test -f /usr/share/doc/isotope/glibc-programs.md || \
+    { echo "${BASE_IMAGE}: the glibc loader's /lib64 link, systemd-binfmt.service, the binfmt_misc automount or module, or the AppImage rule is missing" >&2; exit 1; }
 # Isotope Welcome, the variant's build (welcome-${DESKTOP}). The sessions
 # start `isotope-welcome --login`; Dockerfile.agent removes it.
 COPY --from=welcome / /

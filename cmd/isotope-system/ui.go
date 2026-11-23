@@ -29,6 +29,9 @@ type Hooks struct {
 	// Disks is udisks2; nil when it is missing (the Disks page then says
 	// so).
 	Disks Disks
+	// Glibc is `isotope glibc`, run as the user (compat.go); nil when the
+	// Compatibility page cannot reach it.
+	Glibc Glibc
 	// Files is the file picker; nil asks for a typed path.
 	Files FileChooser
 	// Start runs a program and does not wait (the desktop's own settings,

@@ -102,7 +102,16 @@ jobs:
       - name: every Go build stage copies the packages its program imports
         run: scripts/check-go-stage-copies.sh
 
+      # The AppImage tests build their AppImages with mksquashfs; with
+      # ISOTOPE_REQUIRE_MKSQUASHFS=1 they fail instead of skipping without it.
+      - name: squashfs-tools for the AppImage tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends squashfs-tools
+
       - name: isotope tests
+        env:
+          ISOTOPE_REQUIRE_MKSQUASHFS: "1"
         run: |
           go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/...
           go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/...
@@ -148,7 +157,9 @@ jobs:
           go vet -tags nox11,novulkan ./cmd/isotope-welcome/... && go test -tags nox11,novulkan ./cmd/isotope-welcome/...
 
       # Isotope System: its models and pages against a fake daemon and a
-      # fake NetworkManager. No golden screenshots yet.
+      # fake NetworkManager, and the Compatibility page's screenshots
+      # (cmd/isotope-system/testdata/compat-*.png), on the same Mesa as the
+      # install-gui tests.
       - name: system tests
         env:
           CGO_ENABLED: "1"
@@ -325,6 +336,17 @@ jobs:
         run: test/night-light/check-night-light.sh
       - name: Software-rendering fallback hook, notice and wiring
         run: test/graphics/check-gpu-fallback.sh
+      - name: Stand-in glibc loader hand-off and refusals
+        run: test/glibc/test-loader.sh
+      # The AppImage binfmt handler: the hand-off on the host, the AppImage's
+      # own runtime in a container (once, without the magic), its refusals.
+      - name: AppImage handler hand-off, container fallback and refusals
+        run: test/glibc/test-appimage.sh
+      # The loader, the AppImage rule and glibc.conf in the Dockerfile, kept
+      # off the server and the agent; the Renovate pin; the docs. The images
+      # are checked in desktop-images.yml and release.yml.
+      - name: Programs built for glibc, wiring
+        run: test/glibc/check-glibc.sh --repo
       - name: Clipboard history dispatch and wiring
         run: test/clipboard/dispatch_test.sh
       - name: Extensions menu entry and wiring

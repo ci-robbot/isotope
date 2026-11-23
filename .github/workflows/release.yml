@@ -467,6 +467,15 @@ jobs:
           test/firewall/check-firewall.sh "${DESKTOP}-desktop:dev"
           test/firewall/check-firewall.sh "${DESKTOP}-desktop:dev" --load
 
+      # Programs built for glibc: the stand-in loader (static, at both paths),
+      # glibc.conf's Ubuntu LTS, the AppImage rule and systemd-binfmt, no ELF
+      # of the image naming ld-linux-x86-64.so.2, and Ubuntu's /usr/bin/true
+      # started on the image reaching `isotope glibc run --loader`. The server
+      # (and the agent) must have none of it.
+      - name: Check programs built for glibc
+        shell: bash
+        run: test/glibc/check-glibc.sh "${DESKTOP}-desktop:dev"
+
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
         if: matrix.desktop != 'server'
@@ -970,6 +979,12 @@ jobs:
       - name: Check the firewall is off
         shell: bash
         run: test/firewall/check-firewall.sh "$AGENT_IMAGE"
+
+      # No stand-in glibc loader, AppImage rule or glibc.conf (Dockerfile.agent
+      # removes them): the agent's programs never set up a container.
+      - name: Check there are no glibc programs
+        shell: bash
+        run: test/glibc/check-glibc.sh "$AGENT_IMAGE"
 
       # The gates below re-wrap the freshly built appliance image with their own
       # `cidata` seeds, so the appliance is built exactly once here and every

@@ -70,12 +70,15 @@ Commands:
   backup [command]  back up this machine to a USB disk or a server; see
                     "isotope backup help"
   restore           restore a backup; see "isotope restore help"
+  glibc [command]   run programs built for glibc in an Ubuntu container for
+                    your user; see "isotope glibc help"
   welcome [PAGE]    Isotope Welcome, the first-login setup, again; or one
                     of its pages: apps, language, network, appearance,
                     accessibility, shortcuts
   system [PAGE]     Isotope System, the window for all of the above;
                     or one of its pages: updates, desktop, extensions,
-                    backup, security, network, bluetooth, users, disks, about
+                    backup, security, network, bluetooth, users, disks,
+                    compatibility, about
   help              this text
 
 Started by the desktop session and by systemd, not by hand:
@@ -161,6 +164,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdBackup(args, stdin, stdout, stderr)
 	case "restore":
 		return cmdRestore(args, stdin, stdout, stderr)
+	case "glibc":
+		return cmdGlibc(args, stdin, stdout, stderr)
 	case "welcome":
 		return cmdWelcome(args, stderr)
 	case "wallpaper-follow":

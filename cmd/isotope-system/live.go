@@ -29,7 +29,9 @@ const liveText = "Not available on the live system. Install Isotope first."
 // liveOnly are the pages that cannot work on the live system: they change
 // the installed image, its disk or its users, and the live system is in
 // memory. Extensions is one of them: an extension installed there would
-// be gone at the next boot. Network, Bluetooth, Disks and About still work.
+// be gone at the next boot. So is Compatibility: the glibc container
+// needs Docker on the installed system, and `isotope glibc` refuses on the
+// live one. Network, Bluetooth, Disks and About still work.
 var liveOnly = map[Page]bool{
 	PageUpdates:    true,
 	PageDesktop:    true,
@@ -37,6 +39,7 @@ var liveOnly = map[Page]bool{
 	PageBackup:     true,
 	PageSecurity:   true,
 	PageUsers:      true,
+	PageCompat:     true,
 }
 
 // livePage takes the place of a page in liveOnly on the live system: the

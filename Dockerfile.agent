@@ -235,6 +235,20 @@ RUN rm -f /usr/bin/isotope-welcome /usr/bin/isotope-first-run-apps \
 RUN rm -f /usr/bin/isotope-system /usr/share/applications/isotope-system.desktop && \
     sed -i -e '/isotope-system/d' /etc/i3/config && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 | grep -q 'isotope-system'
+# No glibc programs: an agent that starts a downloaded glibc binary or an
+# AppImage must not get an Ubuntu container pulled from the network and set up
+# behind its back. The stand-in loader, the AppImage binfmt rule and its
+# handler, the container's image setting and the help page go; such a program
+# fails as it does on Hadron. The rule file is gone before the first boot, so
+# systemd-binfmt registers nothing.
+RUN rm -f /usr/lib/ld-linux-x86-64.so.2 /usr/lib/binfmt.d/isotope-appimage.conf \
+      /usr/libexec/isotope-appimage /usr/share/isotope/glibc.conf \
+      /usr/share/doc/isotope/glibc-programs.md && \
+    ! test -e /usr/lib/ld-linux-x86-64.so.2 && ! test -e /lib64/ld-linux-x86-64.so.2 && \
+    ! test -e /usr/lib/binfmt.d/isotope-appimage.conf && \
+    ! test -e /usr/libexec/isotope-appimage && \
+    ! test -e /usr/share/isotope/glibc.conf && \
+    ! test -e /usr/share/doc/isotope/glibc-programs.md
 # No clipboard history. An AI agent drives the appliance: a history would keep
 # every token, password or key that the agent or a person copies, and give it
 # back to anything that can run a command or read the screen, the agent

@@ -198,6 +198,11 @@ jobs:
         shell: bash
         run: test/system/check-system-image.sh agent-desktop:dev agent
 
+      # No stand-in glibc loader, AppImage rule or glibc.conf.
+      - name: No glibc programs in the image
+        shell: bash
+        run: test/glibc/check-glibc.sh agent-desktop:dev
+
       # The VM gates do not boot this ISO directly: each of them re-wraps the
       # appliance OCI image with its own freshly minted `cidata` seed. So the
       # single build is exported twice -- as the OCI image the gates consume and

@@ -1,7 +1,7 @@
 #!/bin/sh
-# Every `ARG <NAME>_VERSION=` in the Dockerfiles must sit directly under a
-# `# renovate:` comment, so Renovate (renovate.json) keeps it up to date, or
-# be listed below with the reason it is updated by hand.
+# Every `ARG <NAME>_VERSION=` and `ARG <NAME>_IMAGE=` in the Dockerfiles must
+# sit directly under a `# renovate:` comment, so Renovate (renovate.json) keeps
+# it up to date, or be listed below with the reason it is updated by hand.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -22,12 +22,24 @@ unmanaged="HADRON FREETYPE LIBGPGERROR LIBASSUAN GPGME LIBGCRYPT LIBKSBA NPTH
 SQLITE NTBTLS GNUPG ZIG DEJAVU LIBDBUSMENU STARTUP_NOTIFICATION ATK LIBEV LIBNL
 WPA HOSTAPD WIRELESS_REGDB GPERF NCURSES GETTEXT SBC GMP MPFR LINUX_FIRMWARE SOF_BIN
 INTEL_UCODE UNICODE_EMOJI SLANG NEWT"
+# Images updated by hand (the _IMAGE suffix dropped):
+#   BASE: Hadron's image, moved with HADRON (Dockerfile), or the local i3
+#     image the agent overlays (Dockerfile.agent).
+#   KAIROS_INIT: a branch tag (master), not a version.
+unmanaged_images="BASE KAIROS_INIT"
 
-missing=$(awk -v unmanaged="$unmanaged" '
-  BEGIN { n = split(unmanaged, u, /[ \n]+/); for (i = 1; i <= n; i++) skip[u[i]] = 1 }
+missing=$(awk -v unmanaged="$unmanaged" -v unmanaged_images="$unmanaged_images" '
+  BEGIN {
+    n = split(unmanaged, u, /[ \n]+/); for (i = 1; i <= n; i++) skip[u[i]] = 1
+    n = split(unmanaged_images, u, /[ \n]+/); for (i = 1; i <= n; i++) skipimg[u[i]] = 1
+  }
   /^ARG [A-Z0-9_]+_VERSION=/ {
     name = $2; sub(/_VERSION=.*/, "", name)
     if (!(name in skip) && prev !~ /^# renovate: /) print FILENAME ":" FNR ": " $2
+  }
+  /^ARG [A-Z0-9_]+_IMAGE=/ {
+    name = $2; sub(/_IMAGE=.*/, "", name)
+    if (!(name in skipimg) && prev !~ /^# renovate: datasource=docker /) print FILENAME ":" FNR ": " $2
   }
   { prev = $0 }
 ' Dockerfile Dockerfile.agent extensions/*/Dockerfile)

@@ -412,28 +412,36 @@ func TestFirewallChangeChecksWhatLoaded(t *testing.T) {
 // On a live or install boot the unit never runs: the status says so, and
 // changes are refused with a sentence, before anything is written.
 func TestFirewallRefusedOnTheISO(t *testing.T) {
+	// One subtest per marker: its cleanup stops the service before the next
+	// firewallEnv rewrites the globals the handler reads. In one loop the
+	// previous service's handler goroutine had read them, and the race
+	// detector does not see the D-Bus round trip as an ordering.
 	for _, marker := range []string{"live_mode", "install_mode", "uki_install_mode"} {
-		f := firewallEnv(t)
-		f.boot(t, marker)
-		sv := startService(t, localeDaemon(t), &fakeAuth{allow: true})
-		st := fwStatus(t, sv)
-		if !st.Skipped || st.Active || st.Summary() != "Not running on this boot" || !strings.Contains(st.Reason, "live system") {
-			t.Fatalf("%s: status %+v", marker, st)
+		t.Run(marker, func(t *testing.T) { firewallRefusedOnTheISO(t, marker) })
+	}
+}
+
+func firewallRefusedOnTheISO(t *testing.T, marker string) {
+	f := firewallEnv(t)
+	f.boot(t, marker)
+	sv := startService(t, localeDaemon(t), &fakeAuth{allow: true})
+	st := fwStatus(t, sv)
+	if !st.Skipped || st.Active || st.Summary() != "Not running on this boot" || !strings.Contains(st.Reason, "live system") {
+		t.Fatalf("%s: status %+v", marker, st)
+	}
+	for _, c := range []*dbus.Call{
+		sv.call("SetFirewall", true),
+		sv.call("AllowPort", uint16(8080), "tcp", ""),
+		sv.call("DenyPort", uint16(22), "tcp"),
+	} {
+		if errName(c.Err) != busInterface+".Error.Refused" || !strings.Contains(c.Err.Error(), "after the install") {
+			t.Fatalf("%s: %v", marker, c.Err)
 		}
-		for _, c := range []*dbus.Call{
-			sv.call("SetFirewall", true),
-			sv.call("AllowPort", uint16(8080), "tcp", ""),
-			sv.call("DenyPort", uint16(22), "tcp"),
-		} {
-			if errName(c.Err) != busInterface+".Error.Refused" || !strings.Contains(c.Err.Error(), "after the install") {
-				t.Fatalf("%s: %v", marker, c.Err)
-			}
-		}
-		noFile(t, f.oem, f.flag, f.rules)
-		for _, x := range f.runs() {
-			if strings.HasPrefix(x, "systemctl") {
-				t.Fatalf("%s: ran %q", marker, x)
-			}
+	}
+	noFile(t, f.oem, f.flag, f.rules)
+	for _, x := range f.runs() {
+		if strings.HasPrefix(x, "systemctl") {
+			t.Fatalf("%s: ran %q", marker, x)
 		}
 	}
 }

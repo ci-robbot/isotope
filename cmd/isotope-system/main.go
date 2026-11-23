@@ -83,6 +83,7 @@ func main() {
 	hooks.Network = nmNetwork{}
 	hooks.Bluetooth = newBluez()
 	hooks.Files = newPortalFiles()
+	hooks.Glibc = glibcCLI{bin: "isotope"}
 	if d, err := dialDisks(); err == nil {
 		hooks.Disks = d
 	} else {
@@ -107,7 +108,9 @@ func main() {
 			switch e := win.Event().(type) {
 			case app.DestroyEvent:
 				// A job the window started keeps running in the daemon;
-				// the tray reports its end.
+				// the tray reports its end. So does the glibc
+				// container's setup or reset, in its own session
+				// (compat.go).
 				if e.Err != nil {
 					fmt.Fprintf(os.Stderr, "isotope-system: %v\n", e.Err)
 					os.Exit(1)

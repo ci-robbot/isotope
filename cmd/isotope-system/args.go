@@ -14,11 +14,12 @@ const (
 	PageBluetooth  Page = "bluetooth"
 	PageUsers      Page = "users"
 	PageDisks      Page = "disks"
+	PageCompat     Page = "compatibility"
 	PageAbout      Page = "about"
 )
 
 // Pages is the sidebar, in order.
-var Pages = []Page{PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageBluetooth, PageUsers, PageDisks, PageAbout}
+var Pages = []Page{PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageBluetooth, PageUsers, PageDisks, PageCompat, PageAbout}
 
 // later are the pages listed but not there yet: none today.
 var later = map[Page]bool{}
@@ -44,6 +45,8 @@ func (p Page) Title() string {
 		return "Users"
 	case PageDisks:
 		return "Disks"
+	case PageCompat:
+		return "Compatibility"
 	case PageAbout:
 		return "About"
 	}
@@ -60,7 +63,7 @@ func (p Page) index() int {
 	return 0
 }
 
-const usage = "usage: isotope-system [updates | desktop | extensions | backup | security | network | bluetooth | users | disks | about]"
+const usage = "usage: isotope-system [updates | desktop | extensions | backup | security | network | bluetooth | users | disks | compatibility | about]"
 
 // ParseArgs maps the command line to the page to open on; ok is false for
 // anything else. No argument is Updates.
