@@ -124,7 +124,7 @@ expect "i3 floats it" "$(grep -c '^for_window \[class="isotope-system"\] floatin
 expect "niri floats it" "$(grep -c 'match app-id="^isotope-system\$"' /src/rootfs/niri/etc/niri/config.kdl)" 1
 expect "the launchers list it" "$(grep -c '^Exec=isotope-system$' /src/rootfs/common/usr/share/applications/isotope-system.desktop)" 1
 expect "the polkit file declares the backup action" "$(grep -c '<action id="io.kairos.isotope-update.backup">' /src/rootfs/common/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
-for a in users restore; do
+for a in users restore firewall; do
     expect "the polkit file declares the $a action" "$(grep -c "<action id=\"io.kairos.isotope-update.$a\">" /src/rootfs/common/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
 done
 

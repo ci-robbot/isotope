@@ -13,6 +13,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+
+	"github.com/kairos-community/isotope/pkg/firewall"
 )
 
 // TestPreview renders every page to ISOTOPE_SYSTEM_PREVIEW/<page>.png,
@@ -36,6 +38,7 @@ func TestPreview(t *testing.T) {
 	}
 	d.backup = BackupStatus{Available: true, Target: "/run/media/anna/USB/isotope-backup", Schedule: "weekly",
 		Last: time.Now().Add(-26 * time.Hour).Unix(), Result: "ok", Present: true}
+	d.fw = Firewall{On: true, Rules: []firewall.Rule{{Port: 22, Proto: "tcp", Note: "SSH"}, {Port: 8080, Proto: "tcp", Note: "dev server"}}}
 	d.mu.Unlock()
 	sz := image.Pt(1100, 720)
 	for _, p := range Pages {
@@ -46,6 +49,27 @@ func TestPreview(t *testing.T) {
 	}
 	live := newUI(testSystem(true), u.Theme.Shaper, Hooks{Live: true, Start: func(...string) error { return nil }}, PageUpdates)
 	shot(t, live, sz, filepath.Join(dir, "updates-live.png"))
+	// The Network page scrolled to its Firewall section, and the "Allow
+	// incoming" dialog.
+	u.show(PageNetwork)
+	net := u.view(PageNetwork).(*networkPage)
+	time.Sleep(50 * time.Millisecond)
+	net.list.Position.First, net.list.Position.Offset = 0, 420
+	u.pageAt = time.Time{}
+	shot(t, u, sz, filepath.Join(dir, "network-firewall.png"))
+	net.allowDialog()
+	net.fwForm.port.Editor.SetText("8443")
+	net.fwForm.note.Editor.SetText("web app")
+	shot(t, u, sz, filepath.Join(dir, "network-allow.png"))
+	u.closeDialog()
+	// Settings that cannot be read, with the reset button.
+	d.mu.Lock()
+	d.fw = Firewall{On: true, Broken: true, Reason: "The firewall settings could not be read (yaml: line 1: did not find expected node content). Reset them to repair the file.",
+		Rules: []firewall.Rule{{Port: 8080, Proto: "tcp", Note: "dev server"}}}
+	d.mu.Unlock()
+	net.loadFirewall()
+	time.Sleep(50 * time.Millisecond)
+	shot(t, u, sz, filepath.Join(dir, "network-firewall-broken.png"))
 	u.show(PageUpdates)
 	u.startInstall("Isotope v1.1.0", "quay.io/x/isotope:sway-v1.1.0", false, "")
 	waitQuestion(t, u, "Install")

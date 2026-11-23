@@ -1,0 +1,33 @@
+[Unit]
+Description=Isotope firewall (nftables table inet isotope)
+Documentation=file:///usr/libexec/isotope-firewall file:///usr/share/isotope/firewall.nft
+# Loaded before any network interface is up, as nftables.service does. That
+# unit is not used: its ExecStart runs `flush ruleset`, which would also
+# delete Docker's tables.
+DefaultDependencies=no
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+Conflicts=shutdown.target
+# Off on the ISO: a live boot (immucore's live_mode, every ISO: desktop,
+# server and agent), an install boot (install_mode) and the Trusted Boot
+# install medium (uki_install_mode, which has no live_mode). An install over
+# SSH from the live server ISO must still work. As conditions, not checks in
+# the script, so `systemctl status` says why the unit did not start.
+ConditionPathExists=!/run/cos/live_mode
+ConditionPathExists=!/run/cos/install_mode
+ConditionPathExists=!/run/cos/uki_install_mode
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/isotope-firewall load
+# A change at run time (isotope-updated runs `systemctl reload-or-restart`)
+# replaces the table in one nft transaction, never unload then load.
+ExecReload=/usr/libexec/isotope-firewall load
+ExecStop=/usr/libexec/isotope-firewall unload
+# A oneshot has no start timeout by default; an nft that hangs must not hold
+# the boot or isotope-updated's reload (which gives up after 30 s too).
+TimeoutSec=30
+
+[Install]
+WantedBy=sysinit.target

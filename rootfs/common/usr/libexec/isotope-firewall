@@ -1,0 +1,93 @@
+#!/bin/sh
+# Isotope's firewall: load or unload the table `inet isotope`.
+#
+#   isotope-firewall load     the ruleset, or nothing when it is turned off
+#   isotope-firewall unload   delete the table `inet isotope`, and only it
+#   isotope-firewall check    parse the files without loading them (nft -c)
+#
+# isotope-firewall.service runs `load` at boot (not on a live or install
+# boot: see its conditions) and on `systemctl reload`, and `unload` when it
+# stops. isotope-updated reloads the unit after a change in Isotope System
+# or `isotope firewall`.
+#
+# The files, loaded in this order in one nft transaction, so a reload never
+# leaves the machine open between two rulesets:
+#   /usr/share/isotope/firewall.nft          the table, policy drop, and what
+#                                            every machine needs to come in
+#   /etc/isotope/firewall.nft                the allowed ports (written from
+#                                            /oem/94_isotope_firewall.yaml)
+#   /usr/share/isotope/firewall-default.nft  instead of the line above when
+#                                            nothing is saved: SSH. Not when
+#                                            the settings file exists but
+#                                            yip could not read it: SSH may
+#                                            have been removed on purpose
+# /etc/isotope/firewall says `on` or `off`; no file is `on`.
+#
+# Paths for tests: ISOTOPE_FIREWALL_SHARE, ISOTOPE_FIREWALL_ETC,
+# ISOTOPE_FIREWALL_NFT, ISOTOPE_FIREWALL_OEM.
+set -eu
+
+share="${ISOTOPE_FIREWALL_SHARE:-/usr/share/isotope}"
+etc="${ISOTOPE_FIREWALL_ETC:-/etc/isotope}"
+nft="${ISOTOPE_FIREWALL_NFT:-/usr/sbin/nft}"
+
+base="$share/firewall.nft"
+defaults="$share/firewall-default.nft"
+user="$etc/firewall.nft"
+saved="${ISOTOPE_FIREWALL_OEM:-/oem/94_isotope_firewall.yaml}"
+
+# The fixed rules, then the allowed ports when $1 is "user": the saved list,
+# or the default one when nothing is saved.
+ruleset() {
+	cat "$base"
+	[ "$1" = user ] || return 0
+	if [ -f "$user" ]; then
+		cat "$user"
+	elif [ -e "$saved" ]; then
+		echo "isotope-firewall: $saved did not write $user (it cannot be read): loading the base rules alone; repair it with \`isotope firewall reset\`" >&2
+	elif [ -f "$defaults" ]; then
+		cat "$defaults"
+	fi
+}
+
+turned_on() {
+	[ -f "$etc/firewall" ] || return 0
+	state=$(tr -d '[:space:]' <"$etc/firewall")
+	[ "$state" != off ]
+}
+
+unload() {
+	# Only our table: Docker's and any other table stay.
+	if "$nft" list table inet isotope >/dev/null 2>&1; then
+		"$nft" delete table inet isotope
+	fi
+}
+
+case "${1:-}" in
+load)
+	if ! turned_on; then
+		unload
+		echo "isotope-firewall: the firewall is off ($etc/firewall)"
+		exit 0
+	fi
+	if ruleset user | "$nft" -f -; then
+		exit 0
+	fi
+	# A broken list of allowed ports must not leave the machine open: load
+	# the fixed rules alone, and fail so that `systemctl status` shows it.
+	# Not the defaults: they may hold a port the administrator removed.
+	echo "isotope-firewall: $user could not be loaded; loading the firewall without the allowed ports" >&2
+	ruleset fixed | "$nft" -f -
+	exit 1
+	;;
+unload)
+	unload
+	;;
+check)
+	ruleset user | "$nft" -c -f -
+	;;
+*)
+	echo "usage: isotope-firewall load|unload|check" >&2
+	exit 2
+	;;
+esac

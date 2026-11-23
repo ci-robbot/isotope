@@ -33,7 +33,10 @@ IMAGE        ?= $(DESKTOP)-desktop:dev
 # Hadron release to build on. scripts/bump-hadron.sh rewrites this line together
 # with the HADRON_VERSION defaults in the Dockerfiles.
 HADRON_VERSION ?= v0.6.7
-BASE_IMAGE   ?= ghcr.io/kairos-io/hadron:$(HADRON_VERSION)
+# TODO: back to ghcr.io/kairos-io/hadron:${HADRON_VERSION} when the Hadron
+# release with nftables (kairos-io/hadron#893) is out. The firewall needs nft;
+# HADRON_VERSION stays the release for the toolchain and the prebuild keys.
+BASE_IMAGE   ?= ghcr.io/kairos-io/hadron:main
 AURORA_IMAGE ?= quay.io/kairos/auroraboot:v0.30.0
 AGENT_BASE_IMAGE ?= i3-desktop:dev
 AGENT_IMAGE      ?= agent-desktop:dev
@@ -238,7 +241,11 @@ KEYS_DIR  ?= build/uki-keys
 UKI_IMAGE ?= $(DESKTOP)-desktop:uki
 UKI_FROM  ?=
 UKI_ISO_DIR := $(WORK)/uki-iso
-TRUSTED_BASE_IMAGE ?= ghcr.io/kairos-io/hadron-trusted:$(HADRON_VERSION)
+# TODO: back to ghcr.io/kairos-io/hadron-trusted:$(HADRON_VERSION) when the
+# Hadron release with nftables (kairos-io/hadron#893) is out. The firewall
+# needs nft; hadron-trusted:main has it (nftables 1.1.7), v0.6.7 does not,
+# and desktop-default and server-default stop early on a base without it.
+TRUSTED_BASE_IMAGE ?= ghcr.io/kairos-io/hadron-trusted:main
 
 uki-keys:
 	@[ ! -e $(KEYS_DIR)/db.key ] || { echo "$(KEYS_DIR) already holds keys; machines enrolled with them need them" >&2; exit 1; }

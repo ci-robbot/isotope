@@ -46,6 +46,9 @@ const (
 	// actionRestore covers restoring a whole backup, which replaces the
 	// users and the settings, on a machine that is still new.
 	actionRestore = "io.kairos.isotope-update.restore"
+	// actionFirewall covers turning the firewall on and off and the ports
+	// it lets in.
+	actionFirewall = "io.kairos.isotope-update.firewall"
 )
 
 // busIntrospection describes the interface for busctl, d-feet and friends.
@@ -136,6 +139,21 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
     <method name="SetAdmin">
       <arg name="name" type="s" direction="in"/>
       <arg name="on" type="b" direction="in"/>
+    </method>
+    <method name="FirewallStatus">
+      <arg name="status" type="a{sv}" direction="out"/>
+      <arg name="rules" type="a(qss)" direction="out"/>
+    </method>
+    <method name="ResetFirewall"/>
+    <method name="SetFirewall"><arg name="on" type="b" direction="in"/></method>
+    <method name="AllowPort">
+      <arg name="port" type="q" direction="in"/>
+      <arg name="proto" type="s" direction="in"/>
+      <arg name="note" type="s" direction="in"/>
+    </method>
+    <method name="DenyPort">
+      <arg name="port" type="q" direction="in"/>
+      <arg name="proto" type="s" direction="in"/>
     </method>
     <signal name="StateChanged"><arg name="status" type="a{sv}"/></signal>
     <signal name="Progress"><arg name="line" type="s"/></signal>
@@ -255,7 +273,8 @@ func busError(err error) *dbus.Error {
 		errors.Is(err, errEmptyPassword), errors.Is(err, errBadPassword),
 		errors.Is(err, errWrongPassword), errors.Is(err, errUnverifiable),
 		errors.Is(err, errMachineInUse), errors.Is(err, errExportNeedsPassword),
-		errors.Is(err, ErrKeyUnchanged):
+		errors.Is(err, ErrKeyUnchanged), errors.Is(err, errFirewallNotThisBoot),
+		errors.Is(err, errFirewallBroken), errors.Is(err, errFirewallNotBroken):
 		name = "Refused"
 	default:
 		name = "Failed"

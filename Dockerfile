@@ -19,7 +19,10 @@
 # Makefile; .github/workflows/follow-hadron.yml runs that when Hadron tags a
 # new release.
 ARG HADRON_VERSION=v0.6.7
-ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:${HADRON_VERSION}
+# TODO: back to ghcr.io/kairos-io/hadron:${HADRON_VERSION} when the Hadron
+# release with nftables (kairos-io/hadron#893) is out. The firewall needs nft;
+# HADRON_VERSION stays the release for the toolchain and the prebuild keys.
+ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:main
 # smartmontools comes from its hadron-layers layer (statically linked, no shared
 # library a base or image already has), copied into every desktop image and the
 # server: see the smartmontools stage.
@@ -6041,6 +6044,12 @@ COPY rootfs/common/usr/lib/systemd/system/isotope-backup.service rootfs/common/u
 COPY rootfs/common/usr/lib/systemd/system/docker.service rootfs/common/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
 COPY rootfs/common/system/oem/92_docker.yaml /system/oem/92_docker.yaml
 COPY rootfs/common/system/oem/94_isotope_state.yaml /system/oem/94_isotope_state.yaml
+# The firewall: its unit (linked into sysinit.target by the
+# sysinit.target.wants copy above), the loader, the base ruleset and the
+# default allowed list (SSH).
+COPY rootfs/common/usr/lib/systemd/system/isotope-firewall.service /usr/lib/systemd/system/isotope-firewall.service
+COPY rootfs/common/usr/libexec/isotope-firewall /usr/libexec/isotope-firewall
+COPY rootfs/common/usr/share/isotope/firewall.nft rootfs/common/usr/share/isotope/firewall-default.nft /usr/share/isotope/
 COPY rootfs/server/ /
 
 FROM ${DESKTOP}-rootfs AS desktop-rootfs
@@ -6314,6 +6323,11 @@ RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoveryk
 
 
 FROM ${BASE_IMAGE} AS desktop-default
+ARG BASE_IMAGE
+# The firewall (isotope-firewall.service) needs nft from the base. Hadron
+# v0.6.7 and hadron-trusted:v0.6.7 have none; stop here, before the long
+# build, rather than ship a unit that fails at every boot.
+RUN test -x /usr/sbin/nft || { echo "${BASE_IMAGE} has no /usr/sbin/nft: the firewall needs a Hadron base with nftables (kairos-io/hadron#893)" >&2; exit 1; }
 # Built desktop stack
 COPY --from=desktop-rootfs / /
 # Intel's VA-API driver and libigdgmm (GPU=full; empty on vm). Copied here, not
@@ -6625,6 +6639,11 @@ RUN systemctl enable isotope-backup.timer isotope-restore-finish.service && \
 # The server edition's image. Keep the binaries at the end in step with
 # desktop-default above.
 FROM ${BASE_IMAGE} AS server-default
+ARG BASE_IMAGE
+# The firewall (isotope-firewall.service) needs nft from the base. Hadron
+# v0.6.7 and hadron-trusted:v0.6.7 have none; stop here, before the long
+# build, rather than ship a unit that fails at every boot.
+RUN test -x /usr/sbin/nft || { echo "${BASE_IMAGE} has no /usr/sbin/nft: the firewall needs a Hadron base with nftables (kairos-io/hadron#893)" >&2; exit 1; }
 COPY --from=server-rootfs / /
 COPY --from=toolchain /usr/lib/libffi.so* /usr/lib/
 COPY --from=toolchain /usr/lib/libexpat.so* /usr/lib/

@@ -67,6 +67,9 @@ const cases = [
     { file: "update", action: up + "users", groups: user, ...here, want: "no", what: "non-admin" },
     { file: "update", action: up + "restore", groups: admin, ...here, want: "yes", what: "admin" },
     { file: "update", action: up + "restore", groups: user, ...here, want: "no", what: "non-admin" },
+    { file: "update", action: up + "firewall", groups: admin, ...here, want: "yes", what: "admin" },
+    { file: "update", action: up + "firewall", groups: user, ...here, want: "no", what: "non-admin" },
+    { file: "update", action: up + "firewall", groups: admin, local: false, active: false, want: "yes", what: "admin over SSH" },
 ];
 
 const files = process.argv.slice(2);

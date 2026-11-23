@@ -60,6 +60,9 @@ Commands:
                     "isotope recovery help"
   users [command]   the user accounts: list, add, remove, passwd, admin; see
                     "isotope users help"
+  firewall [command]
+                    the firewall: status, on, off, allow PORT/PROTO,
+                    deny PORT/PROTO; see "isotope firewall help"
   backup [command]  back up this machine to a USB disk or a server; see
                     "isotope backup help"
   restore           restore a backup; see "isotope restore help"
@@ -132,6 +135,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdExt(args, stdin, stdout, stderr)
 	case "users":
 		return cmdUsers(args, stdin, stdout, stderr)
+	case "firewall":
+		return cmdFirewall(args, stdout, stderr)
 	case "recovery":
 		return cmdRecovery(args, stdout, stderr)
 	case "backup":

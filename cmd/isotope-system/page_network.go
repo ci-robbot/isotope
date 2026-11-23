@@ -15,12 +15,14 @@ import (
 
 func init() {
 	pageMakers[PageNetwork] = func(u *UI) pageView {
-		return &networkPage{u: u, apClicks: map[string]*apClicks{}, vpnClicks: map[string]*vpnClicks{}}
+		return &networkPage{u: u, apClicks: map[string]*apClicks{}, vpnClicks: map[string]*vpnClicks{}, fwClicks: map[string]*fwClicks{}}
 	}
 }
 
 // networkPage: the devices, Wi-Fi on and off, the networks in range with
-// connect, and the saved ones with forget, through NetworkManager.
+// connect, and the saved ones with forget, through NetworkManager. The VPN
+// section is NetworkManager's too; the Firewall section is isotope-updated's
+// (firewall.go).
 type networkPage struct {
 	u    *UI
 	list widget.List
@@ -45,6 +47,15 @@ type networkPage struct {
 	addOC                          widget.Clickable
 	oc                             *ocForm // the open "Add company VPN" dialog
 	vpnClicks                      map[string]*vpnClicks
+
+	// The firewall (firewall.go). fw, fwLoaded and fwErr are under u.mu.
+	fw              Firewall
+	fwLoaded        bool
+	fwErr           string
+	fwToggle, fwAdd widget.Clickable
+	fwReset         widget.Clickable
+	fwClicks        map[string]*fwClicks
+	fwForm          *fwForm // the open "Allow incoming" dialog
 }
 
 type apClicks struct{ connect, forget widget.Clickable }
@@ -56,6 +67,7 @@ func (p *networkPage) Shown() {
 		p.password = guikit.NewSecret()
 	}
 	p.load()
+	p.loadFirewall()
 }
 
 func (p *networkPage) load() {
@@ -140,8 +152,10 @@ func (p *networkPage) Update(gtx layout.Context) {
 				}})
 		}
 	}
+	p.updateFirewall(gtx)
 	if p.refresh.Clicked(gtx) {
 		p.load()
+		p.loadFirewall()
 	}
 	if p.wifi.Clicked(gtx) {
 		on := !st.WifiOn
@@ -411,6 +425,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 	u := p.u
 	u.mu.Lock()
 	st, aps, err, working, chosen, loading, vpns := p.state, p.aps, p.err, p.working, p.chosen, p.loading, p.vpns
+	fw := p.fwInput()
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -478,6 +493,8 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			))
 			return rows.layout(gtx)
 		}))
+		c.gap(26)
+		c.add(func(gtx layout.Context) layout.Dimensions { return p.firewallSection(gtx, fw, working) })
 		if !st.HasWifi {
 			return c.layout(gtx)
 		}

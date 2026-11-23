@@ -193,6 +193,17 @@ RUN rm -f /usr/share/dbus-1/system.d/io.kairos.IsotopeUpdate1.conf \
       /usr/share/polkit-1/actions/io.kairos.isotope-update.policy \
       /usr/share/polkit-1/rules.d/50-isotope-update.rules && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-update'
+# No firewall. The appliance is reached on its MCP gateway, whose port the
+# provisioning config may change (endpoint.listen, 7443 by default), and it
+# has no update service to change the firewall with. A fixed rule for 7443
+# would cut off a gateway moved to another port, so the unit, its link, the
+# loader and the ruleset of the i3 image go: inbound stays as on Hadron.
+RUN rm -f /etc/systemd/system/sysinit.target.wants/isotope-firewall.service \
+      /usr/lib/systemd/system/isotope-firewall.service \
+      /usr/libexec/isotope-firewall /usr/share/isotope/firewall.nft \
+      /usr/share/isotope/firewall-default.nft && \
+    ! find /etc/systemd /usr/lib/systemd /usr/libexec /usr/share/isotope \
+      -name 'isotope-firewall*' -o -name 'firewall*.nft' | grep -q .
 # No keyring: the appliance logs in automatically, so no password ever
 # unlocks it, and there is no dialog that could. Without the Secret Service,
 # apps use their own plain store, as before.

@@ -448,6 +448,19 @@ jobs:
         shell: bash
         run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
+      # The firewall: its files and the daemon's output parse (nft -c) and the
+      # unit is enabled; then, privileged on this throwaway runner, the
+      # ruleset loads next to Docker's tables, a published port still answers
+      # from a LAN namespace, a host port is blocked, a reload keeps the same
+      # rules, and unload deletes only table inet isotope. SSH is a default
+      # on every image; the agent has no firewall.
+      - name: Check the firewall
+        shell: bash
+        run: |
+          set -euo pipefail
+          test/firewall/check-firewall.sh "${DESKTOP}-desktop:dev"
+          test/firewall/check-firewall.sh "${DESKTOP}-desktop:dev" --load
+
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
         if: matrix.desktop != 'server'
@@ -926,6 +939,12 @@ jobs:
       - name: Check guest agent
         shell: bash
         run: test/vm/check-guest-agent.sh "$AGENT_IMAGE" vm
+
+      # The appliance has no firewall (Dockerfile.agent removes it): its MCP
+      # gateway's port is configurable and it has no update service.
+      - name: Check the firewall is off
+        shell: bash
+        run: test/firewall/check-firewall.sh "$AGENT_IMAGE"
 
       # The gates below re-wrap the freshly built appliance image with their own
       # `cidata` seeds, so the appliance is built exactly once here and every

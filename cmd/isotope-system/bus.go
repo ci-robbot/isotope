@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/firewall"
 )
 
 const (
@@ -107,6 +109,10 @@ type User struct {
 	Admin                bool
 }
 
+// Firewall is the daemon's FirewallStatus: the saved setting, what is
+// loaded now, and the ports an administrator allowed.
+type Firewall = firewall.Status
+
 // Credentials go to the daemon through a pipe, never as a D-Bus string:
 // the backup password, then the target's NAME=value lines.
 type Credentials struct {
@@ -179,6 +185,11 @@ type Daemon interface {
 	RemoveUser(name string, keepHome bool) error
 	SetPassword(name, current, password string) error
 	SetAdmin(name string, on bool) error
+	FirewallStatus() (Firewall, error)
+	SetFirewall(on bool) error
+	AllowPort(port uint16, proto, note string) error
+	DenyPort(port uint16, proto string) error
+	ResetFirewall() error
 	BackupInit(target string, opt TargetOptions, cred Credentials) error
 	BackupSSHKey() (string, error)
 	BackupHostKey(host string, port uint32) ([]string, error)
@@ -488,6 +499,32 @@ func (d *busDaemon) SetPassword(name, current, password string) error {
 
 func (d *busDaemon) SetAdmin(name string, on bool) error {
 	return d.call(0, "SetAdmin", nil, name, on)
+}
+
+func (d *busDaemon) FirewallStatus() (Firewall, error) {
+	var m map[string]dbus.Variant
+	var rules []firewall.Rule
+	if err := d.call(0, "FirewallStatus", []any{&m, &rules}); err != nil {
+		return Firewall{}, err
+	}
+	return firewallFromDict(m, rules), nil
+}
+
+func firewallFromDict(m map[string]dbus.Variant, rules []firewall.Rule) Firewall {
+	return Firewall{On: boolean(m, "on"), Active: boolean(m, "active"), Skipped: boolean(m, "skipped"),
+		Broken: boolean(m, "broken"), Reason: str(m, "reason"), Rules: rules}
+}
+
+func (d *busDaemon) SetFirewall(on bool) error { return d.call(0, "SetFirewall", nil, on) }
+
+func (d *busDaemon) AllowPort(port uint16, proto, note string) error {
+	return d.call(0, "AllowPort", nil, port, proto, note)
+}
+
+func (d *busDaemon) ResetFirewall() error { return d.call(0, "ResetFirewall", nil) }
+
+func (d *busDaemon) DenyPort(port uint16, proto string) error {
+	return d.call(0, "DenyPort", nil, port, proto)
 }
 
 // optionsDict is TargetOptions as the daemon's a{sv}, without the zero

@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/firewall"
 )
 
 func v(x any) dbus.Variant { return dbus.MakeVariant(x) }
@@ -279,5 +281,23 @@ func TestFakeDaemonErrOverrides(t *testing.T) {
 	f.err = map[string]error{"Restore": &DaemonError{Name: "Failed", Msg: "restic: wrong password"}}
 	if err := f.Restore("", "abcd1234", "", TargetOptions{}, Credentials{}); errName(err) != "Failed" {
 		t.Fatalf("err override: %v", err)
+	}
+}
+
+func TestFirewallFromDict(t *testing.T) {
+	rules := []firewall.Rule{{Port: 22, Proto: "tcp", Note: "SSH"}}
+	got := firewallFromDict(map[string]dbus.Variant{
+		"on": v(true), "active": v(false), "skipped": v(false), "broken": v(false), "reason": v("did not load"),
+	}, rules)
+	want := Firewall{On: true, Reason: "did not load", Rules: rules}
+	if !reflect.DeepEqual(got, want) || got.Summary() != "On, but not running" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestFirewallFromDictBroken(t *testing.T) {
+	got := firewallFromDict(map[string]dbus.Variant{"on": v(true), "active": v(true), "broken": v(true)}, nil)
+	if !got.Broken || got.Summary() != "The firewall settings could not be read" {
+		t.Fatalf("got %+v", got)
 	}
 }

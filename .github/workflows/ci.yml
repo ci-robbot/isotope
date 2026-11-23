@@ -101,8 +101,8 @@ jobs:
 
       - name: isotope tests
         run: |
-          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/...
-          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/...
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/...
 
       - name: install-ui tests
         run: |
@@ -267,6 +267,11 @@ jobs:
 
       - name: Live desktop files
         run: test/live/check-live.sh --repo
+
+      # The firewall's unit, rulesets and wiring, and its loader against a
+      # fake nft. The images are checked in desktop-images.yml and release.yml.
+      - name: Firewall files and loader
+        run: test/firewall/check-firewall.sh --repo
 
       - name: Session scripts and configs parse
         shell: bash

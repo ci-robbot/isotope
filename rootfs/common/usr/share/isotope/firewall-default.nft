@@ -1,0 +1,15 @@
+#!/usr/sbin/nft -f
+# The allowed ports of a machine with no saved firewall settings, loaded
+# after /usr/share/isotope/firewall.nft until /oem/94_isotope_firewall.yaml
+# exists and writes /etc/isotope/firewall.nft instead. The same list as
+# firewall.Defaults in pkg/firewall (cmd/isotope's TestFirewallDefaultsMatchTheImage).
+#
+# SSH is allowed so that every server, and every desktop managed over SSH,
+# keeps working when the firewall comes on with an upgrade. It is a default,
+# not a fixed rule: Isotope System's Remove or `isotope firewall deny 22/tcp`
+# removes it, and that choice is kept.
+table inet isotope {
+	chain input {
+		tcp dport 22 accept comment "SSH"
+	}
+}

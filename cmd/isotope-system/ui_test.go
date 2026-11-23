@@ -14,6 +14,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 
+	"github.com/kairos-community/isotope/pkg/firewall"
 	"github.com/kairos-community/isotope/pkg/guikit"
 	"github.com/kairos-community/isotope/pkg/isorelease"
 	"github.com/kairos-community/isotope/pkg/recoverykey"
@@ -51,6 +52,10 @@ type fakeDaemon struct {
 	recovery                      RecoveryStatus
 	recReads                      int
 	recCurrent, recNew, recReseal string
+	// fw is what FirewallStatus answers; the changes edit it. Active
+	// follows On unless fwBroken (the unit fails to load).
+	fw       Firewall
+	fwBroken bool
 	// creds are the credentials of the backup calls, by call, for the
 	// tests to check (the call strings never hold one).
 	creds []Credentials
@@ -140,7 +145,7 @@ var (
 )
 
 // fakeOpen are the methods the daemon answers without polkit.
-var fakeOpen = map[string]bool{"Users": true, "UpdateHistory": true}
+var fakeOpen = map[string]bool{"Users": true, "UpdateHistory": true, "FirewallStatus": true}
 
 // refusalLocked is the daemon's answer to method before it does anything,
 // in the daemon's order: polkit, then the machine-in-use check, then the
@@ -268,6 +273,49 @@ func (f *fakeDaemon) SetAdmin(name string, on bool) error {
 		f.users[i].Admin = on
 		return nil
 	}, name, fmt.Sprint(on))
+}
+func (f *fakeDaemon) FirewallStatus() (Firewall, error) {
+	err := f.do("FirewallStatus")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fw := f.fw
+	fw.Rules = append([]firewall.Rule(nil), f.fw.Rules...)
+	if !fw.Skipped && !fw.Broken {
+		fw.Active = fw.On && !f.fwBroken
+		if fw.On && !fw.Active {
+			fw.Reason = "isotope-firewall.service did not load the rules: see `systemctl status isotope-firewall`."
+		}
+	}
+	return fw, err
+}
+func (f *fakeDaemon) ResetFirewall() error {
+	return f.change("ResetFirewall", false, func() error {
+		if len(f.fw.Rules) == 0 {
+			f.fw.Rules = append([]firewall.Rule(nil), firewall.Defaults...)
+		}
+		f.fw.On, f.fw.Broken, f.fw.Reason = true, false, ""
+		return nil
+	})
+}
+func (f *fakeDaemon) SetFirewall(on bool) error {
+	return f.change("SetFirewall", false, func() error { f.fw.On = on; return nil }, fmt.Sprint(on))
+}
+func (f *fakeDaemon) AllowPort(port uint16, proto, note string) error {
+	return f.change("AllowPort", false, func() error {
+		f.fw.Rules = append(f.fw.Rules, firewall.Rule{Port: port, Proto: proto, Note: note})
+		return nil
+	}, fmt.Sprint(port), proto, note)
+}
+func (f *fakeDaemon) DenyPort(port uint16, proto string) error {
+	return f.change("DenyPort", false, func() error {
+		for i, r := range f.fw.Rules {
+			if r.Port == port && r.Proto == proto {
+				f.fw.Rules = append(f.fw.Rules[:i], f.fw.Rules[i+1:]...)
+				return nil
+			}
+		}
+		return &DaemonError{Name: "Failed", Msg: "not allowed"}
+	}, fmt.Sprint(port), proto)
 }
 func (f *fakeDaemon) keepCred(c Credentials) {
 	f.mu.Lock()

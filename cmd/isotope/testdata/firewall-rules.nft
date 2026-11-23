@@ -1,0 +1,12 @@
+# The ports allowed in Isotope System or with `isotope firewall allow`.
+# Written by isotope-updated from /oem/94_isotope_firewall.yaml at every
+# boot: a change made here is lost.
+table inet isotope {
+	chain input {
+		tcp dport 22 accept comment "SSH"
+		tcp dport 443 accept comment "a } # ; $x { flush ruleset"
+		udp dport 5000 accept comment "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+		tcp dport 8080 accept comment "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+		udp dport 51820 accept
+	}
+}

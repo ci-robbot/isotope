@@ -1,0 +1,58 @@
+#!/usr/sbin/nft -f
+# Isotope's firewall: incoming connections are dropped unless a rule here or
+# in the allowed list accepts them: /etc/isotope/firewall.nft (the ports an
+# administrator allowed with Isotope System or `isotope firewall allow`), or
+# /usr/share/isotope/firewall-default.nft (SSH) while nothing is saved.
+# isotope-firewall.service loads this file and the list in one nft
+# transaction (/usr/libexec/isotope-firewall).
+#
+# Only the table `inet isotope` is ours. This file never runs `flush ruleset`
+# and never touches another table, so Docker's iptables tables (ip filter,
+# ip nat, legacy or nft) stay as they are. The chain hooks input only: Docker's
+# published ports (`docker run -p`) are DNATed in prerouting to the
+# container's address, so that traffic goes through the forward hook, not
+# input, and this table does not see it. A rootless Docker or Podman port is a
+# process on the host (slirp4netns, pasta, rootlesskit): it comes through
+# input, and is blocked unless allowed, as any other listening program.
+#
+# The first two lines make the reload atomic: create the table if it is
+# missing, delete it, and create it again with the rules below.
+table inet isotope
+delete table inet isotope
+
+table inet isotope {
+	chain input {
+		type filter hook input priority filter; policy drop;
+
+		# Answers to the connections this computer opened: web pages,
+		# updates, DNS, a VPN tunnel's packets.
+		ct state established,related accept
+
+		# Programs on this computer talking to each other.
+		iif lo accept
+
+		# ICMPv6 before the invalid check: neighbour discovery (the IPv6
+		# replacement for ARP), router advertisements (SLAAC) and
+		# packet-too-big (path MTU) are needed for IPv6 to work at all.
+		meta l4proto ipv6-icmp accept
+
+		# Packets that belong to no connection conntrack can follow.
+		ct state invalid drop
+
+		# Ping, and the ICMP errors (destination unreachable, fragmentation
+		# needed) that make broken paths fail fast instead of hanging.
+		meta l4proto icmp accept
+
+		# DHCP: the server's offer and acknowledgement to this computer's
+		# DHCP client, often broadcast, so not an established connection.
+		udp sport 67 udp dport 68 accept
+
+		# DHCPv6: the server's or relay's reply, from a link-local address.
+		ip6 saddr fe80::/10 udp sport 547 udp dport 546 accept
+
+		# mDNS (Avahi-style .local names, printers and casting found on the
+		# local network): multicast answers to port 5353.
+		ip daddr 224.0.0.251 udp dport 5353 accept
+		ip6 daddr ff02::fb udp dport 5353 accept
+	}
+}
