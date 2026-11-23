@@ -3500,6 +3500,16 @@ ARG XSCT_VERSION=2.3
 RUN curl --retry-all-errors -fL --retry 5 https://github.com/faf0/sct/archive/refs/tags/${XSCT_VERSION}.tar.gz -o sct.tar.gz && \
     tar -xf sct.tar.gz && cd sct-${XSCT_VERSION} && \
     make CC=cc LDFLAGS=-s && install -m0755 xsct /x11-desktop-tools/usr/bin/xsct
+# setxkbmap switches the i3 keyboard layout at once: the live welcome runs it
+# when the user picks a layout. Against libxkbfile, libX11 and libXrandr from
+# x11-libs; only the binary is shipped (no man page). Built here, not next to
+# xkbcomp in x11-libs, because x11-libs also goes into the Wayland variants.
+# renovate: datasource=gitlab-tags depName=xorg/app/setxkbmap registryUrl=https://gitlab.freedesktop.org extractVersion=^setxkbmap-(?<version>\d+(\.\d+)*)$
+ARG SETXKBMAP_VERSION=1.3.5
+RUN curl --retry-all-errors -fL --retry 5 https://xorg.freedesktop.org/archive/individual/app/setxkbmap-${SETXKBMAP_VERSION}.tar.xz -o setxkbmap.tar.xz && \
+    tar -xf setxkbmap.tar.xz && cd setxkbmap-${SETXKBMAP_VERSION} && \
+    ./configure ${COMMON_CONFIGURE_ARGS} && \
+    make -j"$(nproc)" && install -s -m0755 setxkbmap /x11-desktop-tools/usr/bin/setxkbmap
 # clipnotify waits for the next clipboard change (XFixes) and exits; the
 # isotope-clipboard daemon runs it in a loop to record the i3 clipboard
 # history, reading the text with xsel and the types with xclip. One C file.
@@ -6147,11 +6157,22 @@ RUN DESTDIR=/cage-root ninja -C buildDir install && \
 # static text installer. Go itself is copied from the same golang image. The
 # tests run without the screenshots, which need a GPU context; CI runs them
 # (.github/workflows/ci.yml).
+# Two builds, as Isotope Welcome's below: -tags nox11 for cage (a Wayland
+# compositor, on every variant, i3 included) and for the live sessions of
+# sway, COSMIC and niri; -tags novulkan with X11 for i3's live X11 session,
+# where `isotope-install-gui --window` runs as a window. install-gui-${DESKTOP}
+# picks: i3 gets both, the X11 one as isotope-install-gui-x11.
 FROM toolchain AS install-gui-build
 COPY --from=wayland /wayland /
 COPY --from=libxkb /libxkb /
 COPY --from=libdrm /libdrm /
 COPY --from=gl / /
+COPY --from=xorgproto /xorgproto /
+COPY --from=xcbproto /xcbproto /
+COPY --from=libxau /libxau /
+COPY --from=libxcb /libxcb /
+COPY --from=x11-libs /x11-libs /
+COPY --from=libxkb-x11 /libxkb-x11 /
 COPY --from=golang:1.25.0-alpine3.22 /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=local
 WORKDIR /src
@@ -6164,8 +6185,28 @@ COPY guikit/ guikit/
 COPY install-gui/ install-gui/
 RUN cd install-gui && \
     CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan . && \
-    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/isotope-install-gui . && \
-    { /out/isotope-install-gui --nonsense 2>/dev/null; [ $? -eq 2 ]; }
+    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-install-gui . && \
+    { /out/wayland/isotope-install-gui --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
+    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-install-gui . && \
+    { /out/x11/isotope-install-gui --nonsense 2>/dev/null; [ $? -eq 2 ]; }
+
+FROM scratch AS install-gui-sway
+COPY --from=install-gui-build /out/wayland/isotope-install-gui /usr/bin/isotope-install-gui
+FROM scratch AS install-gui-cosmic
+COPY --from=install-gui-build /out/wayland/isotope-install-gui /usr/bin/isotope-install-gui
+FROM scratch AS install-gui-niri
+COPY --from=install-gui-build /out/wayland/isotope-install-gui /usr/bin/isotope-install-gui
+# i3: cage (the "Install Isotope" boot entry) is Wayland and takes the
+# Wayland build; the live X11 session's window takes the X11 one.
+# isotope-live-install-run picks by the session (X11: DISPLAY without
+# WAYLAND_DISPLAY).
+FROM scratch AS install-gui-i3
+COPY --from=install-gui-build /out/wayland/isotope-install-gui /usr/bin/isotope-install-gui
+COPY --from=install-gui-build /out/x11/isotope-install-gui /usr/bin/isotope-install-gui-x11
+# The server has no graphical installer; the stage only keeps
+# install-gui-${DESKTOP} resolvable, as welcome-server does.
+FROM scratch AS install-gui-server
+FROM install-gui-${DESKTOP} AS install-gui
 
 # Isotope Welcome (welcome/), the graphical first-login flow, built like the
 # installer above. Two builds of the same source: Gio's X11 backend links
@@ -6189,9 +6230,12 @@ COPY --from=libxkb-x11 /libxkb-x11 /
 COPY --from=golang:1.25.0-alpine3.22 /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=local
 WORKDIR /src
+COPY install-ui/go.mod install-ui/go.sum install-ui/
 COPY guikit/go.mod guikit/go.sum guikit/
 COPY welcome/go.mod welcome/go.sum welcome/
 RUN cd welcome && go mod download
+# The live page takes the keyboard list and checks from install-ui/core.
+COPY install-ui/ install-ui/
 COPY guikit/ guikit/
 COPY welcome/ welcome/
 # The tests read the app list and the shortcut sheets from the rootfs trees.
@@ -6200,6 +6244,8 @@ COPY rootfs-sway/usr/share/isotope/shortcuts.txt rootfs-sway/usr/share/isotope/
 COPY rootfs-i3/usr/share/isotope/shortcuts.txt rootfs-i3/usr/share/isotope/
 COPY rootfs-cosmic/usr/share/isotope/shortcuts.txt rootfs-cosmic/usr/share/isotope/
 COPY rootfs-niri/usr/share/isotope/shortcuts.txt rootfs-niri/usr/share/isotope/
+# ...and niri's config, which must include the live keyboard file.
+COPY rootfs-niri/etc/niri/config.kdl rootfs-niri/etc/niri/
 RUN cd welcome && \
     CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan . && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-welcome . && \
@@ -6260,9 +6306,13 @@ FROM system-${DESKTOP} AS system
 # user's upgrade; the ones that need a dbus-daemon skip, as this stage has none.
 # ---------------------------------------------------------------------------
 FROM golang:1.25.0-alpine3.22 AS update-build
-WORKDIR /src
+# The module sits at /src/update, as in the repo, because its locale tests
+# read the installer's golden files at ../install-ui/core/testdata: both
+# writers of /oem/91_isotope_locale.yaml are held to the same bytes.
+WORKDIR /src/update
 COPY update/go.mod update/go.sum ./
 RUN go mod download
+COPY install-ui/core/testdata/oem-locale-de_DE.golden install-ui/core/testdata/locale.conf-de_DE.golden /src/install-ui/core/testdata/
 COPY update/ ./
 RUN CGO_ENABLED=0 go test ./... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope . \
@@ -6544,8 +6594,9 @@ RUN chmod 1777 /tmp; \
 # worked because the installer runs in the live environment.)
 COPY --from=install-ui-build /out/isotope-install-ui /usr/bin/isotope-install-ui
 # The graphical installer: isotope-install-ui runs it inside cage when both are
-# here. The server image has neither and keeps the text installer.
-COPY --from=install-gui-build /out/isotope-install-gui /usr/bin/isotope-install-gui
+# here. The server image has neither and keeps the text installer. The
+# variant's build (install-gui-${DESKTOP}); i3 also has isotope-install-gui-x11.
+COPY --from=install-gui / /
 COPY --from=cage /cage/usr/bin/cage /usr/bin/cage
 # The GPU probe, for the sessions' and the installer's software fallback
 # (rootfs/usr/libexec/isotope-gpu-env).

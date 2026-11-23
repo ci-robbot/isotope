@@ -112,6 +112,9 @@ func (p *languagePage) readOnly() bool {
 }
 
 func (p *languagePage) readOnlyLocked() bool {
+	if p.u.hooks.LiveSession {
+		return p.u.hooks.SessionLocale == nil || p.refused
+	}
 	return !p.u.hooks.Admin || p.u.hooks.Settings == nil || p.refused
 }
 
@@ -216,11 +219,11 @@ func (p *languagePage) Continue() {
 	}
 	p.busy, p.applyErr = true, ""
 	p.mu.Unlock()
-	s := p.u.hooks.Settings
+	set := p.setter()
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		err := s.SetLocale(l.Code)
+		err := set(l.Code)
 		p.mu.Lock()
 		p.busy = false
 		switch {
@@ -234,6 +237,25 @@ func (p *languagePage) Continue() {
 		p.mu.Unlock()
 		p.invalidate()
 	}()
+}
+
+// setter is how the pick is applied: isotope-updated's SetLocale, or on
+// the live desktop the session's LANG and the choices file the installer
+// reads (nothing reaches /oem there).
+func (p *languagePage) setter() func(string) error {
+	h := p.u.hooks
+	if !h.LiveSession {
+		return h.Settings.SetLocale
+	}
+	return func(code string) error {
+		if err := h.SessionLocale(code); err != nil {
+			return err
+		}
+		if h.LiveChoicesFile == "" {
+			return nil
+		}
+		return UpdateLiveChoices(h.LiveChoicesFile, h.Live, func(c *LiveChoices) { c.Lang = code })
+	}
 }
 
 // settle takes the result of the background call: the pick was accepted,

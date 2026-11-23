@@ -248,8 +248,18 @@ RUN rm -f /usr/bin/isotope-recovery && ! test -e /usr/bin/isotope-recovery
 # No graphical installer: the appliance installs unattended
 # (isotope-install-ui --progress-only), which never starts it, and without
 # cage the installer keeps to the text screen whatever the boot asks.
-RUN rm -f /usr/bin/cage /usr/bin/isotope-install-gui && \
-    ! test -e /usr/bin/cage && ! test -e /usr/bin/isotope-install-gui
+RUN rm -f /usr/bin/cage /usr/bin/isotope-install-gui /usr/bin/isotope-install-gui-x11 && \
+    ! test -e /usr/bin/cage && ! test -e /usr/bin/isotope-install-gui && \
+    ! test -e /usr/bin/isotope-install-gui-x11
+# ...and no live "Install Isotope" launcher either: it starts that installer
+# window, and the appliance has no live desktop to start it on. The desktop
+# file (hidden in the image anyway), the user-side script and the root helper
+# go with it, and isotope-menu shows no entry without the script.
+RUN rm -f /usr/bin/isotope-live-install /usr/libexec/isotope-live-install-run \
+      /usr/share/applications/isotope-install.desktop && \
+    ! test -e /usr/bin/isotope-live-install && \
+    ! test -e /usr/libexec/isotope-live-install-run && \
+    ! test -e /usr/share/applications/isotope-install.desktop
 # No backups: the appliance keeps no user files worth a backup, and a backup of
 # what an agent did would keep the secrets it handled. Without restic,
 # `isotope backup` and `isotope restore` say they are not available, and

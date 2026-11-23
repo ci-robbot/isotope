@@ -34,6 +34,9 @@ type Hooks struct {
 	// Start runs a program and does not wait (the desktop's own settings,
 	// xdg-open).
 	Start func(argv ...string) error
+	// Live is true on a live desktop session (the marker exists): the
+	// pages that need an installed system then say to install first.
+	Live bool
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the
@@ -135,7 +138,11 @@ func (u *UI) ShowPage(p Page) {
 func (u *UI) view(p Page) pageView {
 	v, ok := u.pages[p]
 	if !ok {
-		v = pageMakers[p](u)
+		if u.hooks.Live && liveOnly[p] {
+			v = &livePage{u: u, page: p}
+		} else {
+			v = pageMakers[p](u)
+		}
 		u.pages[p] = v
 	}
 	return v

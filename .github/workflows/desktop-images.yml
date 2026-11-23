@@ -45,6 +45,7 @@ on:
       - "test/cosmic/**"
       - "test/boot-ux/check-boot-units.sh"
       - "test/vm/**"
+      - "test/live/check-live.sh"
       - "test/welcome/**"
       - "welcome/**"
       - "system/**"
@@ -52,6 +53,8 @@ on:
       - "test/bluetooth/**"
       - "test/network/**"
       - "guikit/**"
+      - "install-ui/**"
+      - "install-gui/**"
       - "scripts/ci-containerd-store.sh"
       - ".github/workflows/desktop-images.yml"
   # Refresh the build cache from main (see above) when an input of the image
@@ -126,8 +129,8 @@ jobs:
               "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
             for f in "${files[@]}"; do
               case "$f" in
-                Dockerfile|Makefile|rootfs/*|test/graphics/*|test/boot-ux/check-boot-units.sh|tools/stage-key.py|\
-                test/welcome/*|welcome/*|guikit/*|test/system/*|system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                Dockerfile|Makefile|rootfs/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|\
+                test/welcome/*|welcome/*|guikit/*|install-ui/*|install-gui/*|test/system/*|system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs-sway/*) want[sway]=1 ;;
@@ -335,6 +338,14 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/vm/check-guest-agent.sh "${DESKTOP}-desktop:dev" "$GPU"
+
+      # The live desktop's contract on the image: login screen gates and
+      # stages, isotope-not-live on every lock and tray line, the backup
+      # timer, the autologin prerequisites, no live user in the image.
+      - name: Check live desktop
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/live/check-live.sh "${DESKTOP}-desktop:dev"
 
       # Isotope Welcome: the variant's build, the session line that starts it
       # at first login, its window rule; no cosmic-initial-setup on COSMIC.

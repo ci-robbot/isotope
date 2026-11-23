@@ -4,9 +4,9 @@
 # Assert the update tray is wired into a variant: the root update service and
 # its polkit policy (with the system extensions action, and the isotope-ext
 # link) are installed, polkitd can run, and the session starts
-# `isotope-update tray` (and, on i3, the snixembed tray bridge). For the agent
-# image, assert the opposite: no update service and nothing that starts
-# isotope-update.
+# `isotope-update tray` through `isotope-not-live` (and, on i3, the snixembed
+# tray bridge). For the agent image, assert the opposite: no update service
+# and nothing that starts isotope-update.
 #
 #   test/update/check-tray-wiring.sh IMAGE FLAVOR
 #   test/update/check-tray-wiring.sh --root DIR FLAVOR
@@ -144,17 +144,21 @@ check_image "polkitd system user exists" 'grep -q "^polkitd:" /etc/passwd'
 check_image "polkit rules directory is owned by polkitd" \
     'test "$(stat -c %U /usr/share/polkit-1/rules.d)" = polkitd'
 
-# The session starts the tray, and no longer the old notifier.
+# The session starts the tray, and no longer the old notifier. The tray goes
+# through isotope-not-live, so it does not start on the live desktop: a tray
+# line without the wrapper fails, and so does a session with no tray at all.
 case "$FLAVOR" in
     sway|i3)
-        TRAY='^[[:space:]]*exec(_always)?[[:space:]]+(--no-startup-id[[:space:]]+)?isotope-update[[:space:]]+tray([[:space:]]|$)' ;;
+        TRAY='^[[:space:]]*exec(_always)?[[:space:]]+(--no-startup-id[[:space:]]+)?isotope-not-live[[:space:]]+isotope-update[[:space:]]+tray([[:space:]]|$)' ;;
     niri)
-        TRAY='^[[:space:]]*spawn-at-startup[[:space:]]+"isotope-update"[[:space:]]+"tray"[[:space:]]*$' ;;
+        TRAY='^[[:space:]]*spawn-at-startup[[:space:]]+"isotope-not-live"[[:space:]]+"isotope-update"[[:space:]]+"tray"[[:space:]]*$' ;;
     cosmic)
-        TRAY='^Exec=isotope-update tray$' ;;
+        TRAY='^Exec=isotope-not-live isotope-update tray$' ;;
 esac
-check "the $FLAVOR session starts isotope-update tray" \
+check "the $FLAVOR session starts isotope-update tray through isotope-not-live" \
     "{ $(lines "$SESSION"); } | grep -Eq '$TRAY'"
+check "no session starts isotope-update tray without isotope-not-live" \
+    "! { $(lines "$ALL_SESSION"); } | grep -E 'isotope-update(\"[[:space:]]+\"|[[:space:]]+)tray' | grep -vq 'isotope-not-live'"
 check "nothing starts isotope-update notify" \
     "! { $(lines "$ALL_SESSION"); } | grep -Eq 'isotope-update(\"[[:space:]]+\"|[[:space:]]+)notify'"
 

@@ -108,18 +108,31 @@ installed machine to another desktop and keeps your files.
    sudo dd if=isotope-cosmic-v0.0.9-amd64.iso of=/dev/sdX bs=4M status=progress oflag=sync
    ```
 
-3. **Boot it.** The desktop ISOs start a graphical installer. It asks for
-   your keyboard layout and time zone, a computer name, your user name and
+3. **Boot it.** The desktop ISOs start the live desktop first (see "Try it
+   first" below). Choose "Install Isotope" in the boot menu, or the
+   "Install Isotope" button of the live desktop, to start the graphical
+   installer. It asks for your keyboard layout and time zone, a computer name, your user name and
    password, and the disk to use, and offers to encrypt your files. It shows
    what is on each disk now and names what installing would erase, and it
-   shows a summary before it erases anything. The server ISO, the live
-   menu's "isotope (text installer)" entry and machines where the graphics
-   do not start get the text installer, which asks the same questions.
+   shows a summary before it erases anything. The server ISO, the
+   "Install Isotope (text)" entry of the desktop ISOs and machines where the
+   graphics do not start get the text installer, which asks the same
+   questions.
 
    <p>
      <img src="install-gui/testdata/2-keyboard-1440x900.png" alt="The graphical installer: keyboard layout and time zone" width="49%">
      <img src="install-gui/testdata/4-disk-1440x900.png" alt="The graphical installer: the disk page" width="49%">
    </p>
+
+**Try it first.** The first entry of the desktop ISOs' boot menu, "Isotope",
+starts the live desktop. You log in as `live` (no password) and use the
+desktop from the USB stick. Nothing is written to your disks. A welcome
+window lets you choose your language and keyboard, and has an "Install
+Isotope" button. The installer opens as a window, and the language and
+keyboard you chose are the first-boot settings of the installed system. The
+live desktop does not lock the screen, does not update and does not back up.
+If the ISO carries an install config (AuroraBoot `--cloud-config`), the
+unattended install runs instead of the live desktop.
 
 > [!TIP]
 > To try it in a VM first, use the `-vm` ISO. Give the VM UEFI firmware,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,7 +26,29 @@ func ronStrings(s string) []string {
 // (~/.config/cosmic/com.system76.CosmicAppList/v1/favorites, a RON list).
 // A user with no file starts from the system default. An app that is
 // already in the list is not added again.
-func PinToCosmicDock(home, appID string) error {
+func PinToCosmicDock(home, appID string) error { return pinToCosmicDock(home, appID, false) }
+
+// PinFirstToCosmicDock is PinToCosmicDock, but puts a new app at the start
+// of the list (the live session's "Install Isotope"). An app that is
+// already in the list stays where it is.
+func PinFirstToCosmicDock(home, appID string) error { return pinToCosmicDock(home, appID, true) }
+
+// liveDockPinID is the desktop-file ID of the live launcher.
+const liveDockPinID = "isotope-install"
+
+// liveDockPin pins the installer first in COSMIC's dock when the live
+// welcome starts. Other desktops have their own launchers and get nothing.
+// pin is PinFirstToCosmicDock in the program.
+func liveDockPin(d Desktop, home string, pin func(home, id string) error) {
+	if d != Cosmic {
+		return
+	}
+	if err := pin(home, liveDockPinID); err != nil {
+		fmt.Fprintf(os.Stderr, "isotope-welcome: %v\n", err)
+	}
+}
+
+func pinToCosmicDock(home, appID string, first bool) error {
 	path := filepath.Join(home, ".config", "cosmic", "com.system76.CosmicAppList", "v1", "favorites")
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -43,15 +66,23 @@ func PinToCosmicDock(home, appID string) error {
 			return nil
 		}
 	}
-	end := strings.LastIndex(s, "]")
-	if end < 0 {
-		s, end = "[]", 1
+	var out string
+	if start := strings.Index(s, "["); first && start >= 0 {
+		out = s[:start+1] + "\n    \"" + appID + "\"," + s[start+1:]
+		if !strings.HasSuffix(out, "\n") {
+			out += "\n"
+		}
+	} else {
+		end := strings.LastIndex(s, "]")
+		if end < 0 {
+			s, end = "[]", 1
+		}
+		head := strings.TrimRight(s[:end], " \t\r\n")
+		if !strings.HasSuffix(head, "[") && !strings.HasSuffix(head, ",") {
+			head += ","
+		}
+		out = head + "\n    \"" + appID + "\",\n]\n"
 	}
-	head := strings.TrimRight(s[:end], " \t\r\n")
-	if !strings.HasSuffix(head, "[") && !strings.HasSuffix(head, ",") {
-		head += ","
-	}
-	out := head + "\n    \"" + appID + "\",\n]\n"
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

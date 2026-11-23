@@ -1,0 +1,15 @@
+#!/bin/sh
+# Run a command unless this boot is the live desktop.
+#
+#   isotope-not-live COMMAND [ARG...]
+#
+# On the live desktop (the marker /run/isotope/live-desktop exists) it does
+# nothing and exits 0, without a message. Everywhere else it is `exec "$@"`.
+# The session configs put it in front of the screen lock, the idle lock and the
+# update tray: the user `live` has no password, so a lock could shut the user
+# out of the installer, and an update tray has nothing to update on a live ISO.
+#
+# ISOTOPE_LIVE_MARKER overrides the marker path (for tests).
+marker="${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}"
+[ -e "$marker" ] && exit 0
+exec "$@"

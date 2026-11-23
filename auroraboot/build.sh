@@ -6,6 +6,8 @@
 # e.g. auroraboot/build.sh sway-desktop:dev build/sway-desktop/iso
 #
 # Env:
+#   FLAVOR                      sway, i3, niri, cosmic, server or agent (required):
+#                               picks the GRUB menu template (render-grub.sh)
 #   ARCH                        target arch (default amd64)
 #   AURORA_IMAGE                AuroraBoot image (default matches the Makefile pin)
 #   ISOTOPE_EXTRA_LIVE_CMDLINE   extra args appended to every live menuentry
@@ -20,6 +22,7 @@ IMAGE="${1:?usage: build.sh <IMAGE> <OUT_DIR> [ISO_NAME]}"
 OUT_DIR="${2:?usage: build.sh <IMAGE> <OUT_DIR> [ISO_NAME]}"
 ISO_NAME="${3:-}"
 ARCH="${ARCH:-amd64}"
+FLAVOR="${FLAVOR:?set FLAVOR to sway, i3, niri, cosmic, server or agent}"
 AURORA_IMAGE="${AURORA_IMAGE:-quay.io/kairos/auroraboot:v0.30.0}"
 
 THEME_SRC="rootfs/etc/kairos/branding/isotope-theme"
@@ -35,17 +38,9 @@ mkdir -p "$OUT_DIR"
 # reproduce that substitution here per-arch (see AuroraBoot pkg/ops/iso.go
 # prepareBootArtifacts: amd64/x86 -> " nomodeset").
 echo "==> staging live GRUB menu + theme (arch=$ARCH)"
-case "$ARCH" in
-  amd64|x86_64) NOMODESET=" nomodeset" ;;
-  *)            NOMODESET="" ;;
-esac
-EXTEND_CMDLINE="${ISOTOPE_EXTRA_LIVE_CMDLINE:+ ${ISOTOPE_EXTRA_LIVE_CMDLINE}}"
-
 rm -rf "$OVERLAY_DIR"
 mkdir -p "$OVERLAY_DIR/boot/grub2/themes/isotope"
-sed -e "s|{{NOMODESET}}|${NOMODESET}|g" \
-    -e "s|{{EXTEND_CMDLINE}}|${EXTEND_CMDLINE}|g" \
-    auroraboot/live-grub.cfg.tmpl > "$OVERLAY_DIR/boot/grub2/grub.cfg"
+ARCH="$ARCH" auroraboot/render-grub.sh "$FLAVOR" > "$OVERLAY_DIR/boot/grub2/grub.cfg"
 
 # Ship the Isotope theme alongside the menu so the LIVE boot is themed too.
 # The same files the installed system gets from the 09_isotope_grub_theme oem

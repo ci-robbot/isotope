@@ -160,10 +160,14 @@ power() {
     case "$DESKTOP_NAME" in
         niri)   exec noctalia msg panel-open session ;;
         COSMIC)
-            what=$(printf '%s\t%s\n' Lock 󰌾 "Log out" 󰍃 Suspend 󰒲 Restart 󰜉 \
-                "Power off" 󰐥 | pick Power 5) || exit 0
+            # No Lock on the live desktop: `live` has no password.
+            rows=5; lock=Lock
+            if [ -e "${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}" ]; then rows=4; lock=; fi
+            what=$({ [ -z "$lock" ] || printf '%s\t%s\n' Lock 󰌾
+                printf '%s\t%s\n' "Log out" 󰍃 Suspend 󰒲 Restart 󰜉 \
+                "Power off" 󰐥; } | pick Power "$rows") || exit 0
             case "$what" in
-                Lock)        exec loginctl lock-session ;;
+                Lock)        exec isotope-not-live loginctl lock-session ;;
                 "Log out")   exec cosmic-osd log-out ;;
                 Suspend)     exec systemctl suspend ;;
                 Restart)     exec cosmic-osd restart ;;
@@ -181,6 +185,11 @@ power() {
 # nor isotope-ext (Dockerfile.agent removes them).
 tab=$(printf '\t')
 entries="Apps${tab}󰀻"
+# On the live desktop the installer comes first.
+if [ -e "${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}" ] && command -v isotope-live-install >/dev/null 2>&1; then
+    entries="Install Isotope${tab}󰋊
+$entries"
+fi
 command -v isotope-welcome >/dev/null 2>&1 && entries="$entries
 Install apps${tab}󰏗"
 entries="$entries
@@ -223,6 +232,7 @@ else
     sel=$(printf '%s\n' "$entries" | pick Isotope "$n") || exit 0
 fi
 case "$sel" in
+    "Install Isotope") exec isotope-live-install ;;
     Apps)      apps ;;
     "Install apps") exec isotope welcome apps ;;
     Welcome)   exec isotope welcome ;;

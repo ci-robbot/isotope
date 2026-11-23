@@ -44,6 +44,8 @@ func TestPreview(t *testing.T) {
 		u.pageAt = time.Time{}
 		shot(t, u, sz, filepath.Join(dir, string(p)+".png"))
 	}
+	live := newUI(testSystem(true), u.Theme.Shaper, Hooks{Live: true, Start: func(...string) error { return nil }}, PageUpdates)
+	shot(t, live, sz, filepath.Join(dir, "updates-live.png"))
 	u.show(PageUpdates)
 	u.startInstall("Isotope v1.1.0", "quay.io/x/isotope:sway-v1.1.0", false, "")
 	waitQuestion(t, u, "Install")

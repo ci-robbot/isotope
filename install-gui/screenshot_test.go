@@ -71,12 +71,19 @@ var testKey = "cbdefghi-jklnrtuv-vutrnlkj-ihgfedcb-bcdtrnhe-gkulvfij-nrdcebtv-lh
 // time, key and group, with nothing that touches the machine.
 func fixture(t *testing.T, trustedBoot bool) *UI {
 	t.Helper()
+	return fixtureMode(t, trustedBoot, nil)
+}
+
+// fixtureMode is fixture with mode applied to the UI before it gets the
+// wizard: window mode sets its fields there, as main does.
+func fixtureMode(t *testing.T, trustedBoot bool, mode func(*UI)) *UI {
+	t.Helper()
 	disks := []core.Disk{{Path: "/dev/nvme0n1", SizeGB: 1000}, {Path: "/dev/sda", SizeGB: 2000}, {Path: "/dev/sdb", SizeGB: 64}}
 	w := core.NewWizardWith(disks, core.CuratedKeyboards, core.CuratedTimezones, "Europe/Rome")
 	w.TrustedBoot = trustedBoot
 	w.NewKey = func() (string, error) { return testKey, nil }
 	w.PickGroup = func() int { return 2 }
-	u := newUI(&w, guikit.NewShaper(), hooks{
+	u := newUI(nil, guikit.NewShaper(), hooks{
 		confirm:  func(core.Choice) {},
 		relaunch: func(core.GUIState) { t.Fatal("relaunch") },
 		poweroff: func() {},
@@ -85,6 +92,10 @@ func fixture(t *testing.T, trustedBoot bool) *UI {
 		saveLog:  func() (string, error) { return "/media/STICK/isotope-install.log", nil },
 		terminal: func() {},
 	})
+	if mode != nil {
+		mode(u)
+	}
+	u.setWizard(&w)
 	f, err := os.Open("testdata/zone.tab")
 	if err != nil {
 		t.Fatal(err)
@@ -242,6 +253,25 @@ var pages = []struct {
 }
 
 func TestScreenshots(t *testing.T) {
+	needGPU(t)
+	for _, p := range pages {
+		for _, sz := range sizes {
+			name := fmt.Sprintf("%s-%dx%d", p.name, sz.X, sz.Y)
+			t.Run(name, func(t *testing.T) {
+				u := fixture(t, p.tb)
+				p.setup(t, u)
+				u.pageAt = time.Time{}
+				img := render(t, u, sz)
+				compare(t, name, img)
+			})
+		}
+	}
+}
+
+// needGPU skips a screenshot test without a headless GPU context, or with
+// ISOTOPE_GUI_SKIP_SCREENSHOTS=1.
+func needGPU(t *testing.T) {
+	t.Helper()
 	if os.Getenv("ISOTOPE_GUI_SKIP_SCREENSHOTS") == "1" {
 		t.Skip("ISOTOPE_GUI_SKIP_SCREENSHOTS=1")
 	}
@@ -255,18 +285,6 @@ func TestScreenshots(t *testing.T) {
 		t.Skipf("no headless GPU context (EGL with Mesa's surfaceless platform): %v", err)
 	}
 	probe.Release()
-	for _, p := range pages {
-		for _, sz := range sizes {
-			name := fmt.Sprintf("%s-%dx%d", p.name, sz.X, sz.Y)
-			t.Run(name, func(t *testing.T) {
-				u := fixture(t, p.tb)
-				p.setup(t, u)
-				u.pageAt = time.Time{}
-				img := render(t, u, sz)
-				compare(t, name, img)
-			})
-		}
-	}
 }
 
 func render(t *testing.T, u *UI, sz image.Point) *image.RGBA {

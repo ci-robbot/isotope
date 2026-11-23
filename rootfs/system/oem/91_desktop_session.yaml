@@ -7,9 +7,11 @@
 # mirroring 09_systemd_services.yaml — wires and starts ly against the live /etc
 # on every boot of the installed system.
 #
-# Guarded so it does NOT run during the live/installer boot: an install boot is
-# always a live one (/run/cos/live_mode), the installer owns tty1 there, and
-# ly's own ConditionPathExists drop-in keeps it from stealing the VT.
+# Guarded so it does NOT run on the ISO: the installed-system stage needs
+# /run/cos/live_mode to be absent. The live desktop (the ISO booted with no
+# install config; isotope-live-boot writes /run/isotope/live-desktop) has its
+# own twin stage below. Where an install runs, ly's own ConditionPathExists
+# drop-in keeps it from stealing the VT from the installer.
 name: "Isotope session"
 stages:
   boot:
@@ -28,4 +30,12 @@ stages:
         # for cos-setup-boot to finish). --no-block breaks the cycle: ly runs
         # once cos-setup-boot completes, by which point later boot stages (e.g.
         # the agent appliance's account-creation stage) have already run.
+        - systemctl start --no-block ly@tty1.service || true
+    - if: '[ -f /run/isotope/live-desktop ]'
+      name: "start ly on the live desktop"
+      commands:
+        - mkdir -p /etc/systemd/system/multi-user.target.wants
+        - ln -sf /usr/lib/systemd/system/ly@.service /etc/systemd/system/multi-user.target.wants/ly@tty1.service
+        - systemctl daemon-reload
+        # --no-block, as above.
         - systemctl start --no-block ly@tty1.service || true

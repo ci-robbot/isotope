@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kairos-community/isotope/guikit"
 )
 
 // Scales are the display scales the Accessibility page offers.
@@ -107,13 +108,13 @@ func ApplyScale(r Runner, home string, d Desktop, s float64) error {
 			return err
 		}
 		for _, o := range outs {
-			if !o.enabled || o.mirroring || o.width == 0 {
+			if !o.Enabled || o.Mirroring || o.Width == 0 {
 				continue
 			}
 			if _, err := runFor(slow, r, "cosmic-randr", "mode",
 				"--scale", fmt.Sprintf("%.2f", s),
-				"--refresh", fmt.Sprintf("%d.%03d", o.refresh/1000, o.refresh%1000),
-				o.name, strconv.Itoa(o.width), strconv.Itoa(o.height)); err != nil {
+				"--refresh", fmt.Sprintf("%d.%03d", o.Refresh/1000, o.Refresh%1000),
+				o.Name, strconv.Itoa(o.Width), strconv.Itoa(o.Height)); err != nil {
 				return err
 			}
 		}
@@ -174,8 +175,8 @@ func CurrentScale(r Runner, d Desktop) float64 {
 			return 1
 		}
 		for _, o := range outs {
-			if o.enabled && o.scale > 0 {
-				return o.scale
+			if o.Enabled && o.Scale > 0 {
+				return o.Scale
 			}
 		}
 	}
@@ -328,57 +329,11 @@ func unquoteKDL(s string) string {
 	return strings.NewReplacer(`\\`, `\`, `\"`, `"`).Replace(s)
 }
 
-type cosmicOutput struct {
-	name                   string
-	enabled, mirroring     bool
-	scale                  float64
-	width, height, refresh int
-}
-
-// cosmicOutputs reads `cosmic-randr list --kdl` (cosmic-randr epoch-1.11.0,
-// list_kdl in cli/src/main.rs): an `output "<name>" enabled=#true {` node
-// per output with `scale 1.25`, an optional `mirroring "<name>"` and
-// `mode <w> <h> <mHz> current=#true` under `modes`.
-func cosmicOutputs(r Runner) ([]cosmicOutput, error) {
+// cosmicOutputs reads `cosmic-randr list --kdl` (guikit.ParseCosmicOutputs).
+func cosmicOutputs(r Runner) ([]guikit.CosmicOutput, error) {
 	out, err := run(r, "cosmic-randr", "list", "--kdl")
 	if err != nil {
 		return nil, err
 	}
-	var outs []cosmicOutput
-	sc := bufio.NewScanner(strings.NewReader(string(out)))
-	for sc.Scan() {
-		f := strings.Fields(sc.Text())
-		if len(f) == 0 {
-			continue
-		}
-		if f[0] == "output" && len(f) >= 2 {
-			outs = append(outs, cosmicOutput{
-				name:    strings.Trim(f[1], `"`),
-				enabled: strings.Contains(sc.Text(), "enabled=#true"),
-			})
-			continue
-		}
-		if len(outs) == 0 {
-			continue
-		}
-		o := &outs[len(outs)-1]
-		switch f[0] {
-		case "scale":
-			if len(f) >= 2 {
-				o.scale, _ = strconv.ParseFloat(f[1], 64)
-			}
-		case "mirroring":
-			o.mirroring = true
-		case "mode":
-			if len(f) >= 5 && strings.Contains(sc.Text(), "current=#true") {
-				o.width, _ = strconv.Atoi(f[1])
-				o.height, _ = strconv.Atoi(f[2])
-				o.refresh, _ = strconv.Atoi(f[3])
-			}
-		}
-	}
-	if len(outs) == 0 {
-		return nil, fmt.Errorf("cosmic-randr lists no outputs")
-	}
-	return outs, nil
+	return guikit.ParseCosmicOutputs(out)
 }

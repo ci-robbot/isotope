@@ -33,6 +33,16 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	}
 
 	var behind func(layout.Context, image.Rectangle)
+	if u.bar != nil {
+		// Window mode on COSMIC: the title bar, then the window under it.
+		full := gtx.Constraints.Max
+		if a := u.bar.Update(gtx); a != 0 && u.hooks.window != nil {
+			u.hooks.window(a)
+		}
+		h := u.bar.Layout(gtx, u.Theme).Size.Y
+		defer op.Offset(image.Pt(0, h)).Push(gtx.Ops).Pop()
+		gtx.Constraints = layout.Exact(image.Pt(full.X, max(0, full.Y-h)))
+	}
 	dims := u.win.Layout(gtx, behind, func(gtx layout.Context) layout.Dimensions {
 		switch {
 		case u.w == nil && u.page < pInstalling:
@@ -69,7 +79,7 @@ func (u *UI) blank(gtx layout.Context) layout.Dimensions {
 
 // steps is the sidebar.
 func (u *UI) steps() guikit.Steps {
-	return guikit.Steps{Title: "Install Isotope", Names: stepNames, Current: stepOf(u.page), Note: u.version}
+	return guikit.Steps{Title: "Install Isotope", Names: u.stepNames(), Current: stepOf(u.page), Note: u.version}
 }
 
 // slide is w sliding in as the page changes.
@@ -243,8 +253,24 @@ func spaced(s string) string {
 // --- 2. Keyboard and time zone ----------------------------------------------
 
 func (u *UI) keyboard(gtx layout.Context) layout.Dimensions {
+	if u.kbFixed {
+		// Window mode: the live session set the keyboard.
+		kb := u.w.Choice.KeyboardLayout
+		if i := u.w.KeyboardIndex(); i >= 0 {
+			kb = u.w.Keyboards[i].Description
+		}
+		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Rigid(u.Heading("Time zone", "The keyboard layout is "+kb+", the one this session uses. You can change it on the last page.")),
+			guikit.VGap(22),
+			layout.Flexed(1, u.zoneColumn),
+		)
+	}
+	sub := "The layout applies at once, here and on the disk passphrase prompt at every start."
+	if u.window {
+		sub = "The layout is for the installed system, and for the disk passphrase prompt at every start."
+	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Keyboard and time zone", "The layout applies at once, here and on the disk passphrase prompt at every start.")),
+		layout.Rigid(u.Heading("Keyboard and time zone", sub)),
 		guikit.VGap(22),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{}.Layout(gtx,
@@ -257,7 +283,19 @@ func (u *UI) keyboard(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) keyboardColumn(gtx layout.Context) layout.Dimensions {
-	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+	try := []layout.FlexChild{
+		guikit.VGap(14),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Try it")
+		}),
+		guikit.VGap(10),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Input(gtx, u.kbTry, guikit.StBody, 38, "", nil) }),
+	}
+	if u.window {
+		// The layout does not apply to this session: nothing to try.
+		try = nil
+	}
+	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, append([]layout.FlexChild{
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return u.Label(gtx, guikit.StLabel, guikit.ColText2, "Keyboard layout")
 		}),
@@ -272,13 +310,7 @@ func (u *UI) keyboardColumn(gtx layout.Context) layout.Dimensions {
 				return k.Description, k.Code()
 			})
 		}),
-		guikit.VGap(14),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Try it")
-		}),
-		guikit.VGap(10),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Input(gtx, u.kbTry, guikit.StBody, 38, "", nil) }),
-	)
+	}, try...)...)
 }
 
 func (u *UI) zoneColumn(gtx layout.Context) layout.Dimensions {
@@ -1229,12 +1261,35 @@ func (u *UI) failed(gtx layout.Context) layout.Dimensions {
 						return u.LabelMax(gtx, guikit.StTiny, guikit.ColText2, 2, u.savedTo)
 					})
 				},
-				[]guikit.Action{
-					{Click: &u.terminal, Kind: guikit.ButtonSecondary, Label: "Open a terminal", Disabled: u.hooks.terminal == nil},
-					{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: "Restart"},
-				})
+				u.failedActions())
 		}),
 	)
+}
+
+// failedActions are the failed page's buttons. The live window has no
+// terminal to open (it is turned off); it offers Close instead, so the
+// session goes on. The cage installer's buttons are as they were.
+func (u *UI) failedActions() []guikit.Action {
+	if u.window {
+		return []guikit.Action{
+			{Click: &u.keep, Kind: guikit.ButtonSecondary, Label: "Close"},
+			{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: "Restart"},
+		}
+	}
+	return []guikit.Action{
+		{Click: &u.terminal, Kind: guikit.ButtonSecondary, Label: "Open a terminal", Disabled: u.hooks.terminal == nil},
+		{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: "Restart"},
+	}
+}
+
+// failedPageHasClose says whether the failed page offers Close (window mode).
+func (u *UI) failedPageHasClose() bool {
+	for _, a := range u.failedActions() {
+		if a.Label == "Close" {
+			return true
+		}
+	}
+	return false
 }
 
 // --- 9. Done ------------------------------------------------------------------
@@ -1300,6 +1355,19 @@ func (u *UI) done(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			return layout.Inset{Top: 22, Bottom: 30}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+					if u.window {
+						// The live session: restart, or keep the session
+						// (the launcher then says the install is done).
+						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return u.Button(gtx, &u.restart, guikit.ButtonPrimary, "Restart now", true)
+							}),
+							layout.Rigid(layout.Spacer{Width: 10}.Layout),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+								return u.Button(gtx, &u.keep, guikit.ButtonSecondary, "Keep trying", true)
+							}),
+						)
+					}
 					return u.Button(gtx, &u.restart, guikit.ButtonPrimary, "Restart", true)
 				})
 			})

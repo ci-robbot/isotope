@@ -82,19 +82,35 @@ check "getty@tty1 is enabled, not masked" "$(ena getty@tty1.service)"
 check "Kairos' 'systemctl enable getty@tty1' succeeds" "systemctl enable getty@tty1"
 
 # The login screens on tty1: the template ly@ (sway, i3, niri, agent) and
-# cosmic-greeter. UNIT FILE DROPIN GETTY
+# cosmic-greeter. UNIT FILE DROPIN GETTY GATE
+# GATE is the unit's 10-conditions.conf: the login screen starts unless an
+# install runs (install_mode, install_mode_interactive), and is no longer held
+# back by live_mode, which every ISO boot sets: the live desktop needs it.
 dm() {
-    local unit="$1" file="$2" dropin="$3" getty="$4"
+    local unit="$1" file="$2" dropin="$3" getty="$4" gate="$5"
     if ! run "test -f $file" >/dev/null 2>&1; then return; fi
+    if run "test -f $gate" >/dev/null 2>&1; then
+        check "$unit does not start while an install runs" \
+            "grep -qx 'ConditionPathExists=!/run/cos/install_mode' $gate && grep -qx 'ConditionPathExists=!/run/cos/install_mode_interactive' $gate"
+        check "$unit starts on an installed system or on the live desktop only" \
+            "grep -qx 'ConditionPathExists=|!/run/cos/live_mode' $gate && grep -qx 'ConditionPathExists=|/run/isotope/live-desktop' $gate"
+        check "$unit is not blocked by live_mode alone (the live desktop needs it)" \
+            "! grep -qE '^ConditionPathExists=!/run/cos/live_mode' $gate"
+    else
+        # The agent image has no base gate: its own drop-in owns the conditions.
+        echo "SKIP: $unit has no $gate (the agent's drop-in sets its conditions)"
+    fi
     check "$unit gives tty1 to its login screen (Conflicts=$getty)" "grep -qx 'Conflicts=$getty' $file"
     check "$unit gives tty1 back when it fails (OnFailure=$getty)" "grep -qx 'OnFailure=$getty' $dropin"
     check "getty@tty1 can start again after the login screen gave up" \
         "grep -qx 'StartLimitIntervalSec=0' /usr/lib/systemd/system/getty@tty1.service.d/20-isotope.conf"
 }
 dm ly@tty1 /usr/lib/systemd/system/ly@.service \
-    /usr/lib/systemd/system/ly@.service.d/20-getty-fallback.conf 'getty@%i.service'
+    /usr/lib/systemd/system/ly@.service.d/20-getty-fallback.conf 'getty@%i.service' \
+    /etc/systemd/system/ly@.service.d/10-conditions.conf
 dm cosmic-greeter /usr/lib/systemd/system/cosmic-greeter.service \
-    /usr/lib/systemd/system/cosmic-greeter.service.d/20-getty-fallback.conf getty@tty1.service
+    /usr/lib/systemd/system/cosmic-greeter.service.d/20-getty-fallback.conf getty@tty1.service \
+    /etc/systemd/system/cosmic-greeter.service.d/10-conditions.conf
 
 # Battery and power profiles, on every desktop variant and the agent (not the
 # server). A laptop running COSMIC showed no battery: /sys/class/power_supply

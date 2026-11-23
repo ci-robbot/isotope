@@ -1,0 +1,22 @@
+# The live desktop boot: marker, the `live` user and automatic login.
+#
+# isotope-live-boot acts only on a live ISO boot of a desktop image, and only
+# when the ISO has no install config. When it has one, the script writes
+# /run/cos/install_mode instead, and the stage in 90_desktop_installer.yaml
+# then points the installer at the Isotope installer.
+#
+# Order: yip runs the files of one stage in filename order. This file (51) runs
+# after kairos-init's 10_accounting.yaml, which creates `kairos` with UID 1000
+# (the live user takes the next free UID), and before kairos-init's
+# 52_installer.yaml, which creates and enables kairos-installer.service when
+# /run/cos/install_mode exists, and before 90_desktop_installer.yaml, which
+# points that service at the Isotope installer. All three read the
+# install_mode file written here, so an ISO with an install config still
+# installs. 51_reset.yaml (also kairos-init) sorts after this file and does not
+# read install_mode.
+name: "Isotope live desktop"
+stages:
+  initramfs:
+    - name: "live desktop: marker, live user, automatic login"
+      commands:
+        - /usr/libexec/isotope-live-boot

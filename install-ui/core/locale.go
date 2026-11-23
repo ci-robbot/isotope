@@ -21,9 +21,9 @@ const (
 	DefaultLayout   = "us"
 	DefaultTimezone = "UTC"
 
-	// xkbRulesList is xkeyboard-config's human-readable rules list. Every
+	// XKBRulesList is xkeyboard-config's human-readable rules list. Every
 	// desktop variant ships xkeyboard-config, so the live installer has it.
-	xkbRulesList = "/usr/share/X11/xkb/rules/base.lst"
+	XKBRulesList = "/usr/share/X11/xkb/rules/base.lst"
 	zoneinfoDir  = "/usr/share/zoneinfo"
 	keymapsDir   = "/usr/share/keymaps"
 )
@@ -88,9 +88,10 @@ var CuratedKeyboards = []Keyboard{
 	{"ca", "", "French (Canada)"},
 }
 
-// loadKeyboards reads xkeyboard-config's base.lst and falls back to the
-// curated list when it is missing or holds no layouts.
-func loadKeyboards(path string) []Keyboard {
+// LoadKeyboards reads xkeyboard-config's base.lst (XKBRulesList) and falls
+// back to the curated list when it is missing or holds no layouts. Isotope
+// Welcome's live page uses it too.
+func LoadKeyboards(path string) []Keyboard {
 	f, err := os.Open(path)
 	if err != nil {
 		return CuratedKeyboards

@@ -299,3 +299,72 @@ func opensslPasswd(t *testing.T, plain string, extra ...string) string {
 	}
 	return strings.TrimSpace(string(out))
 }
+
+// An install config on the ISO root (AuroraBoot --cloud-config) or in the cdrom
+// datasource's 95_userdata counts, like one in /oem. The live boot stage
+// (rootfs/usr/libexec/isotope-live-boot) uses the same places.
+func TestConfigPresentIsoRootAndUserdata(t *testing.T) {
+	const withKey = "#cloud-config\ninstall:\n  auto: true\n"
+	const withoutKey = "stages:\n  boot: []\n"
+	cases := []struct {
+		name string
+		file string // relative to oem (o/) or iso (i/)
+		body string
+		want bool
+	}{
+		{"iso root yaml with install", "i/config.yaml", withKey, true},
+		{"iso root yml with users", "i/config.yml", "users:\n  - name: a\n", true},
+		{"iso root yaml without a block", "i/config.yaml", withoutKey, false},
+		{"userdata file", "o/95_userdata", "users:\n  - name: a\n", true},
+		{"userdata dir", "o/95_userdata/user-data", "users:\n  - name: a\n", true},
+		{"userdata without a block", "o/95_userdata/user-data", withoutKey, false},
+		{"commented key", "i/config.yaml", "# install:\n", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			root := t.TempDir()
+			oem, iso := filepath.Join(root, "o"), filepath.Join(root, "i")
+			t.Setenv("ISOTOPE_ISO_DIR", iso)
+			path := filepath.Join(root, c.file)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(oem, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(c.body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := ConfigPresent(oem, filepath.Join(oem, "99_isotope-user.yaml"))
+			if err != nil || got != c.want {
+				t.Fatalf("got %v err %v, want %v", got, err, c.want)
+			}
+		})
+	}
+}
+
+// With such a config the wizard is skipped and the install runs unattended.
+func TestRunWizardSkipsForIsoRootConfig(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("ISOTOPE_ISO_DIR", root)
+	t.Setenv("ISOTOPE_OEM_DIR", t.TempDir())
+	if err := os.WriteFile(filepath.Join(root, "config.yaml"), []byte("install:\n  auto: true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	asked := false
+	c, err := RunWizard(func(Wizard) (Choice, error) { asked = true; return Choice{}, nil })
+	if err != nil || c != nil || asked {
+		t.Fatalf("got choice %v err %v asked %v, want nil nil false", c, err, asked)
+	}
+}
+
+func TestValidLocale(t *testing.T) {
+	for v, want := range map[string]bool{
+		"de_DE.UTF-8": true, "sr_RS@latin": true, "C": true,
+		"": false, "de DE": false, "de\nstages:": false, "../x/y": false,
+	} {
+		if got := ValidLocale(v); got != want {
+			t.Errorf("ValidLocale(%q) = %v, want %v", v, got, want)
+		}
+	}
+}

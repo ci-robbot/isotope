@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -129,5 +130,24 @@ func TestPagesIsCopy(t *testing.T) {
 	f.Pages()[0] = PReady
 	if f.Current() != PWelcome {
 		t.Fatal("Pages leaked internal slice")
+	}
+}
+
+func TestLanguagePageSkippedWhenLocaleSet(t *testing.T) {
+	has := func(f *Flow) bool { return slices.Contains(f.Pages(), PLanguage) }
+	// The installer wrote /etc/locale.conf with a LANG: no Language page.
+	conf := "LANG=de_DE.UTF-8\n"
+	if f := flowFor(PageLogin, Sway, CurrentLocale(conf)); has(f) || len(f.Pages()) != len(Pages(Sway))-1 {
+		t.Errorf("login flow with LANG set: %v", f.Pages())
+	}
+	// No file, no LANG line, or a neutral value: the user never picked.
+	for _, c := range []string{"", "# nothing\n", "LANG=\n", "LANG=C\n", "LANG=C.UTF-8\n", "LANG=POSIX\n"} {
+		if f := flowFor(PageLogin, Sway, CurrentLocale(c)); !has(f) {
+			t.Errorf("login flow for %q lost the Language page", c)
+		}
+	}
+	// `isotope welcome` asks for every page, so it keeps it.
+	if !has(flowFor(PageAll, Sway, "de_DE.UTF-8")) {
+		t.Error("the whole flow lost the Language page")
 	}
 }

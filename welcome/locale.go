@@ -125,6 +125,18 @@ func CurrentLocale(localeConf string) string {
 	return lang
 }
 
+// LanguageSet says the LANG of /etc/locale.conf is a language somebody
+// picked. The image ships no /etc/locale.conf, so a machine whose user never
+// chose has no LANG; C, POSIX and C.UTF-8 are the neutral values and count
+// as not chosen, so that user still sees the Language page.
+func LanguageSet(lang string) bool {
+	switch strings.ToUpper(strings.TrimSpace(lang)) {
+	case "", "C", "POSIX", "C.UTF-8", "C.UTF8":
+		return false
+	}
+	return true
+}
+
 // LocaleName is the display name of a locale code ("de_DE.UTF-8"), for the
 // current locale, which `locale -a` may spell differently.
 func LocaleName(code string) string {

@@ -1,3 +1,5 @@
+# The session name isotope-live-boot gives ly (the .desktop file name).
+SESSION=i3
 DESKTOP_NAME=i3
 DISPLAY_NAME=XLibre
 # The terminal isotope-update tray opens its dialogs in; split on spaces,

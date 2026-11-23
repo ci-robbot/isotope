@@ -10,6 +10,10 @@ com.system76.CosmicTerm utilities-terminal
 com.system76.CosmicSettings settings
 com.system76.CosmicStore software-store
 
+# The live session's installer: the launcher's icon, and the dock pin id
+# the live welcome adds on COSMIC (welcome/dockpin.go liveDockPinID).
+isotope-install software-store
+
 # First-run apps (first-run-apps.list)
 org.videolan.VLC vlc
 org.chromium.Chromium chrome

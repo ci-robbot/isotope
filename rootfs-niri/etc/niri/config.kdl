@@ -295,7 +295,9 @@ spawn-at-startup "isotope-noctalia"
 // when the user went through it or skipped it), and the update icon in
 // Noctalia's tray, which shows when a new Isotope is out and installs it.
 spawn-at-startup "isotope-welcome" "--login"
-spawn-at-startup "isotope-update" "tray"
+// Not on the live desktop (isotope-not-live). Noctalia's idle lock is off by
+// default and Isotope does not turn it on, so there is no lock line to gate.
+spawn-at-startup "isotope-not-live" "isotope-update" "tray"
 // Turn Noctalia's night light back on if the user had it on in an earlier
 // session; Noctalia itself starts with it off (noctalia-defaults.toml).
 spawn-at-startup "isotope-night-light" "restore"
@@ -404,10 +406,12 @@ window-rule {
     open-floating true
 }
 
-// Isotope Welcome and Isotope System are dialog-sized windows, not columns.
+// Isotope Welcome, Isotope System and the installer in the live session are
+// dialog-sized windows, not columns.
 window-rule {
     match app-id="^isotope-welcome$"
     match app-id="^isotope-system$"
+    match app-id="^isotope-install$"
     open-floating true
 }
 
@@ -476,7 +480,7 @@ binds {
     Alt+Tab { spawn-sh "noctalia msg window-switcher hold"; }
     // help-section: System
     // help: Lock the screen
-    Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn-sh "noctalia msg session lock"; }
+    Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn-sh "isotope-not-live noctalia msg session lock"; }
     // help: Night light on and off
     Super+Alt+N hotkey-overlay-title="Night Light On/Off" { spawn "isotope-night-light" "toggle"; }
 
@@ -781,3 +785,8 @@ binds {
 // block per screen. niri reloads it when it changes; a missing file is
 // skipped. Not ~/.config/niri/config.kdl, which would replace this whole file.
 include optional=true "~/.config/niri/isotope-scale.kdl"
+
+// The keyboard layout the live welcome sets on the live desktop (Isotope
+// Welcome, `isotope welcome live`): an `input` block that replaces the layout
+// above. niri reloads it when it changes; a missing file is skipped.
+include optional=true "~/.config/niri/isotope-keyboard.kdl"

@@ -409,8 +409,8 @@ There are two ways to create that user:
   same checks and runs the same install. It falls back to the text installer
   when cage exits before the window's first frame (no DRM device, no seat), when
   the image has no cage (the server, the agent) or when the kernel command line
-  has `isotope.installer=text` (the live menu's "isotope (text installer)"
-  entry). A new keyboard layout restarts cage with it (exit status 75 and
+  has `isotope.installer=text` (the desktop ISOs' "Install Isotope (text)"
+  menu entry). A new keyboard layout restarts cage with it (exit status 75 and
   `/run/isotope-install/state.json`), because Gio does not let a program
   translate keys itself. "Open a terminal" on the failure page starts foot in
   cage where the image has it (sway, niri), and otherwise exits with status 76

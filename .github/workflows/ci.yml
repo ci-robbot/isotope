@@ -248,6 +248,27 @@ jobs:
       - name: Firmware install scripts
         run: test/firmware/check-install-firmware.sh
 
+      # The live ISO's GRUB menu: the desktop template leads with the live
+      # desktop entry, the server and agent renders equal the old menu.
+      - name: Live ISO boot menu
+        run: test/live/check-grub.sh
+
+      - name: Live boot stage
+        run: test/live/test-live-stage.sh
+
+      # isotope-not-live runs a command unless the live marker exists; the
+      # live desktop's file checks run against the repo tree (the same script
+      # runs on the built images in desktop-images.yml and release.yml).
+      - name: isotope-not-live
+        run: test/live/test-not-live.sh
+
+      # The "Install Isotope" launcher and its root helper, with stubs.
+      - name: Live installer launcher
+        run: test/live/test-live-install.sh
+
+      - name: Live desktop files
+        run: test/live/check-live.sh --repo
+
       - name: Session scripts and configs parse
         shell: bash
         run: |

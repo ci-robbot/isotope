@@ -210,6 +210,27 @@ var pages = []struct {
 	{"cosmic-launcher", Cosmic, 1, sizes, func(u *UI) { to(u, PLauncher) }},
 	{"skip-confirm", Sway, 1, sizes, func(u *UI) { u.askSkip() }},
 	{"welcome-scale-2", Cosmic, 2, []image.Point{{1440, 900}}, func(*UI) {}},
+	{"live-cosmic", Cosmic, 1, sizes, func(u *UI) { liveAt(u, "COSMIC") }},
+	{"live-sway", Sway, 1, sizes, func(u *UI) { liveAt(u, "Sway") }},
+	{"live-keyboard", Sway, 1, sizes, func(u *UI) {
+		p := liveAt(u, "Sway")
+		p.openKeyboards()
+		p.keyboards.search.Editor.SetText("german")
+	}},
+}
+
+// liveAt is the live welcome of the live desktop, its version line naming
+// the variant as the session file does (name), with COSMIC's title bar.
+func liveAt(u *UI, name string) *livePage {
+	u.flow = NewLiveFlow()
+	u.setupFlow = u.flow
+	u.version = "Isotope v0.0.25 · " + name
+	u.hooks.Runner = &fakeRunner{out: map[string]string{"locale -a": localeList}}
+	u.hooks.Live = LiveChoices{Lang: "en_US.UTF-8", Layout: "us"}
+	if u.desktop == Cosmic {
+		u.bar = &guikit.TitleBar{Title: "Welcome to Isotope", Left: true}
+	}
+	return u.page().(*livePage)
 }
 
 // apps is the real list, for the Apps cases.

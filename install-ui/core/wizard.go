@@ -284,7 +284,7 @@ func NewWizardWith(disks []Disk, keyboards []Keyboard, zones []string, tz string
 // keymap loader.
 func NewSystemWizard(trustedBoot bool) Wizard {
 	w := NewWizardWith(installableDisks("/sys/block"),
-		loadKeyboards(xkbRulesList), loadTimezones(zoneinfoDir), detectTimezone("/etc/localtime"))
+		LoadKeyboards(XKBRulesList), loadTimezones(zoneinfoDir), detectTimezone("/etc/localtime"))
 	w.KeymapsDir = keymapsDir
 	w.ApplyKeymap = loadConsoleKeymap
 	w.TrustedBoot = trustedBoot

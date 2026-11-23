@@ -42,16 +42,32 @@ func TestVersionLine(t *testing.T) {
 }
 
 func TestFlowFor(t *testing.T) {
-	if got := flowFor(PageAll, Niri).Pages(); len(got) != len(Pages(Niri)) {
+	if got := flowFor(PageAll, Niri, "").Pages(); len(got) != len(Pages(Niri)) {
 		t.Errorf("PageAll: %v", got)
 	}
-	if got := flowFor(PageLogin, Cosmic).Pages(); len(got) != len(Pages(Cosmic)) {
+	if got := flowFor(PageLogin, Cosmic, "").Pages(); len(got) != len(Pages(Cosmic)) {
 		t.Errorf("PageLogin: %v", got)
 	}
-	if got := flowFor(PageShortcuts, Sway).Pages(); len(got) != 1 || got[0] != PShortcuts {
+	if got := flowFor(PageShortcuts, Sway, "").Pages(); len(got) != 1 || got[0] != PShortcuts {
 		t.Errorf("shortcuts: %v", got)
 	}
-	if got := flowFor(PageApps, Sway).Pages(); len(got) != 1 || got[0] != PApps {
+	if got := flowFor(PageApps, Sway, "").Pages(); len(got) != 1 || got[0] != PApps {
 		t.Errorf("apps: %v", got)
+	}
+}
+
+func TestSystemLocaleReadsTheFile(t *testing.T) {
+	old := localeConfPath
+	t.Cleanup(func() { localeConfPath = old })
+	dir := t.TempDir()
+	localeConfPath = dir + "/locale.conf"
+	if got := systemLocale(); got != "" {
+		t.Errorf("no file: %q", got)
+	}
+	if err := os.WriteFile(localeConfPath, []byte("LANG=de_DE.UTF-8\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := systemLocale(); got != "de_DE.UTF-8" {
+		t.Errorf("got %q", got)
 	}
 }

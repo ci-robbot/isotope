@@ -1,0 +1,119 @@
+#!/bin/sh
+# Start the installer on the live desktop, as a window. This is what the
+# "Install Isotope" launcher, the Isotope menu, the dock and the live welcome
+# run. It is the user's side: the installer partitions a disk, so it must run
+# as root, and isotope-live-install-run does that through sudo (the live user
+# is in `admin`, which has passwordless sudo).
+#
+# - No marker /run/isotope/live-desktop: this is not a live session. It says
+#   so and exits 1.
+# - After a finished install (/run/isotope/installed, written by the
+#   installer): it says "Isotope is installed. Restart to use it."
+# - One installer at a time: it holds a lock on
+#   $XDG_RUNTIME_DIR/isotope/installer.lock for as long as the installer
+#   runs. A second start raises the open window (sway, i3, niri) or says that
+#   it is open (COSMIC has no way to focus a window from here).
+#
+# sudo resets the environment, so the variables the installer needs to open
+# its window on this session go through --preserve-env, each one checked first.
+#
+# Paths for tests: ISOTOPE_LIVE_MARKER, ISOTOPE_LIVE_INSTALLED.
+
+marker="${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}"
+installed="${ISOTOPE_LIVE_INSTALLED:-/run/isotope/installed}"
+helper=/usr/libexec/isotope-live-install-run
+app_id=isotope-install
+nl='
+'
+
+say() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "Install Isotope" "$1" >/dev/null 2>&1 && return 0
+    fi
+    printf '%s\n' "$1" >&2
+}
+
+# valid VALUE REGEX: one line, and all of it matches.
+valid() {
+    case $1 in *"$nl"*) return 1 ;; esac
+    printf '%s\n' "$1" | grep -Eqx -- "$2"
+}
+
+# raise: bring the open installer window to the front.
+raise() {
+    case "${XDG_CURRENT_DESKTOP:-}" in
+        *[Ss]way*)
+            swaymsg "[app_id=\"$app_id\"] focus" >/dev/null 2>&1 && return 0 ;;
+        *i3*)
+            i3-msg "[class=\"$app_id\"] focus" >/dev/null 2>&1 && return 0 ;;
+        *niri*)
+            id=$(niri msg --json windows 2>/dev/null | sed 's/},{/}\n{/g' |
+                grep "\"app_id\":\"$app_id\"" | grep -o '"id":[0-9]*' | head -n 1 | cut -d: -f2)
+            [ -n "$id" ] && niri msg action focus-window --id "$id" >/dev/null 2>&1 && return 0 ;;
+    esac
+    say "The installer is already open."
+}
+
+[ -e "$marker" ] || { say "The installer runs only on the live system."; exit 1; }
+if [ -e "$installed" ]; then
+    say "Isotope is installed. Restart to use it."
+    exit 0
+fi
+
+# The runtime dir must be this user's own: root is going to write beside it.
+uid=$(id -u)
+rt="${XDG_RUNTIME_DIR:-}"
+[ "$rt" = "/run/user/$uid" ] || { say "The installer needs the session's runtime directory."; exit 1; }
+dir="$rt/isotope"
+mkdir -p "$dir" && chmod 0700 "$dir" || exit 1
+
+# The lock stays held while this script runs, so while the installer does.
+exec 9>"$dir/installer.lock" || exit 1
+# flock -n exits 1 only when another process holds the lock; any other
+# status (no flock, a failure) is an error, not "already open".
+flock -n 9
+rc=$?
+if [ "$rc" -eq 1 ]; then
+    raise
+    exit 0
+elif [ "$rc" -ne 0 ]; then
+    say "The installer could not start (flock failed with status $rc)."
+    exit 1
+fi
+
+# The variables to pass: each only when set and well formed.
+keep=""
+add() { keep="${keep:+$keep,}$1"; }
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    if valid "$WAYLAND_DISPLAY" '[A-Za-z0-9._-]+' || valid "$WAYLAND_DISPLAY" "$rt/[A-Za-z0-9._-]+"; then
+        add WAYLAND_DISPLAY
+    fi
+fi
+if [ -n "${DISPLAY:-}" ] && valid "$DISPLAY" '([A-Za-z0-9._-]*):[0-9]+(\.[0-9]+)?'; then
+    add DISPLAY
+fi
+# sudo changes HOME, so the installer cannot find ~/.Xauthority by itself.
+if [ -n "${XAUTHORITY:-}" ]; then
+    case $XAUTHORITY in
+        *..*) ;;
+        "$rt"/* | "${HOME:-/nonexistent}"/*)
+            valid "$XAUTHORITY" '/[A-Za-z0-9._/@+-]+' && add XAUTHORITY ;;
+    esac
+fi
+add XDG_RUNTIME_DIR
+# The COSMIC title bar turns on by this.
+if [ -n "${XDG_CURRENT_DESKTOP:-}" ] && valid "$XDG_CURRENT_DESKTOP" '[A-Za-z0-9:_-]+'; then
+    add XDG_CURRENT_DESKTOP
+fi
+if [ -n "${XCURSOR_THEME:-}" ] && valid "$XCURSOR_THEME" '[A-Za-z0-9._-]+'; then add XCURSOR_THEME; fi
+if [ -n "${XCURSOR_SIZE:-}" ] && valid "$XCURSOR_SIZE" '[0-9]+'; then add XCURSOR_SIZE; fi
+if [ -n "${LANG:-}" ] && valid "$LANG" '[A-Za-z0-9._@-]+'; then add LANG; fi
+
+# Not 9<&-: the child must not hold the lock; this shell does.
+sudo -n "--preserve-env=$keep" "$helper" --choices "$dir/live-choices.json" 9>&-
+rc=$?
+# The installer exits 0 when its window closes. Anything else is sudo's own
+# refusal (no rule, a password needed) or a failed installer: say so, so a
+# click never does nothing.
+[ "$rc" -eq 0 ] || say "The installer stopped (status $rc). Open it again to retry."
+exit "$rc"

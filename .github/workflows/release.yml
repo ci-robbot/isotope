@@ -409,6 +409,14 @@ jobs:
         shell: bash
         run: test/vm/check-guest-agent.sh "${DESKTOP}-desktop:dev" "$GPU"
 
+      # The live desktop's contract on the image: login screen gates and
+      # stages, isotope-not-live on every lock and tray line, the backup
+      # timer, the autologin prerequisites, no live user in the image.
+      - name: Check live desktop
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/live/check-live.sh "${DESKTOP}-desktop:dev"
+
       # Isotope Welcome: the variant's build, the session line that starts it
       # at first login, its window rule; no cosmic-initial-setup on COSMIC.
       - name: Check Isotope Welcome

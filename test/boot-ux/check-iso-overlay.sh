@@ -29,6 +29,17 @@ check() {
     if eval "$*" >/dev/null 2>&1; then echo "PASS: $desc"; else echo "FAIL: $desc"; fail=1; fi
 }
 
+# The desktop menu (auroraboot/live-grub-desktop.cfg.tmpl) leads with a live
+# desktop entry and names its install entries "Install Isotope*"; the server and
+# agent menu is the old one. test/live/check-grub.sh covers the live entries.
+if [ -f "$CFG" ] && grep -q -- '--id isotope-live ' "$CFG"; then
+    DEFAULT_TITLE="Isotope"; DEFAULT_ID="isotope-live"
+    INSTALL="Install Isotope"; SAFE="Install Isotope (safe graphics)"; TEXT="Install Isotope (text)"
+else
+    DEFAULT_TITLE="isotope"; DEFAULT_ID="isotope-install"
+    INSTALL="isotope"; SAFE="isotope (safe graphics)"; TEXT="isotope (text installer)"
+fi
+
 # Body of the named menuentry, from its opening line to the closing brace.
 entry() { awk -v pat="menuentry \"$1\"" 'index($0, pat)==1, /^}/' "$CFG"; }
 
@@ -49,35 +60,37 @@ check "no unrendered placeholder in theme.txt" \
 # menu claiming "agent · xlibre · kairos" while the installed system said i3.
 check "theme subtitle is '$EXPECTED_SUBTITLE'" \
     "test -f '$THEME' && grep -qF '$EXPECTED_SUBTITLE' '$THEME'"
-check "menu is retitled to isotope"      "grep -q 'menuentry \"isotope\"' '$CFG'"
+check "menu is retitled to isotope"      "grep -q 'menuentry \"$INSTALL\"' '$CFG'"
 # One install entry (AuroraBoot#869): immucore turns install-mode-interactive
 # into /run/cos/install_mode_interactive, which 90_desktop_installer.yaml hooks.
-check "default names the install entry by id" \
-    "grep -qx 'set default=\"isotope-install\"' '$CFG' && grep -q 'menuentry \"isotope\" --id isotope-install ' '$CFG'"
+check "default names its entry by id" \
+    "grep -qx 'set default=\"$DEFAULT_ID\"' '$CFG' && grep -q 'menuentry \"$DEFAULT_TITLE\" --id $DEFAULT_ID ' '$CFG'"
+check "install entry is there by id" \
+    "grep -q 'menuentry \"$INSTALL\" --id isotope-install ' '$CFG'"
 check "no stale Kairos titles"          "test -f '$CFG' && ! grep -q 'menuentry \"Kairos' '$CFG'"
 check "default entry asks for the interactive installer" \
-    "entry 'isotope' | grep -q ' install-mode-interactive '"
+    "entry '$INSTALL' | grep -q ' install-mode-interactive '"
 # The unattended install-mode entry, the plain "manual" boot and remote
 # recovery (AuroraBoot#880) are retired upstream.
 check "no plain install-mode entry"     "test -f '$CFG' && ! grep -qE ' install-mode( |\$)' '$CFG'"
 check "no manual entry"                 "test -f '$CFG' && ! grep -q 'menuentry \"isotope (manual)\"' '$CFG'"
 check "no remote recovery entry"        "test -f '$CFG' && ! grep -q 'remote_recovery' '$CFG'"
 check "quiet cmdline on the default entry" \
-    "entry 'isotope' | grep -qF '$QUIET'"
+    "entry '$INSTALL' | grep -qF '$QUIET'"
 check "console palette on the default entry" \
-    "grep -q '^set isotope_vt_palette=\"vt.default_red=' '$CFG' && entry 'isotope' | grep -qF ' \$isotope_vt_palette'"
+    "grep -q '^set isotope_vt_palette=\"vt.default_red=' '$CFG' && entry '$INSTALL' | grep -qF ' \$isotope_vt_palette'"
 # The normal entries load the graphics driver and its firmware; "safe
 # graphics" is the same install with nomodeset, for machines where that driver
 # hangs or shows nothing.
 check "no nomodeset on the default entry" \
-    "test -f '$CFG' && ! entry 'isotope' | grep -q nomodeset"
+    "test -f '$CFG' && ! entry '$INSTALL' | grep -q nomodeset"
 # The desktop ISOs start the graphical installer; this entry keeps the text
 # one (isotope-install-ui reads isotope.installer=text).
-check "text installer entry"            "entry 'isotope (text installer)' | grep -q ' install-mode-interactive isotope.installer=text '"
+check "text installer entry"            "entry '$TEXT' | grep -q ' install-mode-interactive isotope.installer=text '"
 check "only the text entry asks for text" \
     "test -f '$CFG' && [ \"\$(grep -c '^[^#]*isotope.installer=text' '$CFG')\" -eq 1 ]"
 check "safe graphics entry installs with nomodeset" \
-    "entry 'isotope (safe graphics)' | grep -q 'vga=795 nomodeset install-mode-interactive '"
+    "entry '$SAFE' | grep -q 'vga=795 nomodeset install-mode-interactive '"
 check "debug entry left verbose" \
     "entry 'isotope (debug)' | grep -q 'rd.debug' && ! entry 'isotope (debug)' | grep -q 'quiet'"
 # Boot details: the install entry plus isotope.bootvine, which the splash
@@ -86,7 +99,7 @@ check "boot details entry starts bootvine from the splash" \
     "entry 'isotope (boot details)' | grep -q ' quiet splash ' && entry 'isotope (boot details)' | grep -q ' isotope.bootvine '"
 # Kernel errors reach the console only on boot details (isotope-console-level).
 check "boot details entry passes loglevel=4, the install entry loglevel=3" \
-    "entry 'isotope (boot details)' | grep -q ' loglevel=4 ' && ! entry 'isotope (boot details)' | grep -q ' loglevel=3 ' && entry 'isotope' | grep -q ' loglevel=3 '"
+    "entry 'isotope (boot details)' | grep -q ' loglevel=4 ' && ! entry 'isotope (boot details)' | grep -q ' loglevel=3 ' && entry '$INSTALL' | grep -q ' loglevel=3 '"
 check "debug entry has no bootvine" \
     "test -f '$CFG' && ! entry 'isotope (debug)' | grep -q bootvine"
 # Hadron ships dracut 110 or newer, which renamed rd.live.overlay.overlayfs to

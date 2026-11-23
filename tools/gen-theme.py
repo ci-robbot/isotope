@@ -92,7 +92,7 @@ RULES = {
     # The i3 menus pick through isotope-pick; strict, so no colour comes back.
     "rootfs-i3/usr/bin/isotope-audio-menu": ("hash", "hash", []),
     "rootfs-i3/usr/bin/isotope-power-menu": ("hash", "hash", [
-        (r"^\s+Lock\)\s+i3lock .*--color={hex} ;;$", "base"),
+        (r"^\s+Lock\)\s+(?:isotope-not-live )?i3lock .*--color={hex} ;;$", "base"),
     ]),
     "rootfs-i3/usr/bin/isotope-wifi-menu": ("hash", "hash", []),
     "rootfs/usr/bin/isotope-pick": ("hash", "hash", [DMENU]),
@@ -255,7 +255,11 @@ WINDOW_HINT = "dim"
 # border grey (2:1 on base).
 VT_ROLES = ["base"] + ANSI + ["subtext"] + ["dim"] + ANSI_BRIGHT + ["text"]
 VT_PARAMS = re.compile(r"vt\.default_red=\S+ vt\.default_grn=\S+ vt\.default_blu=[0-9a-fx,]+")
-VT_PALETTE = ["rootfs/etc/kairos/branding/grubmenu.cfg", "auroraboot/live-grub.cfg.tmpl"]
+VT_PALETTE = [
+    "rootfs/etc/kairos/branding/grubmenu.cfg",
+    "auroraboot/live-grub.cfg.tmpl",
+    "auroraboot/live-grub-desktop.cfg.tmpl",
+]
 
 # (foreground roles, background roles, minimum ratio), checked in both modes.
 # dim is for inactive labels: below text contrast on purpose, but at least the

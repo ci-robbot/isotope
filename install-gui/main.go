@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"gioui.org/op"
 	"gioui.org/unit"
 
@@ -24,16 +25,44 @@ import (
 )
 
 func main() {
-	for _, a := range os.Args[1:] {
-		fmt.Fprintf(os.Stderr, "isotope-install-gui: unknown argument: %s\n", a)
+	opts, err := parseArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "isotope-install-gui: %v\n", err)
+		fmt.Fprintln(os.Stderr, "usage: isotope-install-gui [--window [--choices FILE]]")
 		os.Exit(2)
 	}
 	_ = os.MkdirAll(core.RunDir(), 0o700)
 
+	// Window mode (window.go): on COSMIC the window draws its own bar,
+	// with the buttons where the user's COSMIC puts them (read before
+	// rootEnv drops the user's config dir).
+	ownBar := opts.window && onCosmic(os.Getenv)
+	barLeft := ownBar && guikit.ControlsLeftHere()
+	if opts.window {
+		app.ID = appID
+		rootEnv(os.Geteuid(), core.RunDir(), os.Getenv,
+			func(k, v string) { _ = os.Setenv(k, v) }, func(k string) { _ = os.Unsetenv(k) })
+	}
+
 	win := new(app.Window)
-	// cage shows one window over the whole output and draws no decorations;
-	// Decorated(false) keeps Gio from drawing its own title bar.
-	win.Option(app.Title("Install Isotope"), app.Size(unit.Dp(1440), unit.Dp(900)), app.Decorated(false), app.Fullscreen.Option())
+	if opts.window {
+		sw, sh, ss := 0, 0, 1.0
+		if ownBar {
+			if out, err := exec.Command("cosmic-randr", "list", "--kdl").Output(); err == nil {
+				if outs, err := guikit.ParseCosmicOutputs(out); err == nil {
+					sw, sh, ss = guikit.CosmicScreen(outs)
+				}
+			}
+		}
+		ww, wh := windowSize(sw, sh, ss, ownBar)
+		win.Option(app.Title(windowTitle), app.Size(unit.Dp(ww), unit.Dp(wh)),
+			app.MinSize(unit.Dp(guikit.MinWindowW), unit.Dp(guikit.MinWindowH)), app.Decorated(!ownBar))
+	} else {
+		// cage shows one window over the whole output and draws no
+		// decorations; Decorated(false) keeps Gio from drawing its own
+		// title bar.
+		win.Option(app.Title("Install Isotope"), app.Size(unit.Dp(1440), unit.Dp(900)), app.Decorated(false), app.Fullscreen.Option())
+	}
 
 	wizards := make(chan core.Wizard, 1)
 	confirmed := make(chan core.Choice, 1)
@@ -54,21 +83,43 @@ func main() {
 		saveLog:    saveLog,
 		terminal:   openTerminal,
 		invalidate: win.Invalidate,
+		window:     func(a system.Action) { win.Perform(a) },
 	})
+	if opts.window {
+		// Never exit to be started again: no cage to restart, and the
+		// live session has its own terminal and its own first frame.
+		u.hooks.relaunch = func(core.GUIState) {}
+		u.hooks.terminal = nil
+		u.hooks.started = nil
+		u.hooks.installed = func() {
+			if err := writeInstalledMarker(installedMarker); err != nil {
+				fmt.Fprintf(os.Stderr, "isotope-install-gui: %v\n", err)
+			}
+		}
+		u.hooks.keepTrying = func() { win.Perform(system.ActionClose) }
+		u.window = true
+		u.live = readLiveChoices(opts.choices)
+		if ownBar {
+			u.bar = &guikit.TitleBar{Title: windowTitle, Left: barLeft}
+		}
+	}
 	u.zoneCoords = core.ZoneCoords()
 	u.version = versionLine("/etc/isotope/release")
 	u.runLayout = orDefault(os.Getenv("XKB_DEFAULT_LAYOUT"), core.DefaultLayout)
 	u.runVariant = os.Getenv("XKB_DEFAULT_VARIANT")
-	u.canRelaunch = os.Getenv("ISOTOPE_INSTALL_GUI_RELAUNCH") == "1"
+	u.canRelaunch = !opts.window && os.Getenv("ISOTOPE_INSTALL_GUI_RELAUNCH") == "1"
 	u.software = os.Getenv("ISOTOPE_SOFTWARE_RENDERING") == "1"
 	u.gpuClass = os.Getenv("ISOTOPE_GPU_CLASS")
 	u.vmImage = releaseKey("/etc/isotope/release", "GPU") == "vm"
 
+	// A relaunched cage's answers; window mode never relaunches.
 	var restored *core.GUIState
-	if s, err := core.ReadGUIState(core.GUIStatePath()); err == nil {
-		restored = &s
+	if !opts.window {
+		if s, err := core.ReadGUIState(core.GUIStatePath()); err == nil {
+			restored = &s
+		}
+		_ = os.Remove(core.GUIStatePath())
 	}
-	_ = os.Remove(core.GUIStatePath())
 
 	go install(win, u, wizards, confirmed)
 	go func() {
@@ -76,7 +127,16 @@ func main() {
 		focused := false
 		for {
 			switch e := win.Event().(type) {
+			case *app.ClosingEvent:
+				// Window mode: the window manager's close button does not
+				// stop an install halfway.
+				if opts.window && u.installRunning() {
+					e.Abort()
+				}
 			case app.ConfigEvent:
+				if u.bar != nil {
+					u.bar.Maximized = e.Config.Mode == app.Maximized
+				}
 				if e.Config.Focused && !focused && u.w != nil {
 					u.refocus()
 					win.Invalidate()

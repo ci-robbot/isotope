@@ -16,3 +16,13 @@ stages:
         # --no-block for the same reason as ly: a blocking start from inside
         # cos-setup-boot can wait on units ordered after it.
         - systemctl start --no-block cosmic-greeter.service || true
+    - if: '[ -f /run/isotope/live-desktop ]'
+      name: "start the COSMIC greeter on the live desktop"
+      commands:
+        - mkdir -p /etc/systemd/system/multi-user.target.wants
+        - ln -sf /usr/lib/systemd/system/cosmic-greeter.service /etc/systemd/system/multi-user.target.wants/cosmic-greeter.service
+        - ln -sf /usr/lib/systemd/system/cosmic-greeter-daemon.service /etc/systemd/system/multi-user.target.wants/cosmic-greeter-daemon.service
+        - ln -sf /usr/lib/systemd/system/accounts-daemon.service /etc/systemd/system/multi-user.target.wants/accounts-daemon.service
+        - systemctl daemon-reload
+        # --no-block, as above. Its initial_session (greetd) logs in `live`.
+        - systemctl start --no-block cosmic-greeter.service || true

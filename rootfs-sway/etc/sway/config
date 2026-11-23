@@ -70,14 +70,19 @@ exec mako
 # Idle: lock after 5 minutes, turn the outputs off after 10. Also lock before
 # suspend (-w makes logind wait until swaylock is up) and on
 # `loginctl lock-session`. swaylock's colours are in /etc/swaylock/config.
-exec swayidle -w timeout 300 'swaylock -f' timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' before-sleep 'swaylock -f' lock 'swaylock -f'
+# Two swayidle processes: the blanking runs everywhere; the lock lines go
+# through isotope-not-live, so the live desktop never locks (`live` has no
+# password, and a lock could shut the user out of the installer) but its
+# screen still blanks.
+exec swayidle -w timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"'
+exec isotope-not-live swayidle -w timeout 300 'swaylock -f' before-sleep 'swaylock -f' lock 'swaylock -f'
 exec $term
 # Isotope Welcome, the first-login flow (once per user: it exits at once
 # when the user went through it or skipped it), and the update icon in
 # waybar's tray, which shows when a new Isotope is out and installs it. Both
 # use the session bus start-desktop opened.
 exec isotope-welcome --login
-exec isotope-update tray
+exec isotope-not-live isotope-update tray
 # One notification when the screen is drawn in software (no Mesa driver for
 # the GPU; /usr/libexec/isotope-gpu-env). Nothing otherwise.
 exec isotope-gpu-notice
@@ -102,7 +107,7 @@ bindsym $mod+Shift+c       reload
 bindsym $mod+Shift+e       exec isotope-power-menu
 # help-section: System
 # help: Lock the screen
-bindsym $mod+Mod1+l        exec swaylock -f
+bindsym $mod+Mod1+l        exec isotope-not-live swaylock -f
 # help-section: Basics
 # help: This help
 bindsym $mod+F1            exec foot --app-id=floatterm -T "Keyboard shortcuts" isotope-help
@@ -253,6 +258,8 @@ for_window [app_id="floatterm" title="Keyboard shortcuts"] resize set 900 720, m
 for_window [app_id="isotope-welcome"] floating enable
 # So is Isotope System.
 for_window [app_id="isotope-system"] floating enable
+# And the installer, when the live session runs it as a window.
+for_window [app_id="isotope-install"] floating enable
 
 ### Status bar ############################################################
 # waybar (Isotope palette) — config at /etc/xdg/waybar/{config,style.css}. Modules:

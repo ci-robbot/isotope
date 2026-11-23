@@ -1,5 +1,7 @@
 package main
 
+import "slices"
+
 // PageID names one page of the welcome flow.
 type PageID string
 
@@ -21,6 +23,10 @@ const (
 	PRestorePassword PageID = "restore-password"
 	PRestoreBackup   PageID = "restore-backup"
 	PRestoreRun      PageID = "restore-run"
+
+	// PageLive is the live desktop's one page: install Isotope or try it,
+	// with the session's language and keyboard.
+	PageLive PageID = "live"
 )
 
 // Pages returns the pages for a desktop, in order. Layout, Workflow and
@@ -73,6 +79,8 @@ func PageTitle(p PageID) string {
 		return "Backup"
 	case PRestoreRun:
 		return "Restore"
+	case PageLive:
+		return "Welcome"
 	}
 	return string(p)
 }
@@ -96,8 +104,22 @@ type Flow struct {
 // NewFlow starts the full flow for a desktop.
 func NewFlow(d Desktop) *Flow { return &Flow{pages: Pages(d)} }
 
+// NewLoginFlow is the flow of the login hook: the full flow, without the
+// Language page when the language is already set (LanguageSet), which is so
+// after an install that carried the live session's language over.
+func NewLoginFlow(d Desktop, lang string) *Flow {
+	f := NewFlow(d)
+	if LanguageSet(lang) {
+		f.pages = slices.DeleteFunc(f.pages, func(p PageID) bool { return p == PLanguage })
+	}
+	return f
+}
+
 // NewRestoreFlow is the flow of "Restore from a backup".
 func NewRestoreFlow() *Flow { return &Flow{pages: RestorePages()} }
+
+// NewLiveFlow is the live welcome: one page, and no stamp.
+func NewLiveFlow() *Flow { return &Flow{pages: []PageID{PageLive}} }
 
 // Single is a flow of one page, for `isotope welcome apps`.
 func Single(p PageID) *Flow { return &Flow{pages: []PageID{p}} }

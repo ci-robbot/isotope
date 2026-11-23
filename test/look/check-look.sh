@@ -54,6 +54,13 @@ id_ok() {
 }'
 check "first-run apps have a Conflux icon or are listed as missing" \
     "$resolve; test -f /usr/share/isotope/first-run-apps.list && grep -v '^#' /usr/share/isotope/first-run-apps.list | cut -d'|' -f2 | while read -r id; do [ -n \"\$id\" ] || continue; id_ok \$id || { echo \$id; exit 1; }; done"
+# The live launcher's icon (isotope-install.desktop, hidden in the image) and
+# the id the live welcome pins in COSMIC's dock at run time (not in the
+# default favorites above) follow the same rule.
+check "the live launcher's icon has a Conflux icon or is listed as missing" \
+    "$resolve; i=\$(sed -n 's/^Icon=//p' /usr/share/applications/isotope-install.desktop); test -n \"\$i\" && id_ok \$i"
+check "the live dock pin isotope-install has a Conflux icon or is listed as missing" \
+    "$resolve; id_ok isotope-install"
 if [ "$DESKTOP" = cosmic ]; then
     F=/usr/share/cosmic/com.system76.CosmicAppList/v1/favorites
     check "COSMIC favorites have a Conflux icon or are listed as missing" \

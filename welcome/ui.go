@@ -62,6 +62,21 @@ type Hooks struct {
 	// USBDisks lists the USB disks a backup may be on (udisks2). Nil lists
 	// none.
 	USBDisks func() ([]USBDisk, error)
+
+	// The live welcome. Live is the session's language and keyboard when
+	// it opens; LiveChoicesFile is where each change is written for the
+	// installer ("" writes nothing). SessionLocale and SessionKeymap apply
+	// a change to the running session; nil applies nothing. XKBRules is
+	// the keyboard list (XKBRulesList).
+	Live            LiveChoices
+	LiveChoicesFile string
+	SessionLocale   func(lang string) error
+	SessionKeymap   func(layout, variant string) error
+	XKBRules        string
+	// LiveSession is set on the live desktop: the Language page then sets
+	// the session's language (SessionLocale) and the choices file, never
+	// the machine's through isotope-updated, which writes /oem.
+	LiveSession bool
 }
 
 // page is one screen of the flow. Each lives in its own page_*.go file and
@@ -198,6 +213,9 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 		u.shown = cur
 		if !u.confirming && u.question == nil {
 			u.focus = &u.cont
+			if f, ok := u.page().(focuser); ok {
+				u.focus = f.firstFocus()
+			}
 		}
 	}
 	if u.focus != nil {
@@ -215,6 +233,10 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	full := gtx.Constraints
 	content := func(gtx layout.Context) {
 		p := u.page()
+		if w, ok := p.(windowPage); ok {
+			w.Window(gtx)
+			return
+		}
 		u.Frame(gtx, u.steps(), u.slide(p.Body), func(gtx layout.Context) layout.Dimensions {
 			lead, trail := p.Footer(u.nav())
 			return u.Footer(gtx, lead, nil, trail)
@@ -236,7 +258,7 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	if q := u.question; q != nil {
 		gtx.Constraints = full
-		u.Confirm(gtx, q.title, q.body, q.actions)
+		u.ConfirmForm(gtx, q.title, q.body, q.form, q.actions)
 	}
 	if u.confirming {
 		gtx.Constraints = full
@@ -333,10 +355,21 @@ func (u *UI) prev() {
 // the secrets they kept).
 type backer interface{ goBack() }
 
+// windowPage is a page that draws the whole window itself, with no step
+// list or footer of the flow (the live welcome).
+type windowPage interface {
+	Window(gtx layout.Context) layout.Dimensions
+}
+
+// focuser is a page whose first focus is not Continue.
+type focuser interface{ firstFocus() event.Tag }
+
 // question is a page's question over the window: Esc runs esc, and
-// update handles its buttons while it is shown.
+// update handles its buttons while it is shown. form, when set, is drawn
+// between the body and the buttons (a search and a list).
 type question struct {
 	title, body string
+	form        layout.Widget
 	actions     []guikit.Action
 	update      func(gtx layout.Context)
 	esc         func()
@@ -415,13 +448,22 @@ func (u *UI) stamp(s Stamp) {
 	// A restore that started ends with the restart: the restored homes
 	// have their own stamps, and a restore that fails leaves the machine
 	// new, so Welcome offers it again at the next login.
-	if u.stamped || u.restoreStarted() {
+	// The live welcome writes none: after the install, the first login
+	// still runs the setup.
+	if u.stamped || u.restoreStarted() || u.live() {
 		return
 	}
 	u.stamped = true
 	if u.hooks.WriteStamp != nil {
 		u.hooks.WriteStamp(s)
 	}
+}
+
+// live: the window is the live welcome, which writes no stamp, so the
+// first login after the install still runs the real Welcome.
+func (u *UI) live() bool {
+	p := u.setupFlow.Pages()
+	return len(p) == 1 && p[0] == PageLive
 }
 
 // close asks the window to close; CloseRequested lets it through.

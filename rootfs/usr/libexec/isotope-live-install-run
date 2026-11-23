@@ -1,0 +1,36 @@
+#!/bin/sh
+# Run the installer window as root, on the live user's display. Started by
+# isotope-live-install through `sudo -n --preserve-env=...`, so WAYLAND_DISPLAY
+# or DISPLAY, XAUTHORITY, XDG_RUNTIME_DIR and XDG_CURRENT_DESKTOP are the
+# user's. It acts only on a live desktop (the marker).
+#
+#   isotope-live-install-run --choices FILE
+#
+# The X11 build (isotope-install-gui-x11, on i3 only) runs in an X11 session:
+# DISPLAY set and WAYLAND_DISPLAY not. Everything else, an XWayland session
+# included, runs the Wayland build.
+#
+# Paths for tests: ISOTOPE_LIVE_MARKER, ISOTOPE_LIVE_BIN.
+
+marker="${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}"
+bindir="${ISOTOPE_LIVE_BIN:-/usr/bin}"
+
+[ -e "$marker" ] || { echo "isotope-live-install-run: not a live session" >&2; exit 1; }
+
+if [ $# -ne 2 ] || [ "$1" != --choices ]; then
+    echo "usage: isotope-live-install-run --choices FILE" >&2
+    exit 2
+fi
+# The user's file, in a runtime directory: no other path is read as root.
+case $2 in
+    *..* | *'
+'*) echo "isotope-live-install-run: bad choices path" >&2; exit 2 ;;
+    /run/user/[0-9]*/isotope/*.json) ;;
+    *) echo "isotope-live-install-run: the choices file is not in a runtime directory" >&2; exit 2 ;;
+esac
+
+gui="$bindir/isotope-install-gui"
+if [ -n "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$bindir/isotope-install-gui-x11" ]; then
+    gui="$bindir/isotope-install-gui-x11"
+fi
+exec "$gui" --window --choices "$2"

@@ -79,6 +79,7 @@ func main() {
 	} else {
 		fmt.Fprintf(os.Stderr, "isotope-system: the system bus: %v\n", err)
 	}
+	hooks.Live = isLive()
 	hooks.Network = nmNetwork{}
 	hooks.Bluetooth = newBluez()
 	hooks.Files = newPortalFiles()

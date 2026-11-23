@@ -47,7 +47,7 @@ func TestParseRulesListPutsUSFirstAndVariantsAfterTheirLayout(t *testing.T) {
 }
 
 func TestLoadKeyboardsFallsBackToTheCuratedList(t *testing.T) {
-	got := loadKeyboards(filepath.Join(t.TempDir(), "missing.lst"))
+	got := LoadKeyboards(filepath.Join(t.TempDir(), "missing.lst"))
 	if len(got) < 30 {
 		t.Fatalf("curated list has %d entries, want about 30", len(got))
 	}
@@ -68,7 +68,7 @@ func TestLoadKeyboardsReadsTheRulesList(t *testing.T) {
 	if err := os.WriteFile(path, []byte(rulesFixture), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := loadKeyboards(path); len(got) != 6 {
+	if got := LoadKeyboards(path); len(got) != 6 {
 		t.Errorf("got %d entries from the rules list, want 6", len(got))
 	}
 }

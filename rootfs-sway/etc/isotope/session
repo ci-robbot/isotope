@@ -1,3 +1,5 @@
+# The session name isotope-live-boot gives ly (the .desktop file name).
+SESSION=sway
 DESKTOP_NAME=Sway
 DISPLAY_NAME=Wayland
 # The terminal isotope-update tray opens its dialogs in; split on spaces,

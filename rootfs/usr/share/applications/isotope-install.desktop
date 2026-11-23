@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Install Isotope
+Comment=Install Isotope on this computer
+Exec=isotope-live-install
+TryExec=isotope-live-install
+Icon=isotope-install
+Terminal=false
+Categories=System;
+Keywords=install;installer;setup;disk;isotope;
+StartupWMClass=isotope-install
+# Shown only on a live boot: isotope-live-boot writes a copy of this file
+# without the NoDisplay line to the live user's applications directory.
+NoDisplay=true

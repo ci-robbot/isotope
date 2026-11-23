@@ -184,7 +184,7 @@ agent-image:
 	  -t $(AGENT_IMAGE) .
 
 agent-iso: agent-image
-	AURORA_IMAGE=$(AURORA_IMAGE) auroraboot/build.sh $(AGENT_IMAGE) $(AGENT_ISO_DIR)
+	FLAVOR=agent AURORA_IMAGE=$(AURORA_IMAGE) auroraboot/build.sh $(AGENT_IMAGE) $(AGENT_ISO_DIR)
 
 # Build the installer ISO with AuroraBoot via auroraboot/build.sh, which stages
 # an --overlay-iso dir carrying our own live GRUB menu (branded, themed, quiet
@@ -222,7 +222,7 @@ print-stage-key:
 	  $(STAGE)
 
 iso: image
-	AURORA_IMAGE=$(AURORA_IMAGE) auroraboot/build.sh $(IMAGE) $(ISO_DIR)
+	FLAVOR=$(DESKTOP) AURORA_IMAGE=$(AURORA_IMAGE) auroraboot/build.sh $(IMAGE) $(ISO_DIR)
 
 # Trusted Boot (UKI) edition: Secure Boot, measured boot and disk encryption
 # sealed to the TPM. See docs/superpowers/specs/2026-11-07-trusted-boot-edition-design.md.

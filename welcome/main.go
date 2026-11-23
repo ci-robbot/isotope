@@ -15,6 +15,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/kairos-community/isotope/guikit"
+	"github.com/kairos-community/isotope/install-ui/core"
 )
 
 // appID is the window's Wayland app_id and X11 class: the window rules of
@@ -38,6 +39,9 @@ const (
 	PageAppearance    PageArg = "appearance"
 	PageAccessibility PageArg = "accessibility"
 	PageShortcuts     PageArg = "shortcuts"
+	// PageLiveArg is the live welcome (`isotope welcome live`); the login
+	// hook opens it on the live desktop.
+	PageLiveArg PageArg = PageArg(PageLive)
 )
 
 // ParseArgs maps the command line to a PageArg; ok is false for anything else.
@@ -53,7 +57,7 @@ func ParseArgs(args []string) (PageArg, bool) {
 	}
 	switch p := PageArg(args[0]); p {
 	case PageAll, PageLogin, PageApps, PageBackup, PageLanguage, PageNetwork,
-		PageAppearance, PageAccessibility, PageShortcuts:
+		PageAppearance, PageAccessibility, PageShortcuts, PageLiveArg:
 		return p, true
 	}
 	return "", false
@@ -62,7 +66,7 @@ func ParseArgs(args []string) (PageArg, bool) {
 func main() {
 	page, ok := ParseArgs(os.Args[1:])
 	if !ok {
-		fmt.Fprintln(os.Stderr, "usage: isotope-welcome [--login | all | apps | language | network | appearance | accessibility | shortcuts]")
+		fmt.Fprintln(os.Stderr, "usage: isotope-welcome [--login | all | apps | language | network | appearance | accessibility | shortcuts | live]")
 		os.Exit(2)
 	}
 	if page == PageBackup {
@@ -75,6 +79,14 @@ func main() {
 		os.Exit(1)
 	}
 	stateDir := StateDir(home, os.Getenv)
+	// On the live desktop the login hook and the whole flow are the live
+	// welcome, and no stamp is read or written: the first login after the
+	// install is still new.
+	page, err = resolvePage(page, LiveMarker)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "isotope-welcome:", err)
+		os.Exit(2)
+	}
 	if page == PageLogin && !ShouldOpenAtLogin(stateDir) {
 		// Apps was skipped for want of a network: remind once, then go.
 		if ShouldRemindApps(stateDir) {
@@ -89,11 +101,11 @@ func main() {
 	}
 	// Only the whole flow writes the stamp: a page opened from the menu
 	// says nothing about the first login.
-	stamps := page == PageAll || page == PageLogin
+	stamps := writesStamp(page)
 	// One whole flow at a time: the login hook and the menu's "Welcome"
-	// would both write the stamp.
+	// would both write the stamp. The live welcome is one window too.
 	unlock := func() {}
-	if stamps {
+	if stamps || page == PageLiveArg {
 		var ok bool
 		if unlock, ok = lockInstance(os.Getenv("XDG_RUNTIME_DIR")); !ok {
 			fmt.Fprintln(os.Stderr, "isotope-welcome: already open")
@@ -112,10 +124,10 @@ func main() {
 	// bars). Other desktops keep their own bars.
 	ownBar := d == Cosmic
 	sw, sh, ss := screenSize(ExecRunner{}, d)
-	ww, wh := WindowSize(sw, sh, ss)
+	ww, wh := guikit.WindowSize(sw, sh, ss)
 	win.Option(app.Title("Welcome to Isotope"), app.Size(unit.Dp(ww), unit.Dp(wh)),
-		app.MinSize(unit.Dp(minW), unit.Dp(minH)), app.Decorated(!ownBar))
-	u := newUI(flowFor(page, d), d, guikit.NewShaper(), Hooks{
+		app.MinSize(unit.Dp(guikit.MinWindowW), unit.Dp(guikit.MinWindowH)), app.Decorated(!ownBar))
+	u := newUI(flowFor(page, d, systemLocale()), d, guikit.NewShaper(), Hooks{
 		Invalidate:        win.Invalidate,
 		Logout:            func() error { return start(logoutCommand(d)...) },
 		OpenShortcutSheet: func() error { return start("isotope-menu", "Help") },
@@ -142,6 +154,16 @@ func main() {
 		Home:         home,
 		LayoutsDir:   CosmicLayoutsDir,
 		SystemLocale: systemLocale(),
+		// The live welcome: the session's language and keyboard, applied
+		// at once and written for the installer.
+		Live:            liveChoicesNow(os.Getenv, systemLocale()),
+		LiveChoicesFile: LiveChoicesPath(os.Getenv("XDG_RUNTIME_DIR")),
+		SessionLocale:   func(lang string) error { return SetSessionLocale(ExecRunner{}, lang) },
+		SessionKeymap: func(layout, variant string) error {
+			return ApplySessionKeymap(ExecRunner{}, home, d, layout, variant)
+		},
+		XKBRules:    core.XKBRulesList,
+		LiveSession: OnLiveDesktop(LiveMarker),
 		AppInstalled: func(id string) {
 			// The chosen browser goes to the COSMIC dock.
 			if d == Cosmic && isBrowser(appList, id) {
@@ -152,10 +174,17 @@ func main() {
 		},
 	})
 	u.appList = appList
+	if page == PageLiveArg {
+		// COSMIC's dock: "Install Isotope" first, on the live session only.
+		liveDockPin(d, home, PinFirstToCosmicDock)
+	}
 	if ownBar {
 		u.bar = &guikit.TitleBar{Title: "Welcome to Isotope", Left: guikit.ControlsLeftHere()}
 	}
-	u.version = versionLine("/etc/isotope/release")
+	u.version = versionLine(releaseFile)
+	if page == PageLiveArg {
+		u.version = liveVersionLine(releaseFile, SessionFile)
+	}
 	if f, err := os.Open(ShortcutsFile); err == nil {
 		if s, err := ParseShortcuts(f); err == nil {
 			u.shortcuts = s
@@ -232,13 +261,44 @@ func loadAppList() []App {
 	return a
 }
 
-// flowFor is the flow a command line opens: the whole flow, or one page.
-func flowFor(p PageArg, d Desktop) *Flow {
-	if p == PageAll || p == PageLogin {
+// releaseFile is the image's release identity (the Dockerfile's kairos
+// stage writes it).
+const releaseFile = "/etc/isotope/release"
+
+// flowFor is the flow a command line opens: the whole flow, the live
+// welcome, or one page.
+func flowFor(p PageArg, d Desktop, lang string) *Flow {
+	switch p {
+	case PageAll:
 		return NewFlow(d)
+	case PageLogin:
+		return NewLoginFlow(d, lang)
+	case PageLiveArg:
+		return NewLiveFlow()
 	}
 	return Single(PageID(p))
 }
+
+// resolvePage is the page a command line opens on this boot. When marker
+// exists, the login hook (--login, or no argument) and the whole flow
+// (`isotope welcome`, the menu's "Welcome") are the live welcome: the setup
+// pages are for an installed system. Without it, the live welcome is
+// refused.
+func resolvePage(p PageArg, marker string) (PageArg, error) {
+	live := OnLiveDesktop(marker)
+	switch {
+	case (p == PageLogin || p == PageAll) && live:
+		return PageLiveArg, nil
+	case p == PageLiveArg && !live:
+		return "", ErrNotLive
+	}
+	return p, nil
+}
+
+// writesStamp: only the whole first-login flow writes the stamp. A page
+// opened from the menu says nothing about the first login, and the live
+// welcome must leave it for the installed system.
+func writesStamp(p PageArg) bool { return p == PageAll || p == PageLogin }
 
 // logoutCommand ends the session of desktop d, as the power menus do.
 func logoutCommand(d Desktop) []string {
@@ -302,9 +362,12 @@ func versionLine(path string) string {
 	return s
 }
 
+// localeConfPath is a variable for the tests.
+var localeConfPath = "/etc/locale.conf"
+
 // systemLocale is the LANG of /etc/locale.conf.
 func systemLocale() string {
-	b, err := os.ReadFile("/etc/locale.conf")
+	b, err := os.ReadFile(localeConfPath)
 	if err != nil {
 		return ""
 	}

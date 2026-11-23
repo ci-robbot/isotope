@@ -26,6 +26,11 @@ type Choice struct {
 	ConsoleKeymap   string
 	Timezone        string
 
+	// Locale is the system language picked in the live session
+	// ("de_DE.UTF-8"), or "" for none: then no language is written and the
+	// config is the one the text installer always made.
+	Locale string
+
 	// Encrypt asks kairos-agent to encrypt COS_PERSISTENT with Passphrase,
 	// which the machine then asks for at every boot. The passphrase is never
 	// in the cloud-config: it reaches kcrypt through passphraseFile.
@@ -110,6 +115,7 @@ func RenderCloudConfig(c Choice, hash string) string {
 	fmt.Fprintf(&b, "            user = %s\n", c.Username)
 	b.WriteString("            session_index = 2\n")
 	writeLocaleStage(&b, c)
+	writeLanguageStage(&b, c)
 	switch {
 	case c.Encrypt:
 		writeEncryptionMarker(&b, "passphrase")
@@ -133,6 +139,7 @@ func RenderCloudConfig(c Choice, hash string) string {
 	b.WriteString("    - name: \"Isotope login shell\"\n")
 	b.WriteString("      commands:\n")
 	fmt.Fprintf(&b, "        - usermod -s /bin/bash %s\n", c.Username)
+	writeLanguageBoot(&b, c)
 	return b.String()
 }
 
@@ -233,35 +240,69 @@ func writeInitramfsKeymap(b *strings.Builder, c Choice) {
 // allowing leading whitespace — the same shape the shell installer grepped for.
 var topLevelKey = regexp.MustCompile(`(?m)^[[:space:]]*(users|install):`)
 
-// ConfigPresent reports whether oemDir already holds an install config other than
-// our own output file. If so the caller skips the wizard and installs unattended,
+// IsoDir is the ISO's root as the live boot mounts it. AuroraBoot
+// --cloud-config writes the install config there; kairos-agent reads it first.
+func IsoDir() string {
+	if d := os.Getenv("ISOTOPE_ISO_DIR"); d != "" {
+		return d
+	}
+	return "/run/initramfs/live"
+}
+
+// hasInstallKey reports whether the file holds a users: or install: key.
+func hasInstallKey(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false // unreadable file is not a config we can honour
+	}
+	return topLevelKey.Match(data)
+}
+
+// ConfigPresent reports whether an install config exists other than our own
+// output file. If so the caller skips the wizard and installs unattended,
 // preserving the shell installer's behaviour for seeded/automated installs.
+//
+// It looks in three places, kept identical to rootfs/usr/libexec/isotope-live-boot (the
+// live boot stage, which must agree so that "an install config wins"):
+//   - *.yaml and *.yml in oemDir;
+//   - oemDir/95_userdata, a file or a directory of files (the cdrom datasource);
+//   - *.yaml and *.yml in IsoDir (AuroraBoot --cloud-config).
 func ConfigPresent(OEMDir, outPath string) (bool, error) {
-	var found bool
-	for _, pat := range []string{"*.yaml", "*.yml"} {
-		matches, err := filepath.Glob(filepath.Join(OEMDir, pat))
-		if err != nil {
-			return false, err
-		}
-		for _, m := range matches {
-			same, err := filepath.Abs(m)
+	var candidates []string
+	for _, dir := range []string{OEMDir, IsoDir()} {
+		for _, pat := range []string{"*.yaml", "*.yml"} {
+			matches, err := filepath.Glob(filepath.Join(dir, pat))
 			if err != nil {
-				continue
+				return false, err
 			}
-			want, err := filepath.Abs(outPath)
-			if err == nil && same == want {
-				continue // never count our own output
-			}
-			data, err := os.ReadFile(m)
-			if err != nil {
-				continue // unreadable file is not a config we can honour
-			}
-			if topLevelKey.Match(data) {
-				found = true
-			}
+			candidates = append(candidates, matches...)
 		}
 	}
-	return found, nil
+	userdata := filepath.Join(OEMDir, "95_userdata")
+	candidates = append(candidates, userdata)
+	inside, err := filepath.Glob(filepath.Join(userdata, "*"))
+	if err != nil {
+		return false, err
+	}
+	candidates = append(candidates, inside...)
+
+	want, wantErr := filepath.Abs(outPath)
+	for _, m := range candidates {
+		if fi, err := os.Stat(m); err != nil || !fi.Mode().IsRegular() {
+			continue
+		}
+		same, err := filepath.Abs(m)
+		if err != nil {
+			continue
+		}
+		if wantErr == nil && same == want {
+			continue // never count our own output
+		}
+		if hasInstallKey(m) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // HashPassword shells out to openssl for a crypt(3) SHA-512 hash.
@@ -286,4 +327,75 @@ func HashPassword(plain string) (string, error) {
 		return "", fmt.Errorf("openssl passwd: %w", err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// localeNameOK is every character a locale name may have, as in
+// isotope-updated's SetLocale: nothing in it can break out of the YAML.
+var localeNameOK = regexp.MustCompile(`^[A-Za-z0-9_.@-]{1,64}$`)
+
+// ValidLocale says whether lang is a locale name Choice.Locale may hold: the
+// graphical installer's window mode takes the live session's language only
+// when it passes.
+func ValidLocale(lang string) bool { return localeNameOK.MatchString(lang) }
+
+// OEMLocaleYAML is the cloud-config isotope-updated's SetLocale writes to
+// /oem/91_isotope_locale.yaml: an initramfs stage that writes
+// /etc/locale.conf again at every boot. update/ cannot be imported here;
+// update's TestOemLocaleMatchesTheInstaller and this package's
+// TestLocaleStageMatchesSetLocale hold both to one golden file.
+func OEMLocaleYAML(lang string) string {
+	var b strings.Builder
+	b.WriteString("name: \"Isotope system locale\"\n")
+	b.WriteString("stages:\n")
+	b.WriteString("  initramfs:\n")
+	b.WriteString("    - name: \"Write /etc/locale.conf\"\n")
+	b.WriteString("      files:\n")
+	b.WriteString("        - path: /etc/locale.conf\n")
+	b.WriteString("          permissions: 0644\n")
+	b.WriteString("          content: |\n")
+	fmt.Fprintf(&b, "            LANG=%s\n", lang)
+	return b.String()
+}
+
+// languageGuard is the `if` of every write of the language. The installer's
+// config is /oem/99_isotope-user.yaml and runs at every boot; the language it
+// carries may only seed the first boot. Once /oem/91_isotope_locale.yaml
+// exists (this config wrote it, or a later SetLocale did) that file owns the
+// language, and these stages must not undo a later choice.
+const languageGuard = `[ ! -e /oem/91_isotope_locale.yaml ]`
+
+// writeLanguageStage seeds the first boot's /etc/locale.conf, so the first
+// session has the language. It is guarded by languageGuard. With no Locale
+// (the text installer), or one that fails the check, it writes nothing.
+func writeLanguageStage(b *strings.Builder, c Choice) {
+	if !localeNameOK.MatchString(c.Locale) {
+		return
+	}
+	b.WriteString("    - name: \"Isotope system language\"\n")
+	fmt.Fprintf(b, "      if: '%s'\n", languageGuard)
+	b.WriteString("      files:\n")
+	b.WriteString("        - path: /etc/locale.conf\n")
+	b.WriteString("          permissions: 0644\n")
+	b.WriteString("          content: |\n")
+	fmt.Fprintf(b, "            LANG=%s\n", c.Locale)
+}
+
+// writeLanguageBoot writes /oem/91_isotope_locale.yaml, the file Isotope
+// Welcome's Language step writes, so the language holds at every later boot.
+// It is a boot-stage step, the stage where this repo writes to /oem (the
+// grubenv, 10_isotope_grub_env.yaml): /oem is mounted read-write there. Same
+// guard: after the first boot the file exists and this does nothing.
+func writeLanguageBoot(b *strings.Builder, c Choice) {
+	if !localeNameOK.MatchString(c.Locale) {
+		return
+	}
+	b.WriteString("    - name: \"Isotope system language, at every later boot\"\n")
+	fmt.Fprintf(b, "      if: '%s'\n", languageGuard)
+	b.WriteString("      files:\n")
+	b.WriteString("        - path: /oem/91_isotope_locale.yaml\n")
+	b.WriteString("          permissions: 0644\n")
+	b.WriteString("          content: |\n")
+	for _, l := range strings.Split(strings.TrimSuffix(OEMLocaleYAML(c.Locale), "\n"), "\n") {
+		b.WriteString("            " + l + "\n")
+	}
 }

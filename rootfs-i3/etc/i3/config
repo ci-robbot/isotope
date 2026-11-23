@@ -97,7 +97,7 @@ bindsym $mod+semicolon     exec --no-startup-id isotope-emoji
 set $lock i3lock --nofork --ignore-empty-password --show-failed-attempts --color=141411
 # help-section: System
 # help: Lock the screen
-bindsym $mod+Mod1+l        exec --no-startup-id $lock
+bindsym $mod+Mod1+l        exec --no-startup-id isotope-not-live $lock
 
 # Screenshots (shotgun + hacksaw + xclip): to the clipboard, like Sway, and to
 # ~/Pictures/Screenshots, like niri.
@@ -233,6 +233,8 @@ for_window [class="IsotopeFloat" title="Keyboard shortcuts"] resize set 900 720,
 for_window [class="isotope-welcome"] floating enable
 # So is Isotope System.
 for_window [class="isotope-system"] floating enable
+# And the installer, when the live session runs it as a window.
+for_window [class="isotope-install"] floating enable
 
 bar {
     position top

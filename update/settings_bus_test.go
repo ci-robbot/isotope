@@ -161,3 +161,41 @@ func TestSetLocaleRefusesFlatpakCaller(t *testing.T) {
 	}
 	noFile(t, conf, oem)
 }
+
+// The installer (install-ui/core) writes this same file; both are tested
+// against one golden file.
+func TestOemLocaleMatchesTheInstaller(t *testing.T) {
+	want, err := os.ReadFile("../install-ui/core/testdata/oem-locale-de_DE.golden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := oemLocale("de_DE.UTF-8"); got != string(want) {
+		t.Errorf("oemLocale differs from the installer's golden file:\n%s", got)
+	}
+}
+
+// setLocale itself, run on temporary paths, writes the bytes the installer's
+// golden files hold: /etc/locale.conf and the /oem file.
+func TestSetLocaleWritesTheInstallersBytes(t *testing.T) {
+	dir := t.TempDir()
+	oldConf, oldOEM, oldList := localeConf, localeOEM, localeList
+	t.Cleanup(func() { localeConf, localeOEM, localeList = oldConf, oldOEM, oldList })
+	localeConf, localeOEM = dir+"/locale.conf", dir+"/91_isotope_locale.yaml"
+	localeList = cmdRunner(func(string, []string, []byte) ([]byte, error) { return []byte("de_DE.UTF-8\n"), nil })
+	if err := setLocale("de_DE.UTF-8"); err != nil {
+		t.Fatal(err)
+	}
+	for file, golden := range map[string]string{
+		localeConf: "../install-ui/core/testdata/locale.conf-de_DE.golden",
+		localeOEM:  "../install-ui/core/testdata/oem-locale-de_DE.golden",
+	} {
+		got, _ := os.ReadFile(file)
+		want, err := os.ReadFile(golden)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("%s = %q, want %q", file, got, want)
+		}
+	}
+}

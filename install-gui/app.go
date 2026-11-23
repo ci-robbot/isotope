@@ -12,6 +12,7 @@ import (
 	"gioui.org/gesture"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
@@ -104,6 +105,11 @@ type hooks struct {
 	relaunch func(s core.GUIState)
 	poweroff func()
 	reboot   func()
+	// installed records that the install finished (window mode only: the
+	// live launcher reads it); keepTrying closes the live window after one
+	// (window mode only). Both are nil in the cage installer.
+	installed  func()
+	keepTrying func()
 	// started is called once the first frame is drawn.
 	started func()
 	// describe says what is on a disk now (core.DescribeDisk).
@@ -116,6 +122,8 @@ type hooks struct {
 	terminal func()
 	// invalidate asks for a frame from another goroutine.
 	invalidate func()
+	// window performs a title bar button's action (window mode on COSMIC).
+	window func(system.Action)
 }
 
 // UI is the graphical installer: the window's state and the wizard it
@@ -144,6 +152,16 @@ type UI struct {
 	software bool
 	gpuClass string
 	vmImage  bool
+
+	// window is window mode (--window, window.go): a window in the live
+	// session, not cage. live is the live session's choices (--choices),
+	// and kbFixed says the keyboard came from them, so the keyboard page
+	// asks only the time zone. bar is the title bar drawn on COSMIC; nil
+	// elsewhere and in cage.
+	window  bool
+	live    liveChoices
+	kbFixed bool
+	bar     *guikit.TitleBar
 
 	focus     event.Tag // focus this on the next frame
 	scale     float32   // Ctrl+Plus and Ctrl+Minus
@@ -193,6 +211,7 @@ type UI struct {
 	details  widget.Clickable
 	logList  widget.List
 	restart  widget.Clickable
+	keep     widget.Clickable
 	saveLog  widget.Clickable
 	terminal widget.Clickable
 	savedTo  string
@@ -270,6 +289,9 @@ func newUI(w *core.Wizard, shaper *text.Shaper, h hooks) *UI {
 // setWizard starts the UI on w, the wizard core.RunWizard made for this
 // machine.
 func (u *UI) setWizard(w *core.Wizard) {
+	if u.window {
+		u.kbFixed = windowWizard(w, u.live)
+	}
 	u.w = w
 	u.kbSel = w.KeyboardIndex()
 	u.tzSel = w.TimezoneIndex()
@@ -319,6 +341,9 @@ func (u *UI) refocus() {
 		u.focus = &u.cont
 	case pKeyboard:
 		u.focus = &u.kbSearch.Editor
+		if u.kbFixed {
+			u.focus = &u.tzField.Editor
+		}
 		if u.kbApplied {
 			// A layout was just applied: try it.
 			u.focus = &u.kbTry.Editor
@@ -430,6 +455,10 @@ func (u *UI) pickKeyboard(i int) {
 	u.kbSel = i
 	if u.needsRelaunch() {
 		u.hooks.relaunch(u.saveState(pKeyboard))
+		return
+	}
+	if u.window {
+		// The layout is for the installed system: nothing to try here.
 		return
 	}
 	u.kbApplied = true
@@ -704,6 +733,9 @@ func (u *UI) apply(e core.Event) {
 		}
 	case core.EventFinished:
 		s.finished = true
+		if u.hooks.installed != nil {
+			u.hooks.installed()
+		}
 		u.goTo(pDone)
 	case core.EventFailed:
 		s.failed, s.err = true, e.Err
@@ -744,6 +776,9 @@ func (u *UI) update(gtx layout.Context) {
 	}
 	if u.restart.Clicked(gtx) {
 		u.hooks.reboot()
+	}
+	if u.keep.Clicked(gtx) && u.hooks.keepTrying != nil {
+		u.hooks.keepTrying()
 	}
 	if u.details.Clicked(gtx) {
 		u.install.show = !u.install.show
@@ -898,6 +933,11 @@ func (u *UI) update(gtx layout.Context) {
 	case pSummary:
 		for i, p := range u.summaryChanges {
 			if u.change[i].Clicked(gtx) {
+				if i == 0 {
+					// The keyboard row: ask it, also when the live
+					// session set it.
+					u.kbFixed = false
+				}
 				u.w.Page = u.firstCorePage(p)
 				u.goTo(p)
 			}

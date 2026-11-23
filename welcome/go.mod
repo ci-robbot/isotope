@@ -6,6 +6,7 @@ require (
 	gioui.org v0.10.3
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/kairos-community/isotope/guikit v0.0.0-00010101000000-000000000000
+	github.com/kairos-community/isotope/install-ui v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -19,3 +20,5 @@ require (
 )
 
 replace github.com/kairos-community/isotope/guikit => ../guikit
+
+replace github.com/kairos-community/isotope/install-ui => ../install-ui

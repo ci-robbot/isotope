@@ -1,0 +1,9 @@
+name: "Isotope system locale"
+stages:
+  initramfs:
+    - name: "Write /etc/locale.conf"
+      files:
+        - path: /etc/locale.conf
+          permissions: 0644
+          content: |
+            LANG=de_DE.UTF-8

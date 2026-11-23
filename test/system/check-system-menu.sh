@@ -86,6 +86,20 @@ rm -f "$T/choice"
 "$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "the menu lists System" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 1
 
+# The live desktop: "Install Isotope" is the first entry, and opens the
+# launcher. Not live: no such entry.
+fake isotope-live-install 'echo "isotope-live-install" > "$T/ran"'
+rm -f "$T/choice"
+"$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+expect "not live: no Install Isotope entry" "$(cut -f1 "$T/pick.in" | grep -c '^Install Isotope$')" 0
+: > "$T/live-marker"
+ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+expect "live: Install Isotope is the first entry" "$(cut -f1 "$T/pick.in" | head -n 1)" "Install Isotope"
+rm -f "$T/ran"
+ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/usr/bin/isotope-menu" "Install Isotope"
+expect "live: the entry runs isotope-live-install" "$(cat "$T/ran" 2>/dev/null)" "isotope-live-install"
+rm -f "$B/isotope-live-install"
+
 # Without the app: the terminal flows, and no System entry.
 rm "$B/isotope-system"
 echo 1 > "$T/choice"
