@@ -302,9 +302,14 @@ RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
     for f in /etc/passwd /etc/shadow /etc/group /etc/gshadow; do \
       [ ! -f "$f" ] || sed -i '/^nm-openconnect:/d' "$f" || exit 1; \
     done && \
-    ! ls /usr/libexec/nm-openconnect* /usr/lib/NetworkManager/VPN/nm-openconnect* >/dev/null 2>&1 && \
-    ! grep -rqs 'org.freedesktop.NetworkManager.openconnect' /usr/share/dbus-1 /etc/dbus-1 /usr/lib/NetworkManager && \
-    ! grep -q '^nm-openconnect:' /etc/passwd && \
-    ! test -e /usr/libexec/bluetooth/obexd && \
-    ! grep -rqs 'org.bluez.obex' /usr/share/dbus-1/services /usr/lib/systemd/user && \
-    test -x /usr/bin/openconnect
+    fail() { echo "agent: $*" >&2; exit 1; } && \
+    ! ls /usr/libexec/nm-openconnect* /usr/lib/NetworkManager/VPN/nm-openconnect* \
+      /usr/lib/NetworkManager/libnm-vpn-plugin-openconnect* >/dev/null 2>&1 || fail "nm-openconnect service files left"; \
+    left=$(grep -rls 'org.freedesktop.NetworkManager.openconnect' /usr/share/dbus-1 /etc/dbus-1 \
+      /usr/lib/NetworkManager/VPN /etc/NetworkManager/VPN || true); \
+    [ -z "$left" ] || fail "openconnect files left: $left"; \
+    ! grep -q '^nm-openconnect:' /etc/passwd || fail "the nm-openconnect user is left"; \
+    ! test -e /usr/libexec/bluetooth/obexd || fail "obexd is left"; \
+    left=$(grep -rls 'org.bluez.obex' /usr/share/dbus-1/services /usr/lib/systemd/user || true); \
+    [ -z "$left" ] || fail "obex files left: $left"; \
+    test -x /usr/bin/openconnect || fail "the openconnect CLI is missing"

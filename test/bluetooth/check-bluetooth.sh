@@ -50,8 +50,10 @@ check "obex.service has its D-Bus session activation file" \
     "grep -q obex.service /usr/share/dbus-1/services/org.bluez.obex.service"
 check "libical 3 is installed with its licence" \
     "test -e /usr/lib/libical.so.3 && test -e /usr/lib/libicalvcal.so.3 && test -f /usr/share/licenses/libical/LICENSE.LGPL21.txt"
-check "no libical headers, pkg-config or CMake files" \
-    '! ls /usr/include/libical /usr/lib/pkgconfig/libical*.pc /usr/lib/cmake/LibIcal 2>/dev/null | grep -q .'
+# niri also ships libical 4 whole (headers too) for Noctalia's calendar, so
+# only libical 3's development files must be absent.
+check "no libical 3 headers, pkg-config or CMake files" \
+    '! grep -rqsE "^Version: 3\.|PACKAGE_VERSION \"3\.|ICAL_VERSION \"3\." /usr/lib/pkgconfig /usr/lib/cmake/LibIcal /usr/include/libical'
 # LE Audio: BlueZ 5.79 keeps these behind Experimental, and the ISO sockets
 # behind the kernel's ISO feature; main.conf turns on both.
 check "main.conf turns on LE Audio (Experimental and the ISO socket feature)" \
