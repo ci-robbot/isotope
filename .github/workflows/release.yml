@@ -33,7 +33,6 @@ env:
   # Isotope was Hadron Desktop. A system installed before the rename runs an
   # updater that looks for upgrades in the old repository, so every upgrade
   # image is pushed there too, with the same tag.
-  LEGACY_IMAGE_REPO: ghcr.io/kairos-community/hadron-desktop
   # Every agent VM gate resolves its appliance image through this variable
   # (`test/agent/run.sh` takes `${1:-${AGENT_IMAGE:-agent-desktop:dev}}`, and the
   # Makefile declares `AGENT_IMAGE ?= agent-desktop:dev`), so one value keeps the
@@ -489,12 +488,6 @@ jobs:
           digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
-          legacy="${LEGACY_IMAGE_REPO}:${target##*:}"
-          docker tag "$target" "$legacy"
-          docker push "$legacy"
-          legacy_digest="$(docker buildx imagetools inspect "$legacy" --format '{{json .Manifest}}' | jq -r .digest)"
-          [[ "$legacy_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $legacy" >&2; exit 1; }
-          cosign sign --yes "${LEGACY_IMAGE_REPO}@${legacy_digest}"
 
       - name: Upload ${{ matrix.desktop }} (${{ matrix.gpu }}) workflow artifact
         uses: actions/upload-artifact@v7
@@ -692,8 +685,8 @@ jobs:
           loaded="$(docker load -i "$out"/*.tar | sed -n 's/^Loaded image: //p' | tail -n1)"
           [ -n "$loaded" ] || { echo "no image in the UKI upgrade archive" >&2; exit 1; }
           rm -rf "$out"
-          printf 'FROM %s\nLABEL io.kairos.isotope.flavor=%s io.kairos.isotope.version=%s io.kairos.isotope.gpu=%s io.kairos.isotope.trusted-boot=true io.kairos.hadron-desktop.flavor=%s io.kairos.hadron-desktop.version=%s io.kairos.hadron-desktop.gpu=%s io.kairos.hadron-desktop.trusted-boot=true\n' \
-            "$loaded" "$DESKTOP" "$RELEASE_TAG" "$GPU" "$DESKTOP" "$RELEASE_TAG" "$GPU" | docker build -t "${IMAGE_REPO}:${LINE}-${RELEASE_TAG}" -
+          printf 'FROM %s\nLABEL io.kairos.isotope.flavor=%s io.kairos.isotope.version=%s io.kairos.isotope.gpu=%s io.kairos.isotope.trusted-boot=true\n' \
+            "$loaded" "$DESKTOP" "$RELEASE_TAG" "$GPU" | docker build -t "${IMAGE_REPO}:${LINE}-${RELEASE_TAG}" -
 
       # A UKI carries the whole OS image in its initramfs. A machine boots it
       # only with room in RAM for about 2.5 times that (immucore copies it to
@@ -723,12 +716,6 @@ jobs:
           digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
-          legacy="${LEGACY_IMAGE_REPO}:${target##*:}"
-          docker tag "$target" "$legacy"
-          docker push "$legacy"
-          legacy_digest="$(docker buildx imagetools inspect "$legacy" --format '{{json .Manifest}}' | jq -r .digest)"
-          [[ "$legacy_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $legacy" >&2; exit 1; }
-          cosign sign --yes "${LEGACY_IMAGE_REPO}@${legacy_digest}"
 
       - name: Upload the ${{ matrix.desktop }} Trusted Boot workflow artifact
         uses: actions/upload-artifact@v7
@@ -1038,12 +1025,6 @@ jobs:
           digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
-          legacy="${LEGACY_IMAGE_REPO}:${target##*:}"
-          docker tag "$target" "$legacy"
-          docker push "$legacy"
-          legacy_digest="$(docker buildx imagetools inspect "$legacy" --format '{{json .Manifest}}' | jq -r .digest)"
-          [[ "$legacy_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $legacy" >&2; exit 1; }
-          cosign sign --yes "${LEGACY_IMAGE_REPO}@${legacy_digest}"
 
       - name: Upload agent workflow artifact
         uses: actions/upload-artifact@v7
@@ -1184,27 +1165,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Both repositories: the old one serves systems installed before the
-          # rename to Isotope.
-          for repo in "$IMAGE_REPO" "$LEGACY_IMAGE_REPO"; do
-            name="${repo#ghcr.io/}"
-            token="$(curl -fsS "https://ghcr.io/token?scope=repository:${name}:pull" | jq -r '.token // empty')" || true
-            if [[ -z "$token" ]]; then
-              echo "${repo} needs a login to pull. Make the package public:" >&2
-              echo "https://github.com/orgs/${GITHUB_REPOSITORY_OWNER}/packages/container/${name#*/}/settings" >&2
-              exit 1
-            fi
-            lines=(sway i3 cosmic niri sway-vm i3-vm cosmic-vm niri-vm server agent)
-            [[ "$TRUSTED_BOOT_RELEASE" == true ]] && lines+=(sway-uki i3-uki cosmic-uki niri-uki server-uki)
-            for line in "${lines[@]}"; do
-              ref="${repo}:${line}-${RELEASE_TAG}"
-              code="$(curl -sS -o /dev/null -w '%{http_code}' --head \
-                -H "Authorization: Bearer $token" \
-                -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
-                "https://ghcr.io/v2/${name}/manifests/${line}-${RELEASE_TAG}")"
-              [[ "$code" == 200 ]] || { echo "$ref is not pullable without a login (HTTP $code)" >&2; exit 1; }
-              echo "$ref: public"
-            done
+          repo="$IMAGE_REPO"
+          name="${repo#ghcr.io/}"
+          token="$(curl -fsS "https://ghcr.io/token?scope=repository:${name}:pull" | jq -r '.token // empty')" || true
+          if [[ -z "$token" ]]; then
+            echo "${repo} needs a login to pull. Make the package public:" >&2
+            echo "https://github.com/orgs/${GITHUB_REPOSITORY_OWNER}/packages/container/${name#*/}/settings" >&2
+            exit 1
+          fi
+          lines=(sway i3 cosmic niri sway-vm i3-vm cosmic-vm niri-vm server agent)
+          [[ "$TRUSTED_BOOT_RELEASE" == true ]] && lines+=(sway-uki i3-uki cosmic-uki niri-uki server-uki)
+          for line in "${lines[@]}"; do
+            ref="${repo}:${line}-${RELEASE_TAG}"
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --head \
+              -H "Authorization: Bearer $token" \
+              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+              "https://ghcr.io/v2/${name}/manifests/${line}-${RELEASE_TAG}")"
+            [[ "$code" == 200 ]] || { echo "$ref is not pullable without a login (HTTP $code)" >&2; exit 1; }
+            echo "$ref: public"
           done
 
       - name: Create or update GitHub Release

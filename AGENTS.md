@@ -24,14 +24,20 @@ runs `isotope-system`. The window that manages the machine is "Isotope
 System", not "Isotope Settings": on COSMIC it sits next to "COSMIC
 Settings", and two "Settings" apps in one launcher are easy to confuse.
 
-Isotope was called Hadron Desktop. These keep systems installed before the
-rename updating; do not remove them without a plan for those systems:
+Isotope was called Hadron Desktop. The old image repository
+`ghcr.io/kairos-community/hadron-desktop` is retired: releases push only to
+`ghcr.io/kairos-community/isotope`, and images carry only the
+`io.kairos.isotope.*` labels. A system installed before the rename (v0.0.12
+or older) still looks for its upgrades in the old repository and finds no new
+tag; it moves over once, by hand:
+`isotope upgrade --image ghcr.io/kairos-community/isotope:<flavor>-<tag>`.
+After that it reads the new repository from its own `/etc/isotope/release`.
 
-- the `io.kairos.hadron-desktop.*` labels next to the new ones (Dockerfile,
-  Dockerfile.agent, the UKI image in release.yml), and `label()` in
-  update/policy.go, which reads either;
-- `LEGACY_IMAGE_REPO` in release.yml, which pushes every upgrade image to
-  `ghcr.io/kairos-community/hadron-desktop` too;
+These keep such a system working once it has moved; do not remove them
+without a plan for those systems:
+
+- `label()` in update/policy.go, which still reads the old
+  `io.kairos.hadron-desktop.*` labels of images released before;
 - `rootfs/system/oem/08_isotope_rename.yaml` (the installer's settings under
   `/etc/hadron-desktop`, the updater's state), the stamps under
   `~/.local/state/hadron*` read by isotope-welcome and isotope-night-light,

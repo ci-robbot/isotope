@@ -181,7 +181,7 @@ RUN groupadd -r isotope-agent-control && \
 RUN sed -i 's/^FLAVOR=.*/FLAVOR=agent/' /etc/isotope/release && \
     grep -qx 'FLAVOR=agent' /etc/isotope/release
 # The label follows the file: inherited from the i3 base it would say `i3`.
-LABEL io.kairos.isotope.flavor="agent" io.kairos.hadron-desktop.flavor="agent"
+LABEL io.kairos.isotope.flavor="agent"
 # No update service: isotope-update upgrade keeps its direct sudo path on the
 # appliance, so the root daemon, its D-Bus policy and activation, and its
 # polkit action and rule from the i3 image go. The update icon that talks to

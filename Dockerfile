@@ -6312,13 +6312,6 @@ LABEL io.kairos.isotope.flavor="${DESKTOP}" \
       io.kairos.isotope.hadron-version="${HADRON_VERSION}" \
       io.kairos.isotope.gpu="${GPU}" \
       io.kairos.isotope.firmware="${FIRMWARE}"
-# The same labels under the name from before the rename to Isotope, which the
-# updater of a system installed before it reads.
-LABEL io.kairos.hadron-desktop.flavor="${DESKTOP}" \
-      io.kairos.hadron-desktop.version="${VERSION}" \
-      io.kairos.hadron-desktop.hadron-version="${HADRON_VERSION}" \
-      io.kairos.hadron-desktop.gpu="${GPU}" \
-      io.kairos.hadron-desktop.firmware="${FIRMWARE}"
 # Isotope GRUB menu colours — text-mode fallback. The main menu renders from
 # /etc/cos/grub.cfg (copied to COS_STATE at install) before grubmenu.cfg switches
 # to the gfxterm theme, and these 16-colour accents also apply if gfxterm/the
