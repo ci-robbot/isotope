@@ -139,7 +139,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}extensions.json
+      url: ${{ steps.deploy-first.outputs.page_url || steps.deploy-retry.outputs.page_url }}extensions.json
     steps:
       - uses: actions/checkout@v7
         with:
@@ -155,5 +155,15 @@ jobs:
         with:
           path: _site
 
-      - id: deploy
+      # deploy-pages can list 0 artifacts right after the upload finished
+      # ("No artifacts named github-pages were found"), a race in the
+      # artifacts API (main, a05662a). Wait and try once more before failing.
+      - id: deploy-first
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Wait before retrying the deploy
+        if: steps.deploy-first.outcome == 'failure'
+        run: sleep 30
+      - id: deploy-retry
+        if: steps.deploy-first.outcome == 'failure'
         uses: actions/deploy-pages@v5
