@@ -1240,7 +1240,7 @@ FROM toolchain AS tllist
 ARG TLLIST_VERSION=1.1.0
 RUN mkdir -p /tllist
 WORKDIR /build
-RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/tllist/archive/${TLLIST_VERSION}.tar.gz -o tllist.tar.gz && tar -xzf tllist.tar.gz && rm tllist.tar.gz && mv tllist* tllist-src
+RUN curl -f --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/tllist/releases/download/${TLLIST_VERSION}/tllist-${TLLIST_VERSION}.tar.gz -o tllist.tar.gz && tar -xzf tllist.tar.gz && rm tllist.tar.gz && mv tllist* tllist-src
 WORKDIR /build/tllist-src
 RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS}
@@ -1261,7 +1261,7 @@ COPY --from=tllist /tllist /
 ARG FCFT_VERSION=3.3.1
 RUN mkdir -p /fcft
 WORKDIR /build
-RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/fcft/archive/${FCFT_VERSION}.tar.gz -o fcft.tar.gz && tar -xzf fcft.tar.gz && rm fcft.tar.gz && mv fcft* fcft-src
+RUN curl -f --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/fcft/releases/download/${FCFT_VERSION}/fcft-${FCFT_VERSION}.tar.gz -o fcft.tar.gz && tar -xzf fcft.tar.gz && rm fcft.tar.gz && mv fcft* fcft-src
 WORKDIR /build/fcft-src
 RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dtest-text-shaping=false -Dgrapheme-shaping=disabled -Drun-shaping=disabled -Ddocs=disabled
@@ -1285,7 +1285,7 @@ COPY --from=pcre2 /pcre2 /
 ARG FOOT_VERSION=1.20.2
 RUN mkdir -p /foot
 WORKDIR /build
-RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/foot/archive/${FOOT_VERSION}.tar.gz -o foot.tar.gz && tar -xzf foot.tar.gz && rm foot.tar.gz && mv foot* foot-src
+RUN curl -f --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/foot/releases/download/${FOOT_VERSION}/foot-${FOOT_VERSION}.tar.gz -o foot.tar.gz && tar -xzf foot.tar.gz && rm foot.tar.gz && mv foot* foot-src
 WORKDIR /build/foot-src
 RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Ddocs=disabled -Dgrapheme-clustering=disabled -Dthemes=false -Dterminfo=disabled -Dwerror=false
@@ -2350,7 +2350,7 @@ COPY --from=libpng /libpng /
 ARG FUZZEL_VERSION=1.11.0
 RUN mkdir -p /fuzzel
 WORKDIR /build
-RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/fuzzel/archive/${FUZZEL_VERSION}.tar.gz -o fuzzel.tar.gz && tar -xzf fuzzel.tar.gz && rm fuzzel.tar.gz && mv fuzzel* fuzzel-src
+RUN curl -f --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 5 --retry-delay 3 --retry-all-errors -L https://codeberg.org/dnkl/fuzzel/releases/download/${FUZZEL_VERSION}/fuzzel-${FUZZEL_VERSION}.tar.gz -o fuzzel.tar.gz && tar -xzf fuzzel.tar.gz && rm fuzzel.tar.gz && mv fuzzel* fuzzel-src
 WORKDIR /build/fuzzel-src
 RUN pip3 install meson ninja
 # Drop the man-page subdir (needs scdoc, which we don't build).

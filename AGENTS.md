@@ -216,7 +216,8 @@ released, never upgraded or never checked:
 - `Dockerfile`: its stages, the `DESKTOP` switch, the `kairos` stage.
 - `rootfs-<variant>/` for its configuration.
 - `.github/workflows/release.yml`: the build matrix (every variant is built
-  in both GPU lines, full and vm), the allowed flavors and the expected asset
+  in both GPU lines, full and vm; COSMIC is in the `build-cosmic` job, which
+  waits for the COSMIC prebuilds), the allowed flavors and the expected asset
   counts (two ISOs per variant), the manifest's flavor/line pairs, and the
   public-image check (`<variant>-<tag>` and `<variant>-vm-<tag>`).
 - `scripts/release-manifest.sh` (the flavor/line pairs) and `update/release.go`

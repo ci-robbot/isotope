@@ -42,7 +42,7 @@ AGENT_HARNESS=(
 
 mk() {
   # Unset every knob CI may set in the environment, so only the tree decides.
-  env -u CACHE_REF -u CACHE_PUSH -u LLVM_IMAGE -u VERSION \
+  env -u CACHE_REF -u CACHE_PUSH -u CACHE_SCOPE -u CACHE_ALSO -u LLVM_IMAGE -u VERSION \
     make -C "$tree" -s --no-print-directory "$@"
 }
 

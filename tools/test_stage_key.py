@@ -132,9 +132,11 @@ class StageKeyTest(unittest.TestCase):
 
 
 class RepoDockerfileTest(unittest.TestCase):
-    """The COSMIC halves link Mesa, which differs per GPU line, so release.yml
-    prebuilds each half once per line. That only works while the two lines
-    get different keys."""
+    """The COSMIC halves are built from a closure that reaches Mesa, which
+    differs per GPU line, so the two lines get different stage keys. They link
+    only libgbm.so.1 from it, the same on every line, so the Makefile builds
+    and looks them up on the full line for every line (see
+    test_makefile_keys_cosmic_on_the_full_line)."""
 
     def key(self, *args):
         repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -153,6 +155,20 @@ class RepoDockerfileTest(unittest.TestCase):
                 # FIRMWARE does not reach COSMIC: the lines share nothing else.
                 self.assertEqual(full, self.key("--arg", "DESKTOP=cosmic", "--arg", "GPU=full",
                                                 "--arg", "FIRMWARE=true", stage))
+
+    def test_makefile_keys_cosmic_on_the_full_line(self):
+        # release.yml prebuilds each half once, with GPU=full, and every cosmic
+        # build (vm line too) looks it up through `make print-stage-key`.
+        repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        for stage in ("cosmic-shell", "cosmic-apps"):
+            with self.subTest(stage=stage):
+                full = self.key("--arg", "DESKTOP=cosmic", "--arg", "GPU=full", stage)
+                for gpu in ("vm", "full"):
+                    out = subprocess.run(
+                        ["make", "-s", "DESKTOP=cosmic", f"GPU={gpu}", f"STAGE={stage}", "print-stage-key"],
+                        capture_output=True, text=True, check=True, cwd=repo,
+                    )
+                    self.assertEqual(out.stdout.strip(), full, f"GPU={gpu}")
 
 
 if __name__ == "__main__":

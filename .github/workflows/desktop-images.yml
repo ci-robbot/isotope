@@ -11,13 +11,21 @@ name: Desktop Images
 # two COSMIC halves (about two and a half hours each) come from the images that
 # release.yml prebuilds and pushes to GHCR, tagged by a hash of their inputs
 # (`make print-llvm-tag`, `make print-stage-key`). The other stages come from
-# the registry build cache that release.yml writes for each line. All of them
-# are public, so this workflow only pulls them: no login and no push, also for
-# a pull request from a fork. When the prebuilt image for this tree does not
-# exist (the pull request changes the LLVM stage, a COSMIC input or the Hadron
+# the registry build cache of each flavor and line (CACHE_REF in the Makefile).
+# All of them are public, so any run reads them without a login, also a pull
+# request from a fork. When the prebuilt image for this tree does not exist
+# (the pull request changes the LLVM stage, a COSMIC input or the Hadron
 # release, or that release has not been built yet), the desktop is skipped with
 # a warning and a note in the job summary instead of compiling it for hours.
 # The release then builds and checks it as before.
+#
+# The cache is written back (mode=max) where the run has a token that can push:
+#   - a push to main builds every flavor in both lines and the server, and
+#     writes the shared refs, so the next pull request and the next release
+#     start from main and not from the last release;
+#   - a pull request from a branch of this repository writes its own refs
+#     (CACHE_SCOPE=pr<number>), which only its next run reads;
+#   - a pull request from a fork only reads.
 
 on:
   pull_request:
@@ -34,6 +42,7 @@ on:
       - "tools/cosmic-build.sh"
       - "tools/stage-key.py"
       - "test/graphics/**"
+      - "test/cosmic/**"
       - "test/boot-ux/check-boot-units.sh"
       - "test/welcome/**"
       - "welcome/**"
@@ -41,6 +50,28 @@ on:
       - "test/system/**"
       - "guikit/**"
       - "scripts/ci-containerd-store.sh"
+      - ".github/workflows/desktop-images.yml"
+  # Refresh the build cache from main (see above) when an input of the image
+  # build changes: the Dockerfile, the Makefile, or what the Dockerfile copies.
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "Makefile"
+      - "rootfs*/**"
+      - "patches/**"
+      - "applets/**"
+      - "guikit/**"
+      - "install-gui/**"
+      - "install-ui/**"
+      - "splash/**"
+      - "system/**"
+      - "theme/**"
+      - "tools/**"
+      - "update/**"
+      - "welcome/**"
+      - "docs/assets/**"
+      - "scripts/kairos-user-live-only.sh"
       - ".github/workflows/desktop-images.yml"
   workflow_dispatch:
     inputs:
@@ -50,9 +81,11 @@ on:
         default: "sway cosmic niri i3"
         type: string
 
+# A newer push to a pull request cancels the older run. On main a run waits
+# for the one before it, so a cache write is never cut off half way.
 concurrency:
   group: desktop-images-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -69,6 +102,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      lines: ${{ steps.lines.outputs.lines }}
+      extra: ${{ steps.lines.outputs.extra }}
       desktops: ${{ steps.pick.outputs.desktops }}
     steps:
       - name: Pick the desktops to build
@@ -93,7 +128,7 @@ jobs:
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs-sway/*) want[sway]=1 ;;
-                rootfs-cosmic/*|tools/cosmic-build.sh) want[cosmic]=1 ;;
+                rootfs-cosmic/*|tools/cosmic-build.sh|test/cosmic/*) want[cosmic]=1 ;;
                 rootfs-niri/*) want[niri]=1 ;;
                 # The only patch today is i3lock's; any other patch builds all.
                 rootfs-i3/*|patches/i3lock-*) want[i3]=1 ;;
@@ -114,15 +149,37 @@ jobs:
           echo "desktops=$json" >> "$GITHUB_OUTPUT"
           echo "Desktops to build: $json" | tee -a "$GITHUB_STEP_SUMMARY"
 
+      # A pull request builds the full line only. A push to main builds the
+      # vm line and the server too, so every cache a release reads is fresh.
+      - name: Pick the image lines
+        id: lines
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == push ]]; then
+            echo 'lines=["full","vm"]' >> "$GITHUB_OUTPUT"
+            echo 'extra=[{"desktop":"server","gpu":"full"}]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'lines=["full"]' >> "$GITHUB_OUTPUT"
+            echo 'extra=[]' >> "$GITHUB_OUTPUT"
+          fi
+
   # GPU=full FIRMWARE=true, the line release.yml publishes as <flavor>-<tag>
   # for real machines. Its glvnd libraries are the same as on the vm line, but
   # its Mesa driver also links libelf and SPIRV-Tools for the hardware drivers,
   # and #100 showed on real hardware only. With the same arguments as the
   # release, the build reads the release's own cache (buildcache-<flavor>-full).
+  # On a push to main, also GPU=vm (buildcache-<flavor>) and the server.
   image:
-    name: ${{ matrix.desktop }} image (full)
+    name: ${{ matrix.desktop }} image (${{ matrix.gpu }})
     needs: plan
     if: needs.plan.outputs.desktops != '[]'
+    permissions:
+      contents: read
+      # The build cache. A fork's token stays read-only whatever this says.
+      packages: write
     runs-on: ubuntu-24.04
     # The same budget as the release build of one variant. With the prebuilt
     # LLVM and COSMIC images and a current cache, a build takes from about 15
@@ -133,13 +190,19 @@ jobs:
       fail-fast: false
       matrix:
         desktop: ${{ fromJSON(needs.plan.outputs.desktops) }}
+        gpu: ${{ fromJSON(needs.plan.outputs.lines) }}
+        include: ${{ fromJSON(needs.plan.outputs.extra) }}
     env:
       DESKTOP: ${{ matrix.desktop }}
-      GPU: full
-      FIRMWARE: "true"
+      GPU: ${{ matrix.gpu }}
+      FIRMWARE: ${{ matrix.gpu == 'full' && 'true' || 'false' }}
       IMAGE_REPO: ghcr.io/${{ github.repository }}
-      # Read only: CACHE_PUSH stays unset, so nothing is written back.
       CACHE_REF: ghcr.io/${{ github.repository }}:buildcache
+      # Written back on a push to main or a manual run on main, and from a
+      # pull request whose branch is in this repository (to its own
+      # pr<number> refs); a fork only reads.
+      CACHE_PUSH: ${{ github.ref == 'refs/heads/main' || github.event.pull_request.head.repo.full_name == github.repository }}
+      CACHE_SCOPE: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('pr{0}', github.event.pull_request.number) || '' }}
 
     steps:
       - name: Check out the pull request
@@ -154,14 +217,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          refs=("LLVM_IMAGE=${IMAGE_REPO}:$(make -s print-llvm-tag)")
+          refs=()
+          # The server has no Mesa, so it needs no LLVM.
+          [[ "$DESKTOP" == server ]] || refs+=("LLVM_IMAGE=${IMAGE_REPO}:$(make -s print-llvm-tag)")
           if [[ "$DESKTOP" == cosmic ]]; then
             for part in shell apps; do
               refs+=("COSMIC_${part^^}_IMAGE=${IMAGE_REPO}:$(make -s STAGE="cosmic-$part" print-stage-key)")
             done
           fi
           missing=()
-          for r in "${refs[@]}"; do
+          for r in ${refs[@]+"${refs[@]}"}; do
             image="${r#*=}"
             if docker buildx imagetools inspect "$image" >/dev/null 2>&1; then
               echo "Using $image"
@@ -211,6 +276,15 @@ jobs:
         shell: bash
         run: scripts/ci-containerd-store.sh
 
+      # Only to write the build cache; reading it needs no login.
+      - name: Log in to GHCR
+        if: steps.prebuilt.outputs.skip != 'true' && env.CACHE_PUSH == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
       - name: Build the ${{ matrix.desktop }} image
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
@@ -219,19 +293,35 @@ jobs:
           make DESKTOP="$DESKTOP" GPU="$GPU" FIRMWARE="$FIRMWARE" image
           df -h /
 
+      # The server edition (pushes to main only): no desktop, its network
+      # stack, update service and network card firmware. The desktop checks
+      # below do not apply to it. The same step as in release.yml.
+      - name: Check the server image
+        if: matrix.desktop == 'server' && steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/server/check-server.sh "${DESKTOP}-desktop:dev"
+
       # Desktop OpenGL through EGL and libepoxy, as Xwayland's glamor uses it
       # on a real GPU: without libOpenGL.so.0 (glvnd) libepoxy aborts. The same
       # step as in release.yml.
       - name: Check desktop OpenGL
-        if: steps.prebuilt.outputs.skip != 'true'
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/graphics/check-desktop-gl.sh "${DESKTOP}-desktop:dev"
+
+      # The COSMIC halves are the full line's on every line: each binary must
+      # find its libraries and symbols in this image. The same step as in
+      # release.yml.
+      - name: Check the COSMIC libraries
+        if: matrix.desktop == 'cosmic' && steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/cosmic/check-cosmic-libs.sh "${DESKTOP}-desktop:dev"
 
       # Boot ordering: no boot stage waits for the network, NetworkManager is
       # the only network manager, tty1 has a login. The same step as in
       # release.yml.
       - name: Check boot units
-        if: steps.prebuilt.outputs.skip != 'true'
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/boot-ux/check-boot-units.sh "${DESKTOP}-desktop:dev"
 
@@ -239,17 +329,17 @@ jobs:
       # at first login, its window rule; no cosmic-initial-setup on COSMIC.
       # The same step as in release.yml.
       - name: Check Isotope Welcome
-        if: steps.prebuilt.outputs.skip != 'true'
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/welcome/check-welcome-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
 
       - name: Check Isotope System
-        if: steps.prebuilt.outputs.skip != 'true'
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/system/check-system-image.sh "${DESKTOP}-desktop:dev" "$DESKTOP"
 
       # The Isotope look: theme, icons, window buttons, panel and applets.
       - name: Check the look
-        if: steps.prebuilt.outputs.skip != 'true'
+        if: matrix.desktop != 'server' && steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/look/check-look.sh "${DESKTOP}-desktop:dev" "$DESKTOP"

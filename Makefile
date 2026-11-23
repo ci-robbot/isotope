@@ -40,6 +40,16 @@ AGENT_IMAGE      ?= agent-desktop:dev
 AGENT_WORK       := build/agent-desktop
 AGENT_ISO_DIR    := $(AGENT_WORK)/iso
 
+# The COSMIC halves (STAGE=cosmic-shell or cosmic-apps) are built once, on the
+# full line, and every line uses them. From Mesa they link only libgbm.so.1,
+# which is the same on every line (only the drivers behind it differ), and they
+# open EGL and Vulkan at run time. So `print-stage-key` and `stage-image` for
+# them always take GPU=full: a vm build looks up the full line's halves, and
+# test/cosmic/check-cosmic-libs.sh proves they resolve in the vm image.
+ifneq ($(filter cosmic-shell cosmic-apps,$(STAGE)),)
+override GPU := full
+endif
+
 # server is an edition, not a desktop: its image has no desktop at all.
 VALID_DESKTOPS := sway i3 cosmic niri server
 ifneq ($(words $(DESKTOP)),1)
@@ -84,14 +94,25 @@ endif
 # each image reads <CACHE_REF>-<name>; CACHE_PUSH=true also writes it back.
 # mode=max exports every stage, not only the final image's layers, which is
 # what lets a later build skip the long stages. The push is best effort: a
-# cache that fails to upload must not fail a build that already succeeded.
+# cache that fails to upload must not fail a build that already succeeded, and
+# a cache that is not there yet (a new name, a fork that never wrote one) only
+# makes BuildKit print a warning and build without it.
 # Exporting needs the containerd image store when using the default builder.
-CACHE_REF  ?=
-CACHE_PUSH ?=
+#
+# CACHE_SCOPE, for a pull request from a branch of this repository: the build
+# writes <CACHE_REF>-<name>-<CACHE_SCOPE> and reads it before
+# <CACHE_REF>-<name>, so the next run of the same pull request reuses its own
+# layers, and the shared cache that main and the releases write is never
+# replaced by an unmerged branch. CACHE_ALSO names more caches to read, after
+# the build's own.
+CACHE_REF   ?=
+CACHE_PUSH  ?=
+CACHE_SCOPE ?=
 comma := ,
 cache_from = --cache-from type=registry$(comma)ref=$(CACHE_REF)-$(1)
 cache_to   = --cache-to type=registry$(comma)ref=$(CACHE_REF)-$(1)$(comma)mode=max$(comma)ignore-error=true
-cache_args = $(if $(CACHE_REF),$(call cache_from,$(1)) $(if $(filter true,$(CACHE_PUSH)),$(call cache_to,$(1))))
+cache_scoped = $(1)$(if $(CACHE_SCOPE),-$(CACHE_SCOPE))
+cache_args = $(if $(CACHE_REF),$(foreach n,$(if $(CACHE_SCOPE),$(call cache_scoped,$(1))) $(1) $(CACHE_ALSO),$(call cache_from,$(n))) $(if $(filter true,$(CACHE_PUSH)),$(call cache_to,$(call cache_scoped,$(1)))))
 # The two image lines build a different Mesa (and every stage built on it), so
 # each keeps its own cache: sharing one, each release's second writer would
 # replace the first one's stages. GPU=vm keeps the plain name it has always
@@ -183,9 +204,14 @@ print-llvm-tag:
 	  "$$({ echo '$(HADRON_VERSION)'; awk '/^FROM toolchain AS llvm$$/{p=1; print; next} p && /^FROM /{exit} p' Dockerfile; } | sha256sum | cut -c1-12)"
 
 # STAGE is cosmic-shell or cosmic-apps: the stages with a <STAGE>-dist target.
+# With CACHE_REF, each half reads and writes its own cache, <CACHE_REF>-<STAGE>
+# (mode=max: every COSMIC component's RUN, and cosmic-build with all its
+# dependencies), and also reads the full cosmic image's cache, which holds
+# cosmic-build because greetd and cosmic-theme are built from it.
+stage-image: CACHE_ALSO = cosmic-full
 stage-image:
 	@[ -n "$(STAGE)" ] && [ -n "$(STAGE_OUT)" ] || { echo "set STAGE and STAGE_OUT" >&2; exit 1; }
-	docker build $(BUILD_ARGS) --target $(STAGE)-dist -t $(STAGE_OUT) .
+	docker build $(BUILD_ARGS) $(call cache_args,$(STAGE)) --target $(STAGE)-dist -t $(STAGE_OUT) .
 
 # <STAGE>-<key>; the key takes the same build args as `make image`.
 print-stage-key:
@@ -247,8 +273,9 @@ vm:                   ## boot the already-installed disk
 # Boot-UX assertions (splash, initramfs, branding, ISO overlay), the update
 # tray wiring (test/update/check-tray-wiring.sh), Isotope Welcome
 # (test/welcome/check-welcome-image.sh), the live-only default
-# user (test/accounting/check-default-user.sh) and desktop OpenGL through
-# EGL (test/graphics/check-desktop-gl.sh) for every variant image that
+# user (test/accounting/check-default-user.sh), desktop OpenGL through
+# EGL (test/graphics/check-desktop-gl.sh) and, on COSMIC, its libraries
+# (test/cosmic/check-cosmic-libs.sh) for every variant image that
 # is already built locally. Deliberately NOT a dependency of `all`:
 # the checks inspect a built image, so wiring them into a plain `make` would
 # either fail before the image exists or force a rebuild. Run them after
@@ -274,6 +301,7 @@ check-boot-ux:
 	    test/welcome/check-welcome-image.sh "$$img" "$${img%%-desktop:*}" || fail=1; \
 	    test/accounting/check-default-user.sh "$$img" || fail=1; \
 	    test/graphics/check-desktop-gl.sh "$$img" || fail=1; \
+	    if [ "$$img" = cosmic-desktop:dev ]; then test/cosmic/check-cosmic-libs.sh "$$img" || fail=1; fi; \
 	  else \
 	    echo "==> boot-ux: skipping $$img (not built)"; \
 	  fi; \

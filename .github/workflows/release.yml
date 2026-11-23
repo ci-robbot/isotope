@@ -162,17 +162,18 @@ jobs:
   # cosmic-apps stages) build here in parallel, each pushed as an image tagged
   # by a hash of everything it is built from (`make print-stage-key`), so a
   # release rebuilds a half only when its inputs changed. The cosmic build job
-  # then uses them in place of compiling COSMIC. COSMIC links Mesa, which
-  # differs per GPU line, so each half is built once per line: four jobs,
-  # each with its own key.
+  # then uses them in place of compiling COSMIC. From Mesa, COSMIC links only
+  # libgbm.so.1, which is the same on every GPU line, so each half is built
+  # once, on the full line, and both lines use it: the Makefile keys and
+  # builds the halves with GPU=full whatever GPU says, and
+  # test/cosmic/check-cosmic-libs.sh proves they resolve in each image.
   cosmic:
-    name: Prebuild COSMIC ${{ matrix.part }} (${{ matrix.gpu }})
+    name: Prebuild COSMIC ${{ matrix.part }}
     needs: llvm
     if: ${{ !cancelled() }}
-    # One run per half and line at a time, as for LLVM above. The two lines
-    # have different keys, so they need not wait for each other.
+    # One run per half at a time, as for LLVM above.
     concurrency:
-      group: prebuild-cosmic-${{ matrix.part }}-${{ matrix.gpu }}
+      group: prebuild-cosmic-${{ matrix.part }}
       cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 330
@@ -185,13 +186,10 @@ jobs:
         part:
           - shell
           - apps
-        gpu:
-          - full
-          - vm
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       STAGE: cosmic-${{ matrix.part }}
-      GPU: ${{ matrix.gpu }}
+      GPU: full
       LLVM_IMAGE: ${{ needs.llvm.result == 'success' && needs.llvm.outputs.image || '' }}
 
     steps:
@@ -236,6 +234,15 @@ jobs:
           docker system prune --all --force
           df -h /
 
+      # The build reads and writes the registry build cache
+      # ($CACHE_REF-cosmic-shell or -apps, and reads $CACHE_REF-cosmic-full;
+      # see stage-image in the Makefile). The default builder exports a cache
+      # only from the containerd image store.
+      - name: Use the containerd image store
+        if: steps.ref.outputs.found != 'true'
+        shell: bash
+        run: scripts/ci-containerd-store.sh
+
       - name: Build and push the ${{ env.STAGE }} image
         if: steps.ref.outputs.found != 'true'
         shell: bash
@@ -257,9 +264,13 @@ jobs:
   # desktop set.
   build:
     name: Build ${{ matrix.desktop }} ISO (${{ matrix.gpu }})
-    needs: [llvm, cosmic]
-    # A failed LLVM or COSMIC prebuild does not stop the release: the variants
-    # that need it then build it themselves, as before.
+    needs: [llvm]
+    # Every variant but COSMIC, which build-cosmic below builds with these
+    # same steps once its prebuilt halves are pushed. These do not use the
+    # halves (niri uses only cosmic-build, the build environment, from the
+    # cache), so they do not wait for them. The server needs no LLVM either;
+    # it waits for it only to share this matrix. A failed LLVM prebuild does
+    # not stop the release: the variants then build LLVM themselves.
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 330
@@ -274,7 +285,6 @@ jobs:
         desktop:
           - sway
           - i3
-          - cosmic
           - niri
         gpu:
           - full
@@ -292,7 +302,8 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       LLVM_IMAGE: ${{ needs.llvm.result == 'success' && needs.llvm.outputs.image || '' }}
 
-    steps:
+    # build-cosmic runs these same steps (a YAML alias of this list).
+    steps: &build-steps
       - name: Validate release tag
         shell: bash
         run: |
@@ -377,6 +388,13 @@ jobs:
         if: matrix.desktop != 'server'
         shell: bash
         run: test/graphics/check-desktop-gl.sh "${DESKTOP}-desktop:dev"
+
+      # The COSMIC halves are the full line's on every line: each binary must
+      # find its libraries and symbols in this image.
+      - name: Check the COSMIC libraries
+        if: matrix.desktop == 'cosmic'
+        shell: bash
+        run: test/cosmic/check-cosmic-libs.sh "${DESKTOP}-desktop:dev"
 
       # Boot ordering: no boot stage waits for the network, NetworkManager is
       # the only network manager, tty1 has a login. check-server.sh runs the
@@ -487,6 +505,38 @@ jobs:
           compression-level: 0
           retention-days: 7
 
+  # COSMIC in both lines: the build job's steps, after the COSMIC prebuilds.
+  # Only this job waits for them; the other variants start as soon as LLVM is
+  # there. A failed prebuild does not stop the release: the build then
+  # compiles that half itself, which may not fit in this job's budget.
+  build-cosmic:
+    name: Build ${{ matrix.desktop }} ISO (${{ matrix.gpu }})
+    needs: [llvm, cosmic]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        desktop:
+          - cosmic
+        gpu:
+          - full
+          - vm
+    # The same environment as the build job.
+    env:
+      DESKTOP: ${{ matrix.desktop }}
+      GPU: ${{ matrix.gpu }}
+      FIRMWARE: ${{ matrix.gpu == 'full' && 'true' || 'false' }}
+      LINE: ${{ matrix.desktop }}${{ matrix.gpu == 'vm' && '-vm' || '' }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      LLVM_IMAGE: ${{ needs.llvm.result == 'success' && needs.llvm.outputs.image || '' }}
+    steps: *build-steps
+
   # Trusted Boot edition: every full line (sway, i3, cosmic, niri) and the
   # server, because Trusted Boot is for real machines with a TPM. Not the vm
   # lines and not the agent. Off until the repository variable
@@ -513,8 +563,8 @@ jobs:
   # PK.key and KEK.key never come here: they only sign key updates, offline.
   build-uki:
     name: Build ${{ matrix.desktop }} Trusted Boot ISO
-    needs: [build]
-    if: ${{ !cancelled() && needs.build.result == 'success' && vars.TRUSTED_BOOT_RELEASE == 'true' }}
+    needs: [build, build-cosmic]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build-cosmic.result == 'success' && vars.TRUSTED_BOOT_RELEASE == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -1009,12 +1059,13 @@ jobs:
     needs:
       - hold-release
       - build
+      - build-cosmic
       - build-uki
       - build-agent
     # Spelled out because the default would also skip this job when only the
-    # LLVM prebuild failed, which the builds recover from. build-uki may be
+    # LLVM or a COSMIC prebuild failed, which the builds recover from. build-uki may be
     # skipped only while the Trusted Boot line is off.
-    if: ${{ !cancelled() && needs.hold-release.result == 'success' && needs.build.result == 'success' && needs.build-agent.result == 'success' && (needs.build-uki.result == 'success' || (needs.build-uki.result == 'skipped' && vars.TRUSTED_BOOT_RELEASE != 'true')) }}
+    if: ${{ !cancelled() && needs.hold-release.result == 'success' && needs.build.result == 'success' && needs.build-cosmic.result == 'success' && needs.build-agent.result == 'success' && (needs.build-uki.result == 'success' || (needs.build-uki.result == 'skipped' && vars.TRUSTED_BOOT_RELEASE != 'true')) }}
     runs-on: ubuntu-24.04
     permissions:
       actions: read
