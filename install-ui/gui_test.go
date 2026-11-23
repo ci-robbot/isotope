@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,11 +17,14 @@ func stubGUI(t *testing.T, cage, cmdline string) string {
 	dir := t.TempDir()
 	run := filepath.Join(dir, "run")
 	t.Setenv("ISOTOPE_INSTALL_RUN_DIR", run)
-	oldCage, oldGUI, oldCmd := cagePath, guiPath, cmdlinePath
-	t.Cleanup(func() { cagePath, guiPath, cmdlinePath = oldCage, oldGUI, oldCmd })
+	oldCage, oldGUI, oldCmd, oldProbe := cagePath, guiPath, cmdlinePath, probePath
+	t.Cleanup(func() { cagePath, guiPath, cmdlinePath, probePath = oldCage, oldGUI, oldCmd, oldProbe })
 	cagePath = filepath.Join(dir, "cage")
 	guiPath = filepath.Join(dir, "isotope-install-gui")
 	cmdlinePath = filepath.Join(dir, "cmdline")
+	// No probe unless a test writes one: the machine's own GPU must not
+	// decide a test.
+	probePath = filepath.Join(dir, "isotope-gpu-probe")
 	for p, body := range map[string]string{cagePath: cage, guiPath: "exit 0"} {
 		if err := os.WriteFile(p, []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
 			t.Fatal(err)
@@ -146,7 +150,7 @@ func TestRunGUIRescueShell(t *testing.T) {
 func TestGUIEnvRendersWithoutAGPU(t *testing.T) {
 	t.Setenv("WLR_RENDERER_ALLOW_SOFTWARE", "")
 	t.Setenv("XCURSOR_THEME", "")
-	env := guiEnv(t.TempDir())
+	env := guiEnv(t.TempDir(), false, "")
 	for _, want := range []string{"WLR_RENDERER_ALLOW_SOFTWARE=1", "XCURSOR_THEME=isotope-installer"} {
 		found := false
 		for _, e := range env {
@@ -157,9 +161,186 @@ func TestGUIEnvRendersWithoutAGPU(t *testing.T) {
 		}
 	}
 	t.Setenv("XCURSOR_THEME", "Bibata")
-	for _, e := range guiEnv(t.TempDir()) {
+	for _, e := range guiEnv(t.TempDir(), false, "") {
 		if strings.HasPrefix(e, "XCURSOR_THEME=") && e != "XCURSOR_THEME=Bibata" {
 			t.Errorf("guiEnv overrode a set XCURSOR_THEME: %s", e)
+		}
+	}
+}
+
+// softwareCage is a cage that records, for each run, the rendering variables
+// it got, and fails before the first frame (no gui-started) unless it runs
+// in software and okInSoftware is set: a GPU whose Mesa driver is missing.
+func softwareCage(okInSoftware bool) string {
+	ok := "exit 1"
+	if okInSoftware {
+		ok = `touch "$r/gui-started"; exit 0`
+	}
+	return `
+r="$ISOTOPE_INSTALL_RUN_DIR"
+echo "${WLR_RENDERER:-} ${LIBGL_ALWAYS_SOFTWARE:-} ${ISOTOPE_SOFTWARE_RENDERING:-}" >> "$r/runs"
+if [ "${LIBGL_ALWAYS_SOFTWARE:-}" = 1 ]; then
+	` + ok + `
+fi
+exit 1`
+}
+
+func cageRuns(t *testing.T) []string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(core.RunDir(), "runs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Split(strings.TrimRight(string(b), "\n"), "\n")
+}
+
+// cage stops before the first frame (no GL driver for the GPU): it starts
+// once more in software, and the GUI comes up there.
+func TestRunGUIRetriesInSoftware(t *testing.T) {
+	stubGUI(t, softwareCage(true), "")
+	fallback, _, err := runGUI()
+	if err != nil || fallback {
+		t.Fatalf("fallback %v, err %v", fallback, err)
+	}
+	runs := cageRuns(t)
+	if len(runs) != 2 {
+		t.Fatalf("cage ran %d times, want 2: %q", len(runs), runs)
+	}
+	if strings.TrimSpace(runs[0]) != "" {
+		t.Errorf("first cage already in software: %q", runs[0])
+	}
+	if runs[1] != "pixman 1 1" {
+		t.Errorf("second cage's environment: %q, want WLR_RENDERER=pixman LIBGL_ALWAYS_SOFTWARE=1 ISOTOPE_SOFTWARE_RENDERING=1", runs[1])
+	}
+}
+
+// Software rendering fails too: the text installer, after exactly one
+// retry.
+func TestRunGUISoftwareFailsTooShowsText(t *testing.T) {
+	stubGUI(t, softwareCage(false), "")
+	fallback, note, err := runGUI()
+	if err != nil || !fallback || !strings.Contains(note, "could not start") {
+		t.Fatalf("fallback %v, note %q, err %v", fallback, note, err)
+	}
+	if runs := cageRuns(t); len(runs) != 2 {
+		t.Fatalf("cage ran %d times, want 2: %q", len(runs), runs)
+	}
+}
+
+// A keyboard-layout relaunch after the software retry stays in software.
+func TestRunGUISoftwareKeepsRelaunches(t *testing.T) {
+	stubGUI(t, `
+r="$ISOTOPE_INSTALL_RUN_DIR"
+echo "${LIBGL_ALWAYS_SOFTWARE:-}" >> "$r/runs"
+[ "${LIBGL_ALWAYS_SOFTWARE:-}" = 1 ] || exit 1
+touch "$r/gui-started"
+if [ ! -f "$r/relaunched" ]; then
+	touch "$r/relaunched"
+	echo '{"next":"account","layout":"it"}' > "$r/state.json"
+	exit 75
+fi
+exit 0`, "")
+	fallback, _, err := runGUI()
+	if err != nil || fallback {
+		t.Fatalf("fallback %v, err %v", fallback, err)
+	}
+	if got := strings.Join(cageRuns(t), ","); got != ",1,1" {
+		t.Fatalf("LIBGL_ALWAYS_SOFTWARE per cage run: %q, want \",1,1\"", got)
+	}
+}
+
+// isotope-gpu-probe says the GPU has no working driver (exit 1): cage
+// starts in software at once, with no failed first try.
+func TestRunGUIStartsInSoftwareWhenTheProbeSaysSo(t *testing.T) {
+	stubGUI(t, softwareCage(true), "")
+	if err := os.WriteFile(probePath, []byte("#!/bin/sh\necho 'hardware radeon: no Mesa driver for this GPU (EGL failed)'\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fallback, _, err := runGUI()
+	if err != nil || fallback {
+		t.Fatalf("fallback %v, err %v", fallback, err)
+	}
+	if runs := cageRuns(t); len(runs) != 1 || runs[0] != "pixman 1 1" {
+		t.Fatalf("cage runs: %q, want one in software", runs)
+	}
+}
+
+// A probe that finds a working driver (exit 0), or no DRM device (exit 2),
+// leaves the first cage on the GPU; exit 1 gives the probe's class.
+func TestGPUNeedsSoftware(t *testing.T) {
+	stubGUI(t, "exit 0", "")
+	if soft, _ := gpuNeedsSoftware(); soft {
+		t.Fatal("software without a probe")
+	}
+	for _, c := range []struct {
+		code  int
+		line  string
+		soft  bool
+		class string
+	}{
+		{0, "AMD CEDAR", false, ""},
+		{2, "no DRM device", false, ""},
+		{1, "hardware radeon: no Mesa driver for this GPU (EGL failed)", true, gpuHardware},
+		{1, "virtual virtio_gpu: software (llvmpipe)", true, gpuVirtual},
+		{1, "firmware simple-framebuffer: software (llvmpipe)", true, gpuFirmware},
+		{1, "", true, gpuHardware},
+	} {
+		body := fmt.Sprintf("#!/bin/sh\necho '%s'\nexit %d\n", c.line, c.code)
+		if err := os.WriteFile(probePath, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if soft, class := gpuNeedsSoftware(); soft != c.soft || class != c.class {
+			t.Errorf("probe %d %q: %v %q, want %v %q", c.code, c.line, soft, class, c.soft, c.class)
+		}
+	}
+}
+
+// A VM without 3D: cage starts in software at once, and the GUI gets no
+// warning.
+func TestRunGUIVirtualGPUHasNoWarning(t *testing.T) {
+	stubGUI(t, softwareCage(true), "")
+	if err := os.WriteFile(probePath, []byte("#!/bin/sh\necho 'virtual bochs-drm: software (llvmpipe)'\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fallback, _, err := runGUI()
+	if err != nil || fallback {
+		t.Fatalf("fallback %v, err %v", fallback, err)
+	}
+	if runs := cageRuns(t); len(runs) != 1 || runs[0] != "pixman 1 " {
+		t.Fatalf("cage runs: %q, want one in software with no warning", runs)
+	}
+}
+
+func TestGUIEnvSoftware(t *testing.T) {
+	t.Setenv("LIBGL_ALWAYS_SOFTWARE", "")
+	has := func(env []string, want string) bool {
+		for _, e := range env {
+			if e == want {
+				return true
+			}
+		}
+		return false
+	}
+	soft := guiEnv(t.TempDir(), true, gpuHardware)
+	for _, want := range []string{"WLR_RENDERER=pixman", "LIBGL_ALWAYS_SOFTWARE=1", "GBM_ALWAYS_SOFTWARE=1", "ISOTOPE_SOFTWARE_RENDERING=1", "ISOTOPE_GPU_CLASS=hardware"} {
+		if !has(soft, want) {
+			t.Errorf("software guiEnv lacks %s", want)
+		}
+	}
+	hard := guiEnv(t.TempDir(), false, "")
+	for _, unwanted := range []string{"WLR_RENDERER=pixman", "LIBGL_ALWAYS_SOFTWARE=1", "GBM_ALWAYS_SOFTWARE=1", "ISOTOPE_SOFTWARE_RENDERING=1"} {
+		if has(hard, unwanted) {
+			t.Errorf("hardware guiEnv has %s", unwanted)
+		}
+	}
+	// A virtual GPU without 3D: software, but no warning in the GUI.
+	virt := guiEnv(t.TempDir(), true, gpuVirtual)
+	if !has(virt, "WLR_RENDERER=pixman") || !has(virt, "GBM_ALWAYS_SOFTWARE=1") {
+		t.Error("virtual guiEnv is not in software")
+	}
+	for _, e := range virt {
+		if strings.HasPrefix(e, "ISOTOPE_SOFTWARE_RENDERING=") || strings.HasPrefix(e, "ISOTOPE_GPU_CLASS=") {
+			t.Errorf("virtual guiEnv warns: %s", e)
 		}
 	}
 }

@@ -55,6 +55,10 @@ exec --no-startup-id $term
 exec --no-startup-id isotope-welcome --login
 # Night light (xsct), if the user turned it on in an earlier session.
 exec --no-startup-id isotope-night-light restore
+# One notification when the screen is drawn in software (no Mesa driver for
+# the GPU; /usr/libexec/isotope-gpu-env). Nothing otherwise. The agent image
+# deletes this line.
+exec --no-startup-id isotope-gpu-notice
 
 # help-row: Windows | Super + drag | Move a floating window with the mouse
 floating_modifier $mod

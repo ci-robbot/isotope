@@ -7,6 +7,10 @@
 # The system language (Welcome page), as LANG. ly sources /etc/profile only for
 # sh and bash users, so read it here too.
 [ -f /etc/profile.d/isotope-locale.sh ] && . /etc/profile.d/isotope-locale.sh
+# Software rendering when Mesa has no working driver for the GPU. XLibre's
+# modesetting driver already runs without glamor then; this gives GL clients
+# (GLX through llvmpipe) and Wayland tools LIBGL_ALWAYS_SOFTWARE=1.
+[ -r /usr/libexec/isotope-gpu-env ] && . /usr/libexec/isotope-gpu-env
 
 # Flatpak apps (the first-run browser among them) fail with "Authorization
 # required, but no authorization protocol specified" unless the sandbox can read

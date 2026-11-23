@@ -5,6 +5,10 @@ import (
 	"image"
 	"testing"
 
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
+
 	"github.com/kairos-community/isotope/install-ui/core"
 )
 
@@ -186,5 +190,40 @@ func TestGithubLookupIsDebouncedAndOnce(t *testing.T) {
 	u.drain()
 	if txt, good, ok := u.githubStatus(); !ok || !good || txt != "2 keys found" {
 		t.Fatalf("status %q %v %v", txt, good, ok)
+	}
+}
+
+// The welcome page's software line takes room only when cage runs in
+// software, so the default page (and its screenshots) stay as they were.
+func TestSoftwareNoteOnlyInSoftware(t *testing.T) {
+	u := fixture(t, false)
+	var ops op.Ops
+	gtx := layout.Context{
+		Ops:         &ops,
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Constraints: layout.Exact(image.Pt(560, 400)),
+	}
+	if d := u.softwareNote(gtx); d.Size != (image.Point{}) {
+		t.Fatalf("software note drawn on a working GPU: %v", d.Size)
+	}
+	u.software = true
+	if d := u.softwareNote(gtx); d.Size.Y == 0 {
+		t.Fatal("no software note in software rendering")
+	}
+}
+
+func TestSoftwareLineNamesTheCause(t *testing.T) {
+	u := fixture(t, false)
+	u.software = true
+	if got := u.softwareLine(); got != softwareText {
+		t.Errorf("full image, real GPU: %q", got)
+	}
+	u.vmImage = true
+	if got := u.softwareLine(); got != softwareTextVM {
+		t.Errorf("vm image, real GPU: %q", got)
+	}
+	u.gpuClass = "firmware"
+	if got := u.softwareLine(); got != softwareTextFirmware {
+		t.Errorf("firmware framebuffer: %q", got)
 	}
 }

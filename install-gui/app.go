@@ -135,6 +135,15 @@ type UI struct {
 	// with; canRelaunch says isotope-install-ui can restart it with another.
 	runLayout, runVariant string
 	canRelaunch           bool
+	// software says the screen is drawn in software, because Mesa has no
+	// working driver for the GPU: isotope-install-ui started cage that way
+	// (ISOTOPE_SOFTWARE_RENDERING=1; not on a virtual GPU). The first page
+	// says so. gpuClass is why (ISOTOPE_GPU_CLASS: hardware or firmware),
+	// and vmImage says this is the vm image line, which has no hardware
+	// drivers at all.
+	software bool
+	gpuClass string
+	vmImage  bool
 
 	focus     event.Tag // focus this on the next frame
 	scale     float32   // Ctrl+Plus and Ctrl+Minus

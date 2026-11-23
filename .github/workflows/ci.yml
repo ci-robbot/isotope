@@ -271,6 +271,8 @@ jobs:
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh
+      - name: Software-rendering fallback hook, notice and wiring
+        run: test/graphics/check-gpu-fallback.sh
       - name: Clipboard history dispatch and wiring
         run: test/clipboard/dispatch_test.sh
       - name: Extensions menu entry and wiring

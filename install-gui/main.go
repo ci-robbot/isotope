@@ -60,6 +60,9 @@ func main() {
 	u.runLayout = orDefault(os.Getenv("XKB_DEFAULT_LAYOUT"), core.DefaultLayout)
 	u.runVariant = os.Getenv("XKB_DEFAULT_VARIANT")
 	u.canRelaunch = os.Getenv("ISOTOPE_INSTALL_GUI_RELAUNCH") == "1"
+	u.software = os.Getenv("ISOTOPE_SOFTWARE_RENDERING") == "1"
+	u.gpuClass = os.Getenv("ISOTOPE_GPU_CLASS")
+	u.vmImage = releaseKey("/etc/isotope/release", "GPU") == "vm"
 
 	var restored *core.GUIState
 	if s, err := core.ReadGUIState(core.GUIStatePath()); err == nil {
@@ -206,6 +209,20 @@ func install(win *app.Window, u *UI, wizards chan<- core.Wizard, confirmed <-cha
 	if last != nil {
 		send(*last)
 	}
+}
+
+// releaseKey is one KEY=value of the release file, "" when it is missing.
+func releaseKey(path, key string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(l, "="); ok && k == key {
+			return v
+		}
+	}
+	return ""
 }
 
 // versionLine is the sidebar's "Isotope v0.0.20 · sway", from the release

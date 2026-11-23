@@ -78,6 +78,9 @@ exec $term
 # use the session bus start-desktop opened.
 exec isotope-welcome --login
 exec isotope-update tray
+# One notification when the screen is drawn in software (no Mesa driver for
+# the GPU; /usr/libexec/isotope-gpu-env). Nothing otherwise.
+exec isotope-gpu-notice
 # Night light (wlsunset), if the user turned it on in an earlier session.
 exec isotope-night-light restore
 # Clipboard history (Super+Ctrl+V): wl-paste gives each copy to cliphist.

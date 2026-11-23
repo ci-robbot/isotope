@@ -1,0 +1,83 @@
+# Software rendering when Mesa has no working driver for the GPU. Sourced
+# (not run) before a compositor starts:
+#   - /etc/profile.d/isotope-gpu.sh: greetd sources /etc/profile with
+#     /bin/sh before every command it runs (COSMIC's session and its login
+#     screen), and ly's session setup does for sh, bash and fish users;
+#   - sway's and i3's start-desktop, isotope-niri-session (niri's session
+#     entry) and isotope-greeter-start (COSMIC's login screen), so a user
+#     whose shell skips /etc/profile (zsh) gets it too.
+# It is safe under `set -e` and runs once per environment
+# (ISOTOPE_GPU_CHECKED), so the second source costs nothing.
+#
+# isotope-gpu-probe makes a GBM device and an EGL context on the primary GPU,
+# as a compositor does. Mesa does not fall back to software by itself when
+# the driver its loader picks from the PCI id is missing or broken: EGL fails
+# and the compositor exits (wlroots: "Could not initialize renderer") or
+# shows only a cursor. When the probe exits 1 (no hardware driver works, or
+# the driver crashed), the session gets:
+#   LIBGL_ALWAYS_SOFTWARE=1        EGL and GL through llvmpipe: wlroots'
+#                                  renderer (EGL device platform) and every
+#                                  GL client, GLX clients on i3 too;
+#   GBM_ALWAYS_SOFTWARE=1          GBM through kms_swrast, never the
+#                                  hardware driver: smithay (niri,
+#                                  cosmic-comp, the COSMIC login screen) makes
+#                                  its EGL display on GBM, where Mesa reads
+#                                  only this variable, and wlroots' GBM
+#                                  allocator; without it a driver that
+#                                  crashes still loads there;
+#   WLR_RENDERER_ALLOW_SOFTWARE=1  wlroots (sway, cage) refuses llvmpipe
+#                                  without it;
+#   ISOTOPE_SOFTWARE_RENDERING=1   for Isotope's own programs;
+# and the marker $XDG_RUNTIME_DIR/isotope/software-rendering, which holds the
+# probe's line ("hardware radeon: no Mesa driver for this GPU (EGL failed)";
+# the first word is the class: hardware, virtual or firmware).
+# isotope-gpu-notice tells the user (not on a virtual GPU); Isotope System's
+# About page shows it.
+#
+# Exit 0 takes back a fallback set before: in this environment, and in the
+# systemd user manager, which niri-session's import-environment filled in an
+# earlier session and which outlives a quick log out and in. Exit 2 (no DRM
+# device, or one this user cannot open) cleans the user manager too, and
+# both remove the marker. The D-Bus activation environment, which
+# niri-session fills with `dbus-update-activation-environment --all`, is not
+# cleaned.
+# A new marker removes the notice's once-per-session stamp.
+if [ -z "${ISOTOPE_GPU_CHECKED:-}" ]; then
+    _ig_probe=${ISOTOPE_GPU_PROBE:-/usr/bin/isotope-gpu-probe}
+    if [ -x "$_ig_probe" ]; then
+        export ISOTOPE_GPU_CHECKED=1
+        _ig_rc=0
+        _ig_line=$("$_ig_probe" 2>/dev/null) || _ig_rc=$?
+        _ig_dir=
+        if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
+            _ig_dir="$XDG_RUNTIME_DIR/isotope"
+        fi
+        case "$_ig_rc" in
+            0 | 2)
+                if [ "$_ig_rc" = 0 ] && [ "${ISOTOPE_SOFTWARE_RENDERING:-}" = 1 ]; then
+                    unset LIBGL_ALWAYS_SOFTWARE GBM_ALWAYS_SOFTWARE WLR_RENDERER_ALLOW_SOFTWARE ISOTOPE_SOFTWARE_RENDERING
+                fi
+                if command -v systemctl >/dev/null 2>&1 &&
+                    systemctl --user show-environment 2>/dev/null | grep -qx 'ISOTOPE_SOFTWARE_RENDERING=1'; then
+                    systemctl --user unset-environment LIBGL_ALWAYS_SOFTWARE GBM_ALWAYS_SOFTWARE \
+                        WLR_RENDERER_ALLOW_SOFTWARE ISOTOPE_SOFTWARE_RENDERING >/dev/null 2>&1 || :
+                fi
+                if [ -n "$_ig_dir" ]; then
+                    rm -f "$_ig_dir/software-rendering" "$_ig_dir/software-rendering-noticed"
+                fi
+                ;;
+            *)
+                export LIBGL_ALWAYS_SOFTWARE=1 GBM_ALWAYS_SOFTWARE=1 WLR_RENDERER_ALLOW_SOFTWARE=1 ISOTOPE_SOFTWARE_RENDERING=1
+                if [ -n "$_ig_dir" ] && mkdir -p "$_ig_dir" 2>/dev/null; then
+                    rm -f "$_ig_dir/software-rendering" "$_ig_dir/software-rendering-noticed"
+                    # noclobber: never write through a link someone put
+                    # in place after the rm.
+                    (set -C; printf '%s\n' "${_ig_line:-hardware unknown: no Mesa driver for this GPU}" \
+                        > "$_ig_dir/software-rendering") 2>/dev/null || :
+                fi
+                ;;
+        esac
+        unset _ig_line _ig_rc _ig_dir
+    fi
+    unset _ig_probe
+fi

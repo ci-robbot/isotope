@@ -1,9 +1,10 @@
-# Builds gl-probe for test/graphics/check-desktop-gl.sh with the Hadron
+# Builds gl-probe and vk-probe for test/graphics/check-desktop-gl.sh with the Hadron
 # toolchain the image is built with, so it runs on the image's musl.
 ARG HADRON_VERSION
 FROM ghcr.io/kairos-io/hadron-toolchain:${HADRON_VERSION} AS build
-COPY gl-probe.c /src/gl-probe.c
-RUN cc -O2 -Wall -Werror -o /gl-probe /src/gl-probe.c
+COPY gl-probe.c vk-probe.c /src/
+RUN cc -O2 -Wall -Werror -o /gl-probe /src/gl-probe.c && \
+    cc -O2 -Wall -Werror -o /vk-probe /src/vk-probe.c
 
 FROM scratch
-COPY --from=build /gl-probe /gl-probe
+COPY --from=build /gl-probe /vk-probe /

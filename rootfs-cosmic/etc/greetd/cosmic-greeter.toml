@@ -8,5 +8,7 @@ vt = 1
 service = "cosmic-greeter"
 
 [default_session]
-command = "cosmic-greeter-start"
+# isotope-greeter-start runs cosmic-greeter-start with software rendering
+# when Mesa has no working driver for the GPU (/usr/libexec/isotope-gpu-env).
+command = "isotope-greeter-start"
 user = "cosmic-greeter"

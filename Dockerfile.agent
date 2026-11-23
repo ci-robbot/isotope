@@ -227,6 +227,14 @@ RUN rm -f /usr/bin/isotope-system /usr/share/applications/isotope-system.desktop
 # isotope-clipboard is gone.
 RUN rm -f /usr/bin/isotope-clipboard /usr/bin/clipnotify && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-clipboard'
+# No software-rendering notice: the appliance is a VM, where drawing in
+# software is normal, and no person reads it. The probe and the session's
+# fallback (/usr/libexec/isotope-gpu-env, through ly's login shell) stay, so
+# GL apps still get llvmpipe when Mesa has no driver for the GPU.
+RUN rm -f /usr/bin/isotope-gpu-notice && \
+    sed -i '/isotope-gpu-notice/d' /etc/i3/config && \
+    ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-gpu-notice' && \
+    test -x /usr/bin/isotope-gpu-probe
 # No system extensions. An appliance must not take root code from a menu: the
 # isotope-ext command goes (isotope-menu and isotope-help hide it then), and so
 # do its catalog list and the setting that merges unsigned extensions. Their

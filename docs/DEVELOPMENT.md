@@ -84,10 +84,13 @@ kairos-init from the Kairos monorepo (`ghcr.io/kairos-io/kairos/kairos-init:mast
   from a GSettings vendor override (`color-scheme='prefer-dark'`, GTK3 theme
   `Adwaita-dark`); on COSMIC the COSMIC portal reports COSMIC's own theme.
 - **Two images per desktop:** the standard one, for desktops and laptops, has
-  Mesa's Intel (`iris`), AMD (`radeonsi`) and NVIDIA (`nouveau`) drivers, a
+  Mesa's Intel (`iris`, `crocus`, `i915`), AMD (`radeonsi`, `r600`, `r300`)
+  and NVIDIA (`nouveau`) GL drivers, their Vulkan drivers (`anv`, `hasvk`,
+  `radv`, NVK) and VA-API video drivers, a
   chosen part of `linux-firmware`, Intel SOF audio firmware and CPU microcode
   (`GPU=full FIRMWARE=true`). The VM one has only
-  `llvmpipe`, `virgl` and the other virtual drivers, and no firmware
+  `llvmpipe`, `virgl` and the other virtual drivers (Vulkan: `lavapipe`
+  and venus), and no firmware
   (`GPU=vm`, the default of a local build). Both run in a VM; the VM one is
   smaller. See [Releases](#releases).
 
@@ -235,7 +238,7 @@ Every desktop flavor is released in two lines:
 | Line | Build | ISO and upgrade image | For |
 | --- | --- | --- | --- |
 | full | `GPU=full FIRMWARE=true` | `isotope-<flavor>-<tag>-amd64.iso`, `:<flavor>-<tag>` | desktops and laptops: Intel and AMD GPU drivers, Wi-Fi, Bluetooth, GPU and audio firmware, CPU microcode. Also runs in a VM (llvmpipe, virgl) |
-| vm | `GPU=vm` | `isotope-<flavor>-vm-<tag>-amd64.iso`, `:<flavor>-vm-<tag>` | virtual machines: about 0.3 GB smaller, no hardware GPU drivers, no firmware |
+| vm | `GPU=vm` | `isotope-<flavor>-vm-<tag>-amd64.iso`, `:<flavor>-vm-<tag>` | virtual machines: about 0.4 GB smaller, no hardware GPU, Vulkan or VA-API drivers, no firmware |
 
 The agent is a VM appliance and has one line, built with `GPU=vm`:
 `isotope-agent-<tag>-amd64.iso` and `:agent-<tag>`.
@@ -532,7 +535,8 @@ not test it.
 ### Hardware GPU (accelerated GL)
 
 The default Mesa build (`GPU=vm`) ships only software and virtual drivers:
-`llvmpipe`, `virgl`, `softpipe` and `svga`. In a VM with 3D acceleration
+`llvmpipe`, `virgl`, `softpipe` and `svga`, and the Vulkan drivers `lavapipe`
+(on the CPU) and venus (virtio-gpu). In a VM with 3D acceleration
 (virtio-gpu with OpenGL) Mesa uses `virgl` and renders on the host GPU. On any
 other display (virtio-gpu or QXL without 3D, `-vga std`, or real hardware with
 `GPU=vm`) it uses `llvmpipe`, a multi-threaded rasterizer that compiles shaders
@@ -550,12 +554,24 @@ docker build --build-arg DESKTOP=i3 --build-arg GPU=full \
   --build-arg FIRMWARE=true -t i3-desktop:hw .
 ```
 
-`GPU=full` also builds Mesa `iris` (Intel), `radeonsi` (AMD) and `nouveau`
-(NVIDIA, the open kernel driver; no NVK Vulkan). Every mode links LLVM
-(`llvmpipe` needs it); `iris` and `radeonsi` also need libclc and SPIRV;
-`nouveau` needs only `libdrm_nouveau`, which the libdrm stage builds. Without
-`nouveau`, a compositor on an NVIDIA GPU finds no GL or GBM driver for the
-render node: the screen shows the hardware cursor and nothing else.
+`GPU=full` also builds Mesa `iris`, `crocus` and `i915` (Intel, from gen 2
+to today), `radeonsi`, `r600` and `r300` (AMD, from R300 to today),
+`nouveau` (NVIDIA, the open kernel driver) and `zink` (GL on Vulkan); the
+Vulkan drivers `anv` and `hasvk` (Intel), `radv` (AMD) and NVK (NVIDIA) with
+the `device-select` layer; and the VA-API video drivers (`radeonsi`, `r600`,
+`nouveau`, `virgl`, every codec) with libva: the x86 set the big
+distributions ship. Intel's VA-API driver (intel-media-driver) is not built.
+Every mode links LLVM (`llvmpipe` and `lavapipe` need it; `r300` and `i915`
+use its draw module, `r600` its AMDGPU target); `iris`, `radeonsi` and the
+Vulkan drivers also need libclc and SPIRV; NVK is Rust (rustc, bindgen and
+cbindgen, build time only); `i915` needs `libdrm_intel` (and so
+libpciaccess), which the libdrm stage builds. The Vulkan loader
+(`libvulkan.so.1`, the `vulkan-loader` stages) comes with Mesa on both lines. Without a driver for the GPU,
+a compositor finds no GL or GBM driver for the render node: the screen shows
+the hardware cursor and nothing else, or the compositor exits. Every
+session therefore runs `isotope-gpu-probe` first and falls back to software
+rendering (llvmpipe) when no hardware driver works; see AGENTS.md,
+"Graphics drivers and software fallback".
 The example builds its **own** LLVM/clang/libclc + SPIRV stack on top of the
 published `hadron-toolchain` (same musl ABI — no Alpine cross-mix) as dedicated
 stages in this Dockerfile, so **the main Hadron toolchain is never touched and
@@ -565,12 +581,16 @@ itself compiles for about three hours; CI and release builds take it from a
 prebuilt image instead (`LLVM_IMAGE`, see the Makefile).
 
 Mesa is built with `-Dllvm=enabled` and `-Dcpp_rtti=false` (the libLLVM is built
-without RTTI). The image bundles only `libLLVM.so` (~125 MB), and for
-`GPU=full` also `libelf.so`, because the megadriver links them at runtime.
+without RTTI), and without LTO (Mesa 26 refuses it). The image bundles only
+`libLLVM.so` (~125 MB), and for `GPU=full` also `libelf.so`, the shared
+SPIRV-Tools libraries and libva, because the drivers link them at runtime.
+Mesa's version (`MESA_VERSION`, in both Mesa stages) is tracked by Renovate,
+which opens one PR for the two.
 
-Validated: Mesa 25.3 builds `iris`/`radeonsi`/`virgl`/`softpipe` into
-`libgallium-25.3.0.so` against the example-built libLLVM, the megadriver resolves
-all runtime symbols, and the resulting ISO boots. Actual GPU *rendering* is
+Validated: Mesa 26.3.1 builds every driver above into
+`libgallium-26.3.1.so` and the `libvulkan_*.so` drivers against the
+example-built libLLVM, every library they need resolves on the Hadron base,
+and llvmpipe (GL ES) and lavapipe (Vulkan) answer in a container. Actual GPU *rendering* is
 validated on physical hardware — QEMU has no real GPU, so a VM boot uses
 llvmpipe or virgl while the hardware drivers ride along for real metal.
 

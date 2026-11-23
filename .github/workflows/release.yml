@@ -247,7 +247,9 @@ jobs:
           docker push "$STAGE_OUT"
 
   # Every flavor in two lines. full (GPU=full FIRMWARE=true) is the standard
-  # one: Mesa's iris, radeonsi and nouveau drivers and linux-firmware for real
+  # one: Mesa's Intel (iris, crocus, i915), AMD (radeonsi, r600, r300) and
+  # NVIDIA (nouveau) drivers, their Vulkan and VA-API drivers and
+  # linux-firmware for real
   # Intel, AMD and NVIDIA machines, with llvmpipe for VMs too. vm (GPU=vm) has
   # only the virtual and software drivers and no firmware: smaller, for VMs.
   # The server edition (no desktop) has one line, server-<tag>; it is GPU=full

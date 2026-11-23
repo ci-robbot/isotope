@@ -152,8 +152,40 @@ func (u *UI) welcome(gtx layout.Context) layout.Dimensions {
 				}),
 				guikit.VGap(40),
 				layout.Rigid(u.images),
+				layout.Rigid(u.softwareNote),
 			)
 		})
+	})
+}
+
+// The welcome page's line when cage runs in software rendering
+// (isotope-install-ui's fallback when Mesa has no working driver for the
+// GPU). A virtual GPU without 3D gets none: software is normal there.
+const (
+	softwareText         = "No graphics driver for this GPU: the screen is drawn in software, so it can be slow."
+	softwareTextVM       = "This image is for virtual machines and has no graphics drivers: the screen is drawn in software, so it can be slow. On a computer, install the standard Isotope image."
+	softwareTextFirmware = "The graphics driver is off or did not load (for example, nomodeset): the screen is drawn in software, so it can be slow."
+)
+
+// softwareLine picks the line for the GPU class and the image line.
+func (u *UI) softwareLine() string {
+	switch {
+	case u.gpuClass == "firmware":
+		return softwareTextFirmware
+	case u.vmImage:
+		return softwareTextVM
+	}
+	return softwareText
+}
+
+// softwareNote is that line, or nothing on a GPU with a working driver, so
+// the page stays as it was there.
+func (u *UI) softwareNote(gtx layout.Context) layout.Dimensions {
+	if !u.software {
+		return layout.Dimensions{}
+	}
+	return layout.Inset{Top: 28}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		return u.LabelLines(gtx, guikit.StSmall, guikit.ColWarn, 1.45, u.softwareLine())
 	})
 }
 

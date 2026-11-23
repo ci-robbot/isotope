@@ -23,11 +23,13 @@ ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:${HADRON_VERSION}
 # Select the display server + window manager pair: sway, i3, cosmic or niri.
 # server builds the server edition instead, with no desktop (server-default).
 ARG DESKTOP=sway
-# GPU=vm (default): software/virtual GL only (llvmpipe, virgl, softpipe, svga).
-#   llvmpipe links libLLVM, so the llvm stage below is built (or taken from
-#   LLVM_IMAGE), but not the SPIRV stages.
-# GPU=full: also hardware GL (iris/radeonsi/nouveau), which adds the SPIRV
-#   stack below.
+# GPU=vm (default): software/virtual GL only (llvmpipe, virgl, softpipe, svga)
+#   and Vulkan on the CPU or through virtio-gpu (lavapipe, venus). llvmpipe
+#   links libLLVM, so the llvm stage below is built (or taken from
+#   LLVM_IMAGE), but not the SPIRV stages nor Rust.
+# GPU=full: also hardware GL (iris, crocus, i915, radeonsi, r600, r300,
+#   nouveau, zink), Vulkan (radv, anv, hasvk, NVK) and VA-API, which adds the
+#   SPIRV stack below and Rust (for NVK). See the mesa stage.
 ARG GPU=vm
 # kairos-init image for the bootable layer (final `kairos` stage). kairos-init
 # now lives in the kairos-io/kairos monorepo, whose master pipeline promotes
@@ -64,9 +66,9 @@ RUN cd /build/splash && make clean && make && make test && \
 
 FROM toolchain AS wayland
 # renovate: datasource=gitlab-tags depName=wayland/wayland registryUrl=https://gitlab.freedesktop.org extractVersion=^(?<version>\d+(\.\d+)*)$
-ARG WAYLAND_VERSION=1.24.0
+ARG WAYLAND_VERSION=1.25.0
 # renovate: datasource=gitlab-tags depName=wayland/wayland-protocols registryUrl=https://gitlab.freedesktop.org extractVersion=^(?<version>\d+(\.\d+)*)$
-ARG WAYLAND_PROTOCOLS_VERSION=1.46
+ARG WAYLAND_PROTOCOLS_VERSION=1.49
 RUN mkdir -p /wayland
 WORKDIR /build
 RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://gitlab.freedesktop.org/wayland/wayland/-/archive/${WAYLAND_VERSION}/wayland-${WAYLAND_VERSION}.tar -o wayland.tar && tar -xf wayland.tar && rm wayland.tar && mv wayland-* wayland-src
@@ -81,16 +83,37 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dtests=false
 RUN DESTDIR=/wayland ninja -C buildDir install
 
 
+# libpciaccess: libdrm_intel needs it, and the X server (x11-libs takes it
+# from here). It is in /libdrm too, so every image that has libdrm_intel has it.
+FROM toolchain AS libpciaccess
+# renovate: datasource=gitlab-tags depName=xorg/lib/libpciaccess registryUrl=https://gitlab.freedesktop.org extractVersion=^libpciaccess-(?<version>\d+(\.\d+)*)$
+ARG LIBPCIACCESS_VERSION=0.18.1
+RUN pip3 install meson ninja
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://xorg.freedesktop.org/archive/individual/lib/libpciaccess-${LIBPCIACCESS_VERSION}.tar.xz -o libpciaccess.tar.xz && \
+    tar -xf libpciaccess.tar.xz && cd libpciaccess-${LIBPCIACCESS_VERSION} && \
+    meson setup buildDir ${COMMON_MESON_FLAGS} -Dzlib=disabled && \
+    DESTDIR=/libpciaccess ninja -C buildDir install
+
+
+# libdrm with every x86 driver API on, not left to "auto": Mesa's i915
+# driver (GPU=full) links libdrm_intel, which needs libpciaccess; radeonsi and
+# radv link libdrm_amdgpu (2.4.133 or later since Mesa 26); and a missing
+# dependency must fail here, not drop the API in silence.
 FROM toolchain AS libdrm
+COPY --from=libpciaccess /libpciaccess /
+COPY --from=libpciaccess /libpciaccess /libdrm
 # renovate: datasource=gitlab-tags depName=mesa/drm registryUrl=https://gitlab.freedesktop.org extractVersion=^libdrm-(?<version>\d+(\.\d+)*)$
-ARG LIBDRM_VERSION=2.4.129
+ARG LIBDRM_VERSION=2.4.133
 RUN mkdir -p /libdrm
 WORKDIR /build
 RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://dri.freedesktop.org/libdrm/libdrm-${LIBDRM_VERSION}.tar.xz -o libdrm.tar.xz && tar -xf libdrm.tar.xz && rm libdrm.tar.xz && mv libdrm-* libdrm-src
 WORKDIR /build/libdrm-src
 RUN pip3 install meson ninja
-RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dtests=false
-RUN DESTDIR=/libdrm ninja -C buildDir install
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dtests=false -Dintel=enabled -Dradeon=enabled \
+      -Damdgpu=enabled -Dnouveau=enabled -Dvmwgfx=enabled
+RUN DESTDIR=/libdrm ninja -C buildDir install && \
+    for l in intel.so.1 radeon.so.1 amdgpu.so.1 nouveau.so.2; do test -e /libdrm/usr/lib/libdrm_$l || exit 1; done
 
 
 # systemd/libudev in the Hadron musl toolchain is linked against libucontext.
@@ -110,7 +133,7 @@ RUN make ARCH=x86_64 DESTDIR=/libucontext install
 
 # ===========================================================================
 # LLVM / SPIRV stack for Mesa: llvmpipe (every GPU mode) and iris + radeonsi
-# (GPU=full).
+# (GPU=full; r600, r300 and i915 use the same LLVM, see the mesa stage).
 #
 # Kept ENTIRELY inside this example so the main Hadron toolchain Dockerfile is
 # never touched: these stages build LLVM/clang/libclc + SPIRV on top of the
@@ -123,7 +146,7 @@ RUN make ARCH=x86_64 DESTDIR=/libucontext install
 # stage from a prebuilt image (LLVM_IMAGE in the Makefile).
 #
 # Validated on hadron-toolchain (musl / GCC 15): LLVM 20.1.8 (LLVM 18 fails on
-# GCC 15), amdgcn libclc, SPIRV-Tools, and llvm-spirv all compile; Mesa 25.3
+# GCC 15), amdgcn libclc, SPIRV-Tools, and llvm-spirv all compile; Mesa 26.3
 # links iris/radeonsi against them.
 # ===========================================================================
 
@@ -149,7 +172,8 @@ RUN cd spirv-tools && cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE
 # LLVM + clang + amdgcn libclc. LTO off (brutal for LLVM); shared libLLVM dylib;
 # in-tree SPIRV backend kept so clang can emit SPIR-V. The spirv libclc targets
 # need llvm-spirv at configure time (circular dep on LLVM), so libclc builds the
-# amdgcn targets only — enough for radeonsi + Mesa's libclc dependency.
+# amdgcn targets only — enough for radeonsi + Mesa's libclc dependency. The
+# AMDGPU target also holds the R600 processors, which r600 asks LLVM for.
 FROM toolchain AS llvm
 # renovate: datasource=github-tags depName=llvm/llvm-project extractVersion=^llvmorg-(?<version>\d+(\.\d+)*)$
 ARG LLVM_VERSION=20.1.8
@@ -244,67 +268,268 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dx11=disabled -Dglx=disabled \
 RUN DESTDIR=/libglvnd ninja -C buildDir install
 
 
+# Rust compiler from the pinned Alpine image: build time only, nothing it links
+# ships. Used by Mesa's NVK (GPU=full), the i3 screenshot tools and the COSMIC
+# stages, the same way Dockerfile.agent builds cua-driver. It is declared
+# before all of them because BuildKit resolves --from only against stages
+# defined above the consumer.
+FROM rust:1.97.0-alpine3.22 AS rust-toolchain
+
+
+# Mesa's Rust tools, for NVK (the nouveau Vulkan driver, GPU=full): rustc,
+# bindgen and cbindgen. Built here against Hadron's musl with crt-static off,
+# so bindgen can dlopen the llvm stage's libclang (the Alpine image's
+# binaries are static and cannot). Mesa refuses bindgen 0.72.0, 0.73.0 and
+# 0.73.1 (meson.build), so check its list before a bump. The toolchain's own
+# static musl (self-contained/libc.a) is removed: Mesa links NVK's Rust
+# library with -L to that directory (for libunwind.a), so the linker took
+# libc.a from there before the system libc.so and put a second, never
+# initialized musl into libvulkan_nouveau.so, which crashed in malloc as soon
+# as the loader opened it. Build time only:
+# nothing here ships. GPU=vm builds no Rust driver and takes the empty
+# mesa-rust-vm stage, so it never pulls the Rust image.
+FROM toolchain AS mesa-rust-full
+COPY --from=rust-toolchain /usr/local/cargo/ /usr/local/cargo/
+COPY --from=rust-toolchain /usr/local/rustup/ /usr/local/rustup/
+ENV CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:${PATH} \
+    RUSTFLAGS="-C target-feature=-crt-static" \
+    CARGO_INCREMENTAL=0
+# renovate: datasource=crate depName=bindgen-cli
+ARG BINDGEN_VERSION=0.72.1
+# renovate: datasource=crate depName=cbindgen
+ARG CBINDGEN_VERSION=0.29.4
+RUN cargo install bindgen-cli --version ${BINDGEN_VERSION} --locked && \
+    cargo install cbindgen --version ${CBINDGEN_VERSION} --locked && \
+    rm -rf /usr/local/cargo/registry /usr/local/cargo/git && \
+    rm /usr/local/rustup/toolchains/*/lib/rustlib/x86_64-unknown-linux-musl/lib/self-contained/libc.a && \
+    mkdir -p /mesa-rust/usr/local && mv /usr/local/cargo /usr/local/rustup /mesa-rust/usr/local/
+
+FROM toolchain AS mesa-rust-vm
+RUN mkdir -p /mesa-rust/usr/local
+
+FROM mesa-rust-${GPU} AS mesa-rust
+
+
+# glslangValidator: Mesa compiles the ray-tracing BVH shaders of radv, anv
+# and lavapipe with it at build time (it wants 12.2 or later). Build time only:
+# only the binary goes to the Mesa stages, nothing ships. No SPIRV-Tools
+# optimizer (ENABLE_OPT=OFF): Mesa does not ask glslang to optimize.
+FROM toolchain AS glslang
+# renovate: datasource=github-tags depName=KhronosGroup/glslang versioning=regex:^vulkan-sdk-(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)\.(?<build>\d+)$
+ARG GLSLANG_VERSION=vulkan-sdk-1.4.363.0
+RUN pip3 install ninja
+WORKDIR /b
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/KhronosGroup/glslang/archive/refs/tags/${GLSLANG_VERSION}.tar.gz -o g.tgz && \
+    tar -xf g.tgz && mv glslang-* glslang
+RUN cd glslang && cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
+      -DENABLE_OPT=OFF -DGLSLANG_TESTS=OFF -DBUILD_SHARED_LIBS=OFF && \
+    ninja -C build -j$(nproc) && DESTDIR=/b/out ninja -C build install && \
+    mkdir -p /glslang/usr/bin && cp -a /b/out/usr/bin/glslang* /glslang/usr/bin/ && \
+    /glslang/usr/bin/glslangValidator --version
+
+
+# The Vulkan loader (libvulkan.so.1), which finds Mesa's drivers through the
+# ICD files in /usr/share/vulkan/icd.d. Without it no native Vulkan app and
+# no zink (GL on Vulkan) works; Flatpak apps bring their own. The headers
+# and the loader are one Vulkan SDK release; the headers are only for the
+# loader's build, and only the runtime library goes to the images (no
+# headers, pkg-config or CMake files: nothing on the image builds against
+# them, and the C++ headers alone are over 20 MB). The WSI options only add
+# header-level code, the loader links nothing for them: the Wayland images
+# get Wayland (Mesa's Wayland build has no X11 WSI either), i3 gets XCB, Xlib
+# and Wayland (vulkan-loader-x11, after the X11 libraries). Built without LTO,
+# like Mesa: the loader's asm_offset step reads offsets out of a compiled
+# object, which an LTO object does not have.
+FROM toolchain AS vulkan-src
+# renovate: datasource=github-tags depName=KhronosGroup/Vulkan-Headers versioning=regex:^vulkan-sdk-(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)\.(?<build>\d+)$
+ARG VULKAN_HEADERS_VERSION=vulkan-sdk-1.4.363.0
+# renovate: datasource=github-tags depName=KhronosGroup/Vulkan-Loader versioning=regex:^vulkan-sdk-(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)\.(?<build>\d+)$
+ARG VULKAN_LOADER_VERSION=vulkan-sdk-1.4.363.0
+RUN pip3 install ninja
+WORKDIR /b
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/KhronosGroup/Vulkan-Headers/archive/refs/tags/${VULKAN_HEADERS_VERSION}.tar.gz -o h.tgz && \
+    curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/KhronosGroup/Vulkan-Loader/archive/refs/tags/${VULKAN_LOADER_VERSION}.tar.gz -o l.tgz && \
+    tar -xf h.tgz && mv Vulkan-Headers-* headers && tar -xf l.tgz && mv Vulkan-Loader-* loader
+RUN cmake -G Ninja -S headers -B headers/build -DCMAKE_INSTALL_PREFIX=/usr && \
+    ninja -C headers/build install
+ENV VULKAN_LOADER_CMAKE="-G Ninja -S loader -B loader/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_SYSCONFDIR=/etc -DBUILD_TESTS=OFF"
+
+FROM vulkan-src AS vulkan-loader
+RUN export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g')" && \
+    cmake ${VULKAN_LOADER_CMAKE} -DBUILD_WSI_XCB_SUPPORT=OFF -DBUILD_WSI_XLIB_SUPPORT=OFF -DBUILD_WSI_WAYLAND_SUPPORT=ON && \
+    ninja -C loader/build && DESTDIR=/vulkan-loader ninja -C loader/build install && \
+    rm -rf /vulkan-loader/usr/include /vulkan-loader/usr/lib/pkgconfig /vulkan-loader/usr/lib/cmake && \
+    test -e /vulkan-loader/usr/lib/libvulkan.so.1 && ! test -e /vulkan-loader/usr/include
+
+
+# libva, the VA-API library that video players and browsers load Mesa's video
+# drivers through (radeonsi, r600, nouveau and virgl: /usr/lib/dri/*_drv_video.so,
+# GPU=full). DRM and Wayland only: libva's X11 part needs libX11, which the
+# Wayland images do not have, and apps on i3 use the DRM display too. Intel's
+# VA-API driver is intel-media-driver, a separate project that is not built.
+# GPU=vm has no VA-API and takes the empty libva-vm stage. /libva keeps the
+# headers and pkg-config file for Mesa's build; the Mesa stages copy only the
+# libraries into the images.
+FROM toolchain AS libva-full
+COPY --from=libdrm /libdrm /
+COPY --from=wayland /wayland /
+# renovate: datasource=github-releases depName=intel/libva
+ARG LIBVA_VERSION=2.24.1
+WORKDIR /build
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/intel/libva/archive/refs/tags/${LIBVA_VERSION}.tar.gz -o libva.tar.gz && \
+    tar -xf libva.tar.gz && mv libva-* src
+WORKDIR /build/src
+RUN pip3 install meson ninja
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Ddisable_drm=false -Dwith_x11=no -Dwith_glx=no -Dwith_wayland=yes -Denable_docs=false && \
+    DESTDIR=/libva ninja -C buildDir install && \
+    test -e /libva/usr/lib/libva.so.2 && test -e /libva/usr/lib/libva-drm.so.2 && test -e /libva/usr/lib/libva-wayland.so.2
+
+FROM toolchain AS libva-vm
+RUN mkdir -p /libva
+
+FROM libva-${GPU} AS libva
+
+
 FROM toolchain AS mesa
 COPY --from=libdrm /libdrm /
 # Mesa is a glvnd vendor: it installs libEGL_mesa.so.0 and the vendor file,
 # and glvnd's libraries go into /mesa with it, so every stage and image that
-# takes /mesa gets the whole GL stack.
+# takes /mesa gets the whole GL stack. The Vulkan loader goes with it too.
 COPY --from=libglvnd /libglvnd /
 COPY --from=libglvnd /libglvnd /mesa
+COPY --from=vulkan-loader /vulkan-loader /mesa
 # LLVM stack: LLVM for GPU=vm, LLVM + libclc + SPIRV for GPU=full.
 COPY --from=llvm-stack /llvm-out /llvm-out
 RUN rsync -aHAX --keep-dirlinks /llvm-out/. / && rm -rf /llvm-out
 COPY --from=wayland /wayland /
+COPY --from=glslang /glslang /
+# Rust, bindgen and cbindgen for NVK (GPU=full; empty for GPU=vm).
+COPY --from=mesa-rust /mesa-rust/ /
+ENV CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:${PATH}
+COPY --from=libva /libva /libva-out
 # renovate: datasource=gitlab-tags depName=mesa/mesa registryUrl=https://gitlab.freedesktop.org extractVersion=^mesa-(?<version>\d+(\.\d+)*)$
-ARG MESA_VERSION=25.3.0
+ARG MESA_VERSION=26.3.1
 RUN mkdir -p /mesa
 WORKDIR /build
 RUN curl --retry 5 --retry-delay 3 --retry-all-errors -L https://archive.mesa3d.org/mesa-${MESA_VERSION}.tar.xz -o mesa.tar.xz && tar -xf mesa.tar.xz && rm mesa.tar.xz && mv mesa-* mesa-src
 WORKDIR /build/mesa-src
-RUN pip3 install meson ninja setuptools mako pyyaml
+RUN pip3 install meson ninja setuptools packaging mako pyyaml
+# venus (the virtio Vulkan driver) needs venus-protocol at exactly the version
+# Mesa's subprojects/venus-protocol.wrap names, a git wrap; the toolchain has
+# no git, so the tag's tarball goes into the directory that wrap names. A Mesa
+# bump that changes the wrap must change this line and the checksum.
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://gitlab.freedesktop.org/virgl/venus-protocol/-/archive/v1.1.3/venus-protocol-v1.1.3.tar.gz -o venus.tgz && \
+    echo "c5a362ca28e0a35042db1baeadaf9183500b216841e49d72714b80bae50b4445  venus.tgz" | sha256sum -c - && \
+    grep -qx 'directory = venus-protocol-1.1.3' subprojects/venus-protocol.wrap && \
+    grep -qx 'revision = v1.1.3' subprojects/venus-protocol.wrap && \
+    tar -xzf venus.tgz -C subprojects && mv subprojects/venus-protocol-v1.1.3 subprojects/venus-protocol-1.1.3 && rm venus.tgz
 # Every mode builds llvmpipe, the software rasterizer Mesa picks for any
 # display it has no GPU driver for: a VM without 3D (virtio-gpu, QXL, -vga
 # std) or, with GPU=vm, real hardware. softpipe stays as a fallback that
 # GALLIUM_DRIVER=softpipe selects, for when llvmpipe itself is suspect.
-# GPU=vm (default): software/virtual GL only (llvmpipe/virgl/softpipe/svga).
-# GPU=full: also real hardware GL — iris (Intel) + radeonsi (AMD), linked
-#   against the LLVM/libclc/SPIRV stack built by the stages above (rsync'd into
-#   /usr), and nouveau (NVIDIA), which needs only libdrm_nouveau. Without
-#   nouveau, a compositor on an NVIDIA GPU has KMS but no GL or GBM driver for
-#   the render node, and shows only the cursor. Pair with --build-arg
-#   FIRMWARE=true so the i915/amdgpu blobs and nouveau's GSP firmware are
-#   present.
+# GPU=vm (default): software/virtual GL only (llvmpipe/virgl/softpipe/svga),
+#   and Vulkan on the CPU (lavapipe) and through virtio-gpu to the host
+#   (venus). No zink, no VA-API: a VM gets nothing from them.
+# GPU=full: also real hardware, the x86 set the big distributions (Fedora,
+# Debian, Arch, Alpine, Chimera) ship:
+#   - Intel: iris (gen 8 and later, Broadwell on), crocus (gen 4 to 7.5: GMA
+#     X4500, Ironlake, Sandy Bridge, Ivy Bridge, Haswell, Bay Trail,
+#     2008-2014) and i915 (gen 2 and 3: GMA 900 to 3150, 2004-2010; GL 2.1,
+#     links libdrm_intel). crocus shares Intel's compiler with iris (the elk
+#     back end, built in-tree). Vulkan: anv (gen 9 on) and hasvk (gen 7 and 8).
+#   - AMD: radeonsi (GCN and later), r600 (TeraScale, HD 2000 to HD 6000 and
+#     the Llano, Trinity, Richland and Brazos APUs, 2007-2013) and r300 (R300
+#     to R500, X300 to X1950, 2002-2008; GL 2.1). r600 compiles its shaders
+#     with its own NIR back end (sfn); with -Dllvm=enabled Mesa adds LLVM's
+#     `amdgpu` and `asmparser` components for it, and LLVM's AMDGPU target
+#     (built in the llvm stage) holds the R600 processors too, so no other
+#     LLVM target is needed. r300 and i915 need LLVM's draw module for their
+#     vertex shaders, which llvmpipe needs too. Vulkan: radv. radeonsi and
+#     radv need libdrm_amdgpu 2.4.133 or later (Mesa 26).
+#   - NVIDIA: nouveau. Without it, a compositor on an NVIDIA GPU has KMS but
+#     no GL or GBM driver for the render node, and shows only the cursor.
+#     Vulkan: NVK (Turing and later), which is Rust and needs mesa-rust.
+#   - zink, GL on any of these Vulkan drivers (MESA_LOADER_DRIVER_OVERRIDE=zink).
+#   - The device-select Vulkan layer, which puts the GPU that drives the
+#     display first on a machine with two (as Fedora and Debian ship it).
+#   - VA-API video decode and encode (radeonsi, r600, nouveau, virgl) with
+#     every codec, as Debian, Arch, Alpine and Chimera build it; Fedora leaves
+#     out the patented ones.
+#   iris and radeonsi link against the LLVM/libclc/SPIRV stack built by the
+#   stages above (rsync'd into /usr). The 2.1-era GPUs (r300, i915) may still
+#   be too weak for a compositor: isotope-gpu-probe and the sessions' software
+#   fallback cover a GPU whose driver fails, as they cover one with no driver
+#   at all. Pair with --build-arg FIRMWARE=true so the i915/amdgpu/radeon
+#   blobs and nouveau's GSP firmware are present.
+# Mesa 26 refuses LTO (meson.build: "Building Mesa with LTO is not
+# supported"); the toolchain's CFLAGS and LDFLAGS carry -flto=auto, which
+# that check does not see, so it is taken out here.
+# NVK's Rust code is a static library linked into libvulkan_nouveau.so; it
+# must use the system's musl. rust_args turns rustc's crt-static default for
+# the musl target off, and mesa-rust removes the toolchain's static libc.a
+# (see there). The install step below fails when NVK defines malloc, which
+# means it has its own copy of musl and crashes the first app that loads it.
+# NVK also links Rust's static LLVM libunwind; --exclude-libs keeps its
+# _Unwind_* symbols out of the dynamic table, so C++ code in the same process
+# keeps libgcc_s's unwinder, and the install step checks that too.
+# Mesa 26 has no "wayland" EGL native platform any more, so the Wayland
+# build's EGL_DEFAULT_DISPLAY is surfaceless (it was wayland with 25.3). Apps
+# that pass a wl_display or use eglGetPlatformDisplay, as the toolkits do,
+# are not affected.
 ARG GPU=vm
 # The example's libLLVM is built without RTTI, so Mesa must disable it too
 # (cpp_rtti=false).
 RUN if [ "$GPU" = "full" ]; then \
-      DRV="iris,radeonsi,nouveau,llvmpipe,virgl,softpipe,svga"; \
+      DRV="iris,crocus,i915,radeonsi,r600,r300,nouveau,zink,llvmpipe,softpipe,virgl,svga"; \
+      VK="amd,intel,intel_hasvk,nouveau,swrast,virtio"; VKLAYERS="device-select"; VA=enabled; \
+      RUSTARGS="-Drust_args=-Ctarget-feature=-crt-static"; \
+      rsync -aHAX --keep-dirlinks /libva-out/. /; \
     else \
-      DRV="llvmpipe,virgl,softpipe,svga"; \
+      DRV="llvmpipe,softpipe,virgl,svga"; \
+      VK="swrast,virtio"; VKLAYERS=""; VA=disabled; RUSTARGS=""; \
     fi; \
-    meson setup buildDir ${COMMON_MESON_FLAGS} -Dplatforms=wayland \
+    export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" \
+           CXXFLAGS="$(printf '%s' "${CXXFLAGS:-}" | sed 's/-flto[^ ]*//g')" \
+           LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g') -Wl,--exclude-libs,libunwind.a"; \
+    meson setup buildDir ${COMMON_MESON_FLAGS} ${RUSTARGS} -Dplatforms=wayland \
     -Dgallium-drivers="$DRV" \
+    -Dvulkan-drivers="$VK" \
+    -Dvulkan-layers="$VKLAYERS" \
+    -Dgallium-va="$VA" \
+    -Dvideo-codecs=all \
     -Dglx=disabled \
     -Dglvnd=enabled \
     -Dopengl=true \
     -Dgles1=enabled \
     -Dgles2=enabled \
     -Degl=enabled \
-    -Dvulkan-drivers= \
     -Dllvm=enabled \
     -Dcpp_rtti=false \
     -Dbuild-tests=false
-RUN DESTDIR=/mesa ninja -C buildDir install
-# The megadriver links libLLVM at runtime (llvmpipe in every mode); with
-# GPU=full it also links libelf (radeonsi) and the shared SPIRV-Tools
-# libraries (iris). They come from the LLVM stack and the toolchain and aren't
+RUN DESTDIR=/mesa ninja -C buildDir install && \
+    if [ -e /mesa/usr/lib/libvulkan_nouveau.so ]; then \
+      nm -D --defined-only /mesa/usr/lib/libvulkan_nouveau.so >/tmp/nvk.syms && \
+      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms; \
+    fi
+# The megadriver links libLLVM at runtime (llvmpipe in every mode, lavapipe
+# too); with GPU=full it also links libelf (radeonsi, NVK), the shared
+# SPIRV-Tools libraries (iris and the Vulkan drivers) and libdrm_intel (i915;
+# from /libdrm with its libpciaccess), and the VA drivers link libva. They
+# come from the LLVM stack, the toolchain and the libva stage and aren't
 # otherwise in the OS image, so bundle them: only the shared libraries, not
-# the LLVM install (libLLVM is ~125MB, the cost of llvmpipe).
+# the LLVM install (libLLVM is ~125MB, the cost of llvmpipe). libdrm's
+# amdgpu, radeon, nouveau and intel libraries come with /libdrm.
 RUN mkdir -p /mesa/usr/lib && \
     cp -a /usr/lib/libLLVM.so* /mesa/usr/lib/ && \
     if [ "$GPU" = "full" ]; then \
-      cp -a /usr/lib/libelf.so* /usr/lib/libSPIRV-Tools*.so* /mesa/usr/lib/ ; \
-    fi
+      cp -a /usr/lib/libelf.so* /usr/lib/libSPIRV-Tools*.so* /mesa/usr/lib/ && \
+      rsync -aHAX --keep-dirlinks --exclude=/usr/include --exclude=/usr/lib/pkgconfig /libva-out/. /mesa/ ; \
+    fi && \
+    rm -rf /libva-out
 
 
 FROM toolchain AS xkeyboard-config
@@ -2328,13 +2553,6 @@ RUN ./configure ${COMMON_CONFIGURE_ARGS} --build=${BUILD} --disable-dependency-t
 RUN make -j$(nproc) && make install DESTDIR=/libxcb
 
 
-# Rust compiler from the pinned Alpine image: build time only, nothing it links
-# ships. Used by the i3 screenshot tools and the COSMIC stages, the same way
-# Dockerfile.agent builds cua-driver. It is declared before both because
-# BuildKit resolves --from only against stages defined above the consumer.
-FROM rust:1.97.0-alpine3.22 AS rust-toolchain
-
-
 # ===========================================================================
 # XLibre + i3 display stack (selected with DESKTOP=i3)
 #
@@ -2487,12 +2705,9 @@ RUN curl --retry-all-errors -fL --retry 5 https://xorg.freedesktop.org/archive/i
     meson setup buildDir ${COMMON_MESON_FLAGS} && \
     ninja -C buildDir install && DESTDIR=/x11-libs ninja -C buildDir install
 
-# renovate: datasource=gitlab-tags depName=xorg/lib/libpciaccess registryUrl=https://gitlab.freedesktop.org extractVersion=^libpciaccess-(?<version>\d+(\.\d+)*)$
-ARG LIBPCIACCESS_VERSION=0.18.1
-RUN curl --retry-all-errors -fL --retry 5 https://xorg.freedesktop.org/archive/individual/lib/libpciaccess-${LIBPCIACCESS_VERSION}.tar.xz -o libpciaccess.tar.xz && \
-    tar -xf libpciaccess.tar.xz && cd libpciaccess-${LIBPCIACCESS_VERSION} && \
-    meson setup buildDir ${COMMON_MESON_FLAGS} -Dzlib=disabled && \
-    ninja -C buildDir install && DESTDIR=/x11-libs ninja -C buildDir install
+# libpciaccess comes from its own stage, shared with libdrm.
+COPY --from=libpciaccess /libpciaccess /
+COPY --from=libpciaccess /libpciaccess /x11-libs
 
 # renovate: datasource=gitlab-tags depName=xorg/lib/libxshmfence registryUrl=https://gitlab.freedesktop.org extractVersion=^libxshmfence-(?<version>\d+(\.\d+)*)$
 ARG LIBXSHMFENCE_VERSION=1.3.3
@@ -2611,8 +2826,25 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Denable-x11=true -Denable-waylan
 RUN DESTDIR=/libxkb-x11 ninja -C buildDir install
 
 
+# The Vulkan loader for i3 (see vulkan-src): XCB, Xlib and Wayland WSI. The X11
+# libraries are only needed for their headers; the loader links none of them.
+FROM vulkan-src AS vulkan-loader-x11
+COPY --from=xorgproto /xorgproto /
+COPY --from=xcbproto /xcbproto /
+COPY --from=libxau /libxau /
+COPY --from=libxcb /libxcb /
+COPY --from=x11-libs /x11-libs /
+RUN export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g')" && \
+    cmake ${VULKAN_LOADER_CMAKE} -DBUILD_WSI_XCB_SUPPORT=ON -DBUILD_WSI_XLIB_SUPPORT=ON -DBUILD_WSI_WAYLAND_SUPPORT=ON && \
+    ninja -C loader/build && DESTDIR=/vulkan-loader ninja -C loader/build install && \
+    rm -rf /vulkan-loader/usr/include /vulkan-loader/usr/lib/pkgconfig /vulkan-loader/usr/lib/cmake && \
+    test -e /vulkan-loader/usr/lib/libvulkan.so.1 && ! test -e /vulkan-loader/usr/include
+
+
 # Mesa rebuilt for the X11 platform and DRI GLX. GPU retains the same vm/full
-# semantics as the Sway Mesa stage, and every mode builds llvmpipe.
+# semantics as the Sway Mesa stage (the same GL, Vulkan and VA-API drivers;
+# see the comment there for each driver and for LTO), and every mode builds
+# llvmpipe. The Vulkan drivers get the X11 WSI here too.
 FROM toolchain AS mesa-x11
 COPY --from=libdrm /libdrm /
 COPY --from=llvm-stack /llvm-out /llvm-out
@@ -2625,26 +2857,57 @@ COPY --from=x11-libs /x11-libs /
 # The Wayland platform too: the graphical installer (cage and
 # isotope-install-gui) is a Wayland client on every variant, i3 included.
 COPY --from=wayland /wayland /
+COPY --from=glslang /glslang /
+COPY --from=mesa-rust /mesa-rust/ /
+ENV CARGO_HOME=/usr/local/cargo \
+    RUSTUP_HOME=/usr/local/rustup \
+    PATH=/usr/local/cargo/bin:${PATH}
+COPY --from=libva /libva /libva-out
+COPY --from=vulkan-loader-x11 /vulkan-loader /mesa-x11
 # renovate: datasource=gitlab-tags depName=mesa/mesa registryUrl=https://gitlab.freedesktop.org extractVersion=^mesa-(?<version>\d+(\.\d+)*)$
-ARG MESA_VERSION=25.3.0
+ARG MESA_VERSION=26.3.1
 ARG GPU=vm
 RUN mkdir -p /mesa-x11
 WORKDIR /build
 RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://archive.mesa3d.org/mesa-${MESA_VERSION}.tar.xz -o mesa.tar.xz && \
     tar -xf mesa.tar.xz && mv mesa-* src
 WORKDIR /build/src
-RUN pip3 install meson ninja setuptools mako pyyaml
+RUN pip3 install meson ninja setuptools packaging mako pyyaml
+# venus-protocol without git, as in the Sway Mesa stage.
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://gitlab.freedesktop.org/virgl/venus-protocol/-/archive/v1.1.3/venus-protocol-v1.1.3.tar.gz -o venus.tgz && \
+    echo "c5a362ca28e0a35042db1baeadaf9183500b216841e49d72714b80bae50b4445  venus.tgz" | sha256sum -c - && \
+    grep -qx 'directory = venus-protocol-1.1.3' subprojects/venus-protocol.wrap && \
+    grep -qx 'revision = v1.1.3' subprojects/venus-protocol.wrap && \
+    tar -xzf venus.tgz -C subprojects && mv subprojects/venus-protocol-v1.1.3 subprojects/venus-protocol-1.1.3 && rm venus.tgz
 RUN if [ "$GPU" = "full" ]; then \
-      DRV="iris,radeonsi,nouveau,llvmpipe,virgl,softpipe,svga"; \
+      DRV="iris,crocus,i915,radeonsi,r600,r300,nouveau,zink,llvmpipe,softpipe,virgl,svga"; \
+      VK="amd,intel,intel_hasvk,nouveau,swrast,virtio"; VKLAYERS="device-select"; VA=enabled; \
+      RUSTARGS="-Drust_args=-Ctarget-feature=-crt-static"; \
+      rsync -aHAX --keep-dirlinks /libva-out/. /; \
     else \
-      DRV="llvmpipe,virgl,softpipe,svga"; \
+      DRV="llvmpipe,softpipe,virgl,svga"; \
+      VK="swrast,virtio"; VKLAYERS=""; VA=disabled; RUSTARGS=""; \
     fi; \
-    meson setup buildDir ${COMMON_MESON_FLAGS} -Dplatforms=x11,wayland \
-      -Dgallium-drivers="$DRV" -Dglx=dri -Dopengl=true -Dgles1=enabled -Dgles2=enabled \
-      -Degl=enabled -Dvulkan-drivers= -Dllvm=enabled -Dcpp_rtti=false -Dbuild-tests=false
-RUN DESTDIR=/mesa-x11 ninja -C buildDir install
+    export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" \
+           CXXFLAGS="$(printf '%s' "${CXXFLAGS:-}" | sed 's/-flto[^ ]*//g')" \
+           LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g') -Wl,--exclude-libs,libunwind.a"; \
+    meson setup buildDir ${COMMON_MESON_FLAGS} ${RUSTARGS} -Dplatforms=x11,wayland \
+      -Dgallium-drivers="$DRV" -Dvulkan-drivers="$VK" -Dvulkan-layers="$VKLAYERS" \
+      -Dgallium-va="$VA" -Dvideo-codecs=all \
+      -Dglx=dri -Dopengl=true -Dgles1=enabled -Dgles2=enabled \
+      -Degl=enabled -Dllvm=enabled -Dcpp_rtti=false -Dbuild-tests=false
+RUN DESTDIR=/mesa-x11 ninja -C buildDir install && \
+    if [ -e /mesa-x11/usr/lib/libvulkan_nouveau.so ]; then \
+      nm -D --defined-only /mesa-x11/usr/lib/libvulkan_nouveau.so >/tmp/nvk.syms && \
+      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms; \
+    fi
+# The same bundled libraries as the Sway Mesa stage.
 RUN mkdir -p /mesa-x11/usr/lib && cp -a /usr/lib/libLLVM.so* /mesa-x11/usr/lib/ && \
-    if [ "$GPU" = "full" ]; then cp -a /usr/lib/libelf.so* /mesa-x11/usr/lib/; fi
+    if [ "$GPU" = "full" ]; then \
+      cp -a /usr/lib/libelf.so* /usr/lib/libSPIRV-Tools*.so* /mesa-x11/usr/lib/ && \
+      rsync -aHAX --keep-dirlinks --exclude=/usr/include --exclude=/usr/lib/pkgconfig /libva-out/. /mesa-x11/ ; \
+    fi && \
+    rm -rf /libva-out
 
 
 FROM toolchain AS libepoxy-x11
@@ -3101,7 +3364,8 @@ RUN zig build installexe -Dcpu=baseline -Dinit_system=systemd -Ddest_directory=/
 # way Dockerfile.agent builds cua-driver. libclang for bindgen comes from the
 # llvm stage and is used at build time only. BuildKit only evaluates these
 # stages for DESKTOP=cosmic. The rust-toolchain stage is declared above the
-# XLibre section, whose i3 screenshot tools use it too.
+# Mesa stages, which build NVK with it (GPU=full), and the XLibre section,
+# whose i3 screenshot tools use it too.
 # ===========================================================================
 
 # duktape: the small JavaScript engine polkit evaluates its rules with (the
@@ -4198,6 +4462,8 @@ RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry
 
 # niri's release profile keeps line-table debug info (~130 MB binary); the
 # installed copy is stripped.
+# rootfs-niri's niri.desktop replaces the one installed here: it starts
+# isotope-niri-session (the GPU check, then niri-session).
 FROM niri-build AS niri
 # renovate: datasource=github-tags depName=YaLTeR/niri extractVersion=^v(?<version>\d+(\.\d+)*)$
 ARG NIRI_VERSION=26.04
@@ -5381,6 +5647,17 @@ COPY --from=x11-libs /x11-libs /
 FROM scratch AS gl-server
 FROM gl-${DESKTOP} AS gl
 
+# isotope-gpu-probe: can Mesa draw on this GPU in hardware? The sessions
+# (/usr/libexec/isotope-gpu-env) and the installer run it before a
+# compositor starts, and fall back to software rendering when it says no. It
+# dlopens libgbm and libEGL, so it builds with libc alone and runs with
+# glvnd's EGL (sway, COSMIC, niri) and Mesa's own (i3).
+FROM toolchain AS isotope-gpu-probe
+COPY tools/isotope-gpu-probe.c /build/isotope-gpu-probe.c
+RUN mkdir -p /isotope-gpu-probe/usr/bin && \
+    cc -O2 -Wall -Wextra -Werror /build/isotope-gpu-probe.c -o /isotope-gpu-probe/usr/bin/isotope-gpu-probe && \
+    ! ldd /isotope-gpu-probe/usr/bin/isotope-gpu-probe | grep 'not found'
+
 # cage, with wlroots linked in from source (a meson subproject), so it needs no
 # libwlroots on cosmic, niri and i3, whose desktops do not use wlroots. cage's
 # releases follow wlroots series (0.2.0 is the wlroots 0.18 one); the
@@ -5808,6 +6085,9 @@ COPY --from=install-ui-build /out/isotope-install-ui /usr/bin/isotope-install-ui
 # here. The server image has neither and keeps the text installer.
 COPY --from=install-gui-build /out/isotope-install-gui /usr/bin/isotope-install-gui
 COPY --from=cage /cage/usr/bin/cage /usr/bin/cage
+# The GPU probe, for the sessions' and the installer's software fallback
+# (rootfs/usr/libexec/isotope-gpu-env).
+COPY --from=isotope-gpu-probe /isotope-gpu-probe /
 # Isotope Welcome, the variant's build (welcome-${DESKTOP}). The sessions
 # start `isotope-welcome --login`; Dockerfile.agent removes it.
 COPY --from=welcome / /

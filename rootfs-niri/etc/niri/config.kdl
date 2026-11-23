@@ -299,6 +299,10 @@ spawn-at-startup "isotope-update" "tray"
 // Turn Noctalia's night light back on if the user had it on in an earlier
 // session; Noctalia itself starts with it off (noctalia-defaults.toml).
 spawn-at-startup "isotope-night-light" "restore"
+// One notification when the screen is drawn in software (no Mesa driver for
+// the GPU; /usr/libexec/isotope-gpu-env, sourced by isotope-niri-session,
+// niri's session entry).
+spawn-at-startup "isotope-gpu-notice"
 
 // Apps that read these only from the environment.
 environment {

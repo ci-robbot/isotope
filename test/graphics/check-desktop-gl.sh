@@ -20,8 +20,13 @@
 # with an OpenGL ES 2 context, which the compositors render with. The probes
 # run as root and as an unprivileged user.
 #
-# The probe is compiled with the Hadron toolchain the image is built with
-# (Dockerfile.probe); it needs only libc.
+# It also checks Mesa's drivers per image line (the Gallium drivers in the
+# megadriver, the Vulkan drivers and the device-select layer, the VA-API
+# drivers), that every library they need resolves (ldd), and that a Vulkan
+# instance made through the loader lists lavapipe (vk-probe.c).
+#
+# The probes are compiled with the Hadron toolchain the image is built with
+# (Dockerfile.probe); they need only libc.
 set -euo pipefail
 IMAGE="${1:?usage: $0 IMAGE}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,7 +46,87 @@ libs() { # DESC PATH: PATH exists and every library it needs resolves
 
 flavor="$(docker run --rm --entrypoint sh "$IMAGE" -c \
     'sed -n "s/^FLAVOR=//p" /etc/isotope/release' 2>/dev/null || true)"
-echo "==> desktop GL: $IMAGE (flavor ${flavor:-unknown})"
+gpu="$(docker run --rm --entrypoint sh "$IMAGE" -c \
+    'sed -n "s/^GPU=//p" /etc/isotope/release' 2>/dev/null || true)"
+echo "==> desktop GL: $IMAGE (flavor ${flavor:-unknown}, GPU ${gpu:-unknown})"
+
+# Mesa 25.1 and later put every Gallium driver in one megadriver,
+# /usr/lib/libgallium-<version>.so, with no per-driver *_dri.so files. A
+# driver left out of the build is still named there, by a stub that prints
+# "<driver>: driver missing" (DRM_DRIVER_DESCRIPTOR_STUB in Mesa's
+# drm_helper.h, still there in 26.3): the message an old Radeon got before
+# r600 was built. So a driver is in the build exactly when its stub's message
+# is not in the file. The stubs are named after the kernel driver, so svga is
+# "vmwgfx" and virgl is "virtio_gpu"; llvmpipe and softpipe have no stub, the
+# GL probes below run llvmpipe.
+gallium='$(ls /usr/lib/libgallium-*.so | head -n1)'
+libs "Mesa's megadriver finds its libraries" "$gallium"
+hw_drivers="iris crocus i915 radeonsi r600 r300 nouveau zink"
+for d in vmwgfx virtio_gpu; do
+    check "Mesa's $d driver is built (svga, virgl)" "! grep -aqF '$d: driver missing' $gallium"
+done
+# Vulkan: the loader, and per line the ICD files Mesa installs. Each names its
+# driver library by an absolute path, which must resolve.
+vk_sw="lvp virtio"
+vk_hw="radeon intel intel_hasvk nouveau"
+libs "the Vulkan loader finds its libraries" /usr/lib/libvulkan.so.1
+# The Vulkan headers (over 20 MB of C++ headers) are for building the loader
+# only; the images must not carry them.
+check "the image has no Vulkan headers" '! test -e /usr/include/vulkan'
+icd() { # NAME: the ICD file is there and its library resolves
+    check "the Vulkan driver $1 is there and finds its libraries" \
+        "f=/usr/share/vulkan/icd.d/$1_icd.x86_64.json && test -r \$f &&
+         l=\$(grep -o '\"library_path\": *\"[^\"]*\"' \$f | cut -d'\"' -f4) && test -e \"\$l\" &&
+         ldd \"\$l\" >/tmp/ldd 2>&1 && ! grep -q 'not found' /tmp/ldd"
+}
+for v in $vk_sw; do icd "$v"; done
+# VA-API: libva, and the video drivers Mesa installs in /usr/lib/dri.
+va_drivers="radeonsi r600 nouveau virtio_gpu"
+case "$gpu" in
+    full)
+        for d in $hw_drivers; do
+            check "the full line has Mesa's $d driver" \
+                "! grep -aqF '$d: driver missing' $gallium"
+        done
+        # i915 links libdrm_intel, which links libpciaccess; r600 and r300 go
+        # through the radeon winsys (libdrm only), libdrm_radeon is built for
+        # anything else that asks for it. radeonsi and radv link
+        # libdrm_amdgpu.
+        libs "libdrm_intel finds its libraries (i915)" /usr/lib/libdrm_intel.so.1
+        libs "libdrm_radeon finds its libraries" /usr/lib/libdrm_radeon.so.1
+        libs "libdrm_amdgpu finds its libraries (radeonsi, radv)" /usr/lib/libdrm_amdgpu.so.1
+        check "the megadriver links libdrm_intel (i915)" "ldd $gallium | grep -q libdrm_intel.so.1"
+        for v in $vk_hw; do icd "$v"; done
+        check "the device-select Vulkan layer is there" \
+            'test -r /usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json'
+        libs "the device-select layer finds its libraries" /usr/lib/libVkLayer_MESA_device_select.so
+        libs "libva finds its libraries" /usr/lib/libva.so.2
+        libs "libva-drm finds its libraries" /usr/lib/libva-drm.so.2
+        libs "libva-wayland finds its libraries" /usr/lib/libva-wayland.so.2
+        for d in $va_drivers; do
+            libs "the VA-API driver $d finds its libraries" "/usr/lib/dri/${d}_drv_video.so"
+        done
+        ;;
+    vm)
+        # The same test the other way: it proves the stub message is still
+        # what Mesa prints, so the full line's checks above are not vacuous.
+        for d in $hw_drivers; do
+            check "the vm line has no $d driver (stub message present)" \
+                "grep -aqF '$d: driver missing' $gallium"
+        done
+        for v in $vk_hw; do
+            check "the vm line has no $v Vulkan driver" "! test -e /usr/share/vulkan/icd.d/${v}_icd.x86_64.json"
+        done
+        check "the vm line has no VA-API driver" '! ls /usr/lib/dri/*_drv_video.so >/dev/null 2>&1'
+        check "the vm line has no device-select layer" \
+            '! test -e /usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json'
+        ;;
+    *)
+        # /etc/isotope/release names the line on every desktop image; without
+        # it both per-line blocks above would be skipped in silence.
+        echo "FAIL: /etc/isotope/release has no GPU=full or GPU=vm line (got '$gpu')"; fail=1
+        ;;
+esac
 
 libs "libepoxy finds its libraries" /usr/lib/libepoxy.so.0
 libs "libEGL finds its libraries" /usr/lib/libEGL.so.1
@@ -70,19 +155,49 @@ case "$flavor" in
         ;;
 esac
 
+# The software-rendering fallback (test/graphics/check-gpu-fallback.sh checks
+# the scripts; this checks what the image ships). In a container there is no
+# GPU, so the probe must answer exit 2 ("no DRM device" or a card it cannot
+# open), with one line and nothing on stderr.
+libs "isotope-gpu-probe finds its libraries" /usr/bin/isotope-gpu-probe
+check "isotope-gpu-probe answers exit 2 without a GPU, silently" \
+    '/usr/bin/isotope-gpu-probe >/tmp/out 2>/tmp/err; [ $? = 2 ] && [ "$(wc -l </tmp/out)" = 1 ] && [ ! -s /tmp/err ]'
+check "the session hook is there" 'test -r /usr/libexec/isotope-gpu-env && test -r /etc/profile.d/isotope-gpu.sh'
+check "the libraries the probe dlopens are there" \
+    'for l in libgbm.so.1 libEGL.so.1 libGLESv2.so.2; do test -e /usr/lib/$l || exit 1; done'
+case "$flavor" in
+    sway)   check "sway starts the notice" 'grep -qx "exec isotope-gpu-notice" /etc/sway/config' ;;
+    i3)     check "i3 starts the notice" 'grep -qx "exec --no-startup-id isotope-gpu-notice" /etc/i3/config' ;;
+    niri)
+        check "niri starts the notice" 'grep -qx "spawn-at-startup \"isotope-gpu-notice\"" /etc/niri/config.kdl'
+        check "niri's session entry goes through the GPU check" \
+            'grep -qx "Exec=isotope-niri-session" /usr/share/wayland-sessions/niri.desktop && test -x /usr/bin/isotope-niri-session && test -x /usr/bin/niri-session'
+        ;;
+    cosmic)
+        check "COSMIC starts the notice" 'grep -qx "Exec=isotope-gpu-notice" /etc/xdg/autostart/isotope-gpu-notice.desktop'
+        check "COSMIC's login screen gets the fallback" \
+            'grep -qx "command = \"isotope-greeter-start\"" /etc/greetd/cosmic-greeter.toml && test -x /usr/bin/isotope-greeter-start && test -x /usr/bin/cosmic-greeter-start'
+        ;;
+    agent)  check "the agent has no notice" '! test -e /usr/bin/isotope-gpu-notice && ! grep -rqs isotope-gpu-notice /etc/i3' ;;
+esac
+case "$flavor" in
+    agent) ;;
+    *) check "isotope-gpu-notice is there" 'test -x /usr/bin/isotope-gpu-notice' ;;
+esac
+
 tmp="$(mktemp -d)"
 chmod 755 "$tmp" # the unprivileged probe run must reach it
 trap 'rm -rf "$tmp"' EXIT
 hadron="$(awk -F= '/^ARG HADRON_VERSION=/{print $2; exit}' "$REPO/Dockerfile")"
 if ! docker build -q --build-arg HADRON_VERSION="$hadron" -f "$HERE/Dockerfile.probe" \
         --output "type=local,dest=$tmp" "$HERE" >/dev/null; then
-    echo "FAIL: could not build gl-probe"; exit 1
+    echo "FAIL: could not build gl-probe and vk-probe"; exit 1
 fi
-probe() { # DESC USER [gles]: run gl-probe on llvmpipe in the image as USER
-    local desc="$1" user="$2" out rc
-    shift 2
+probe() { # DESC USER PROBE [ARGS]: run gl-probe or vk-probe on llvmpipe in the image as USER
+    local desc="$1" user="$2" bin="$3" out rc
+    shift 3
     set +e
-    out="$(docker run --rm --user "$user" --entrypoint /probe/gl-probe -v "$tmp:/probe:ro" \
+    out="$(docker run --rm --user "$user" --entrypoint "/probe/$bin" -v "$tmp:/probe:ro" \
         -e EGL_PLATFORM=surfaceless -e LIBGL_ALWAYS_SOFTWARE=1 \
         -e MESA_SHADER_CACHE_DISABLE=true "$IMAGE" "$@" 2>&1)"
     rc=$?
@@ -96,8 +211,12 @@ probe() { # DESC USER [gles]: run gl-probe on llvmpipe in the image as USER
 }
 # As root, and as an unprivileged user (65534, nobody), like the greeter and
 # the desktop session: a GL file that only root can read fails only there.
+# vk-probe (vk-probe.c) creates a Vulkan instance through the loader and must
+# find lavapipe among the devices: the loader, the ICD files and a Mesa
+# Vulkan driver work together, on both lines.
 for user in 0:0 65534:65534; do
-    probe "an OpenGL ES 2 context through EGL and libepoxy answers glGetString (uid ${user%%:*})" "$user" gles
-    probe "a desktop GL context through EGL and libepoxy answers glGetString (uid ${user%%:*})" "$user"
+    probe "an OpenGL ES 2 context through EGL and libepoxy answers glGetString (uid ${user%%:*})" "$user" gl-probe gles
+    probe "a desktop GL context through EGL and libepoxy answers glGetString (uid ${user%%:*})" "$user" gl-probe
+    probe "a Vulkan instance lists lavapipe (uid ${user%%:*})" "$user" vk-probe
 done
 exit $fail

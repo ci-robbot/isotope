@@ -1,0 +1,10 @@
+#!/bin/sh
+# niri's session entry (/usr/share/wayland-sessions/niri.desktop): the GPU
+# check, then upstream's niri-session. niri-session re-reads the login
+# environment through "$SHELL -l", which sources /etc/profile.d only for
+# shells that read /etc/profile; zsh does not, so its users would start niri
+# on a GPU Mesa cannot drive. The variables set here go through niri-session's
+# `systemctl --user import-environment` into niri.service. See
+# /usr/libexec/isotope-gpu-env.
+[ -r /usr/libexec/isotope-gpu-env ] && . /usr/libexec/isotope-gpu-env
+exec niri-session "$@"

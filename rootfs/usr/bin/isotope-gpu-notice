@@ -1,0 +1,78 @@
+#!/bin/sh
+# Tell the user, once per session, that the screen is drawn in software.
+#
+# /usr/libexec/isotope-gpu-env writes $XDG_RUNTIME_DIR/isotope/software-rendering
+# before the compositor starts when Mesa has no working driver for the GPU
+# (isotope-gpu-probe). The session starts this script: `exec` in the sway and
+# i3 configs, `spawn-at-startup` on niri, /etc/xdg/autostart on COSMIC. With
+# no marker, or on a virtual machine's GPU, it does nothing. On the vm image
+# line it points to the standard image instead of a missing driver. The
+# notification expires as the server's other ones do. The notification
+# server (mako, dunst, cosmic-notifications, Noctalia) may start after this
+# script, so it tries for 30 seconds. A stamp next to the marker keeps it to
+# one notification per session, also when the compositor's config is
+# reloaded; the session hook removes the stamp when it writes a new marker.
+#
+#   isotope-gpu-notice [--print]   --print writes the text instead (tests)
+#   ISOTOPE_RELEASE                the release file (tests)
+set -u
+dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/isotope"
+marker="$dir/software-rendering"
+stamp="$dir/software-rendering-noticed"
+
+[ -r "$marker" ] || exit 0
+# The marker is the probe's line: "<class> <kernel driver>: <reason>".
+line=$(head -n1 "$marker" 2>/dev/null) || line=""
+class=${line%% *}
+rest=${line#* }
+driver=${rest%%:*}
+# Only a plain kernel driver name goes into the text.
+case "$driver" in
+    '' | unknown | *[!A-Za-z0-9_-]*) driver="" ;;
+esac
+# The image line: vm has no hardware GL drivers at all.
+gpu=$(sed -n 's/^GPU=//p' "${ISOTOPE_RELEASE:-/etc/isotope/release}" 2>/dev/null) || gpu=""
+
+title="Software rendering"
+case "$class" in
+    virtual)
+        # A virtual machine's GPU without 3D: software is normal there,
+        # and the vm image line is made for it. Isotope System's About
+        # page still says what draws the screen.
+        exit 0
+        ;;
+    firmware)
+        body="The graphics driver for this computer's GPU is off or did not load (for example, the kernel option nomodeset), so the processor draws the screen. Everything works, but more slowly, and video and games are affected."
+        ;;
+    *)
+        if [ "$gpu" = vm ]; then
+            body="This Isotope image is for virtual machines and has no graphics drivers, so the processor draws the screen. To use this computer's GPU, switch to the standard image in Isotope System, Desktop & image."
+        elif [ -n "$driver" ]; then
+            body="Isotope has no graphics driver for this computer's GPU ($driver), so the processor draws the screen. Everything works, but more slowly, and video and games are affected."
+        else
+            body="Isotope has no graphics driver for this computer's GPU, so the processor draws the screen. Everything works, but more slowly, and video and games are affected."
+        fi
+        ;;
+esac
+
+if [ "${1:-}" = --print ]; then
+    printf '%s\n%s\n' "$title" "$body"
+    exit 0
+fi
+
+[ -e "$stamp" ] && exit 0
+: > "$stamp" 2>/dev/null || exit 0
+
+i=0
+while [ "$i" -lt 30 ]; do
+    if busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications \
+        org.freedesktop.Notifications Notify 'susssasa{sv}i' \
+        "Isotope" 0 "video-display" "$title" "$body" 0 0 -1 >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 1
+    i=$((i + 1))
+done
+# No notification server answered: let a later start try again.
+rm -f "$stamp"
+exit 0

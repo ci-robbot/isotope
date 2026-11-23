@@ -130,7 +130,7 @@ if [ "$FLAVOR" = niri ]; then
     # requests fail instead of asking for the password.
     check "Isotope's Noctalia defaults turn the polkit agent on" \
         "grep -qx 'polkit_agent = true' /usr/share/isotope/noctalia-defaults.toml && test -x /usr/bin/isotope-noctalia"
-    check "ly offers the niri session" "grep -q '^Exec=niri-session' /usr/share/wayland-sessions/niri.desktop"
+    check "ly offers the niri session (through the GPU check)" "grep -q '^Exec=isotope-niri-session' /usr/share/wayland-sessions/niri.desktop && test -x /usr/bin/isotope-niri-session && test -x /usr/bin/niri-session"
     # The build stages check ldd against their own build root; this checks
     # the image, where a library a stage built but the rootfs never copied
     # is missing.

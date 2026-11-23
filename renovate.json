@@ -134,6 +134,41 @@
       ]
     },
     {
+      "description": "Mesa numbers its releases by year (25.3 to 26.0), so each new year is a 'major' that the dependencyDashboardApproval above would hold forever. Both Mesa stages pin the same version: one PR",
+      "groupName": "Mesa",
+      "matchDepNames": [
+        "mesa/mesa"
+      ],
+      "dependencyDashboardApproval": false
+    },
+    {
+      "description": "Other calendar-versioned projects, where a 'major' is only a new year (YYYY.N, YY.N, YY.MM)",
+      "matchDepNames": [
+        "ostreedev/ostree",
+        "xorg/proto/xorgproto",
+        "X11Libre/xserver",
+        "X11Libre/xf86-input-libinput",
+        "xorg/xserver",
+        "YaLTeR/niri"
+      ],
+      "dependencyDashboardApproval": false
+    },
+    {
+      "description": "Mesa's meson.build refuses these bindgen releases (NVK)",
+      "matchDepNames": [
+        "bindgen-cli"
+      ],
+      "allowedVersions": "!/^0\\.(72\\.0|73\\.[01])$/"
+    },
+    {
+      "groupName": "Vulkan SDK",
+      "matchDepNames": [
+        "KhronosGroup/Vulkan-Headers",
+        "KhronosGroup/Vulkan-Loader",
+        "KhronosGroup/glslang"
+      ]
+    },
+    {
       "groupName": "SPIR-V",
       "matchDepNames": [
         "KhronosGroup/SPIRV-Headers",

@@ -1,12 +1,20 @@
 package main
 
 import (
+	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/guikit"
+	"github.com/kairos-community/isotope/update/isorelease"
 )
 
 func init() {
@@ -18,9 +26,72 @@ type aboutPage struct {
 	u     *UI
 	list  widget.List
 	notes widget.Clickable
+	// graphics is the Graphics row, read when the page opens; "" hides
+	// the row. Under u.mu.
+	graphics string
 }
 
-func (p *aboutPage) Shown() {}
+func (p *aboutPage) Shown() {
+	p.u.async(func() {
+		g := graphicsLine(p.u.sys.Release.GPU == isorelease.GPUVM)
+		p.u.mu.Lock()
+		p.graphics = g
+		p.u.mu.Unlock()
+	})
+}
+
+// The software-rendering marker and the GPU probe; variables for the tests.
+var (
+	softwareMarker = func() string {
+		return filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "isotope", "software-rendering")
+	}
+	gpuProbePath = "/usr/bin/isotope-gpu-probe"
+)
+
+// The Graphics row when the session draws in software, by the class the
+// probe gave (the first word of the marker): a real GPU without a working
+// driver, the same on the vm image line (which has no hardware drivers), a
+// virtual machine's GPU without 3D, or only the firmware's framebuffer.
+const (
+	softwareGraphics         = "Software (no driver for this GPU)"
+	softwareGraphicsVMImage  = "Software (this image has no GPU drivers)"
+	softwareGraphicsVirtual  = "Software (virtual GPU without 3D)"
+	softwareGraphicsFirmware = "Software (graphics driver off)"
+)
+
+// graphicsLine is what draws the screen: "Software (...)" when the session
+// fell back to software rendering (the marker /usr/libexec/isotope-gpu-env
+// writes, or ISOTOPE_SOFTWARE_RENDERING), else the renderer
+// isotope-gpu-probe reads, "" when it cannot tell. vmImage: this is the vm
+// image line.
+func graphicsLine(vmImage bool) string {
+	software := os.Getenv("ISOTOPE_SOFTWARE_RENDERING") == "1"
+	class := ""
+	if os.Getenv("XDG_RUNTIME_DIR") != "" {
+		if b, err := os.ReadFile(softwareMarker()); err == nil {
+			software = true
+			class, _, _ = strings.Cut(strings.TrimSpace(string(b)), " ")
+		}
+	}
+	if software {
+		switch {
+		case class == "virtual":
+			return softwareGraphicsVirtual
+		case class == "firmware":
+			return softwareGraphicsFirmware
+		case vmImage:
+			return softwareGraphicsVMImage
+		}
+		return softwareGraphics
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, gpuProbePath).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
 
 func (p *aboutPage) notesURL() string {
 	rel := p.u.sys.Release
@@ -65,6 +136,12 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 		{"Edition", edition},
 		{"Kernel", orUnknown(u.sys.Kernel)},
 		{"Computer name", orUnknown(u.sys.Hostname)},
+	}
+	u.mu.Lock()
+	graphics := p.graphics
+	u.mu.Unlock()
+	if graphics != "" {
+		rows = append(rows, [2]string{"Graphics", graphics})
 	}
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col

@@ -22,6 +22,7 @@ var (
 	cagePath    = "/usr/bin/cage"
 	guiPath     = "/usr/bin/isotope-install-gui"
 	cmdlinePath = "/proc/cmdline"
+	probePath   = "/usr/bin/isotope-gpu-probe"
 )
 
 // textOnlyArg on the kernel command line keeps the text installer; the live
@@ -76,21 +77,61 @@ var errInstallRunning = errors.New("the graphical installer stopped while the in
 // terminal for cage: the text installer's rescue shell takes tty1.
 var errRescueShell = errors.New("rescue shell")
 
+// The GPU classes isotope-gpu-probe names on exit 1, the first word of its
+// line: a real GPU whose Mesa driver is missing or fails, a virtual
+// machine's GPU without 3D (software is normal there), or only the
+// firmware's framebuffer on real hardware (nomodeset, or the kernel driver
+// not loaded yet).
+const (
+	gpuHardware = "hardware"
+	gpuVirtual  = "virtual"
+	gpuFirmware = "firmware"
+)
+
+// gpuNeedsSoftware runs isotope-gpu-probe, which makes a GBM device and an
+// EGL context on the primary GPU as a compositor does. Exit status 1 means
+// Mesa has no working hardware driver for it (an old Radeon without r600,
+// any real GPU on the vm image line, a driver that crashes, a VM without
+// 3D): Mesa does not fall back to software by itself then, and cage exits
+// before the first frame. It returns the probe's class with it. No probe
+// (an older image) or another answer means try the GPU.
+func gpuNeedsSoftware() (bool, string) {
+	if _, err := os.Stat(probePath); err != nil {
+		return false, ""
+	}
+	out, err := exec.Command(probePath).Output()
+	var ee *exec.ExitError
+	if !errors.As(err, &ee) || ee.ExitCode() != 1 {
+		return false, ""
+	}
+	class, _, _ := strings.Cut(strings.TrimSpace(string(out)), " ")
+	switch class {
+	case gpuVirtual, gpuFirmware:
+		return true, class
+	}
+	return true, gpuHardware
+}
+
 // runGUI runs `cage -s -- isotope-install-gui` until the GUI is done. It
 // starts cage again, with the saved layout as its keymap, each time the GUI
-// asks for that (core.GUIRelaunchExit). It reports fallback when the text
-// installer should take over, with a line to show above it.
+// asks for that (core.GUIRelaunchExit). When cage stops before the GUI's
+// first frame, it starts it once more in software rendering (see guiEnv),
+// and only then gives up; it starts in software at once when
+// isotope-gpu-probe says the GPU has no working driver. That retry is not a
+// relaunch and does not count against maxRelaunches. It reports fallback
+// when the text installer should take over, with a line to show above it.
 func runGUI() (fallback bool, note string, err error) {
 	run := core.RunDir()
 	if err := os.MkdirAll(run, 0o700); err != nil {
 		return true, "", nil
 	}
 	_ = os.Remove(core.GUIStatePath())
+	software, class := gpuNeedsSoftware()
 	for i := 0; ; i++ {
 		_ = os.Remove(core.GUIStartedPath())
 		cmd := exec.Command(cagePath, "-s", "--", guiPath)
 		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		cmd.Env = guiEnv(run)
+		cmd.Env = guiEnv(run, software, class)
 		werr := cmd.Run()
 		code := 0
 		var ee *exec.ExitError
@@ -110,8 +151,18 @@ func runGUI() (fallback bool, note string, err error) {
 		if code == core.GUIShellExit && exists(core.GUIStartedPath()) {
 			return false, "", errRescueShell
 		}
+		if !exists(core.GUIStartedPath()) && !software {
+			// No GL driver that works for this GPU: try once more
+			// with no hardware driver at all. Nothing was asked yet,
+			// so the GUI starts at its first page again.
+			software, class = true, gpuHardware
+			_ = os.Remove(core.GUIStatePath())
+			i--
+			continue
+		}
 		if !exists(core.GUIStartedPath()) {
-			// No DRM device, no seat, no GL: nothing was asked yet.
+			// No DRM device, no seat, no GL even in software:
+			// nothing was asked yet.
 			return true, "The graphical installer could not start. This is the text installer.", nil
 		}
 		if exists(core.InstallRunningPath()) {
@@ -127,7 +178,19 @@ func runGUI() (fallback bool, note string, err error) {
 // builtin backend (the service runs as root on tty1 with no logind
 // session), software rendering allowed, the installer's cursor theme, and
 // the flag that lets the GUI ask for a relaunch.
-func guiEnv(run string) []string {
+//
+// With software, nothing loads a hardware GL driver: cage draws with
+// wlroots' pixman renderer (WLR_RENDERER=pixman), which needs no EGL or GBM
+// at all, so even a GPU whose Mesa driver crashes or is missing cannot stop
+// it; GLES2 on llvmpipe would still go through Mesa's GBM and EGL loader.
+// The GUI, a Gio client that needs EGL, gets llvmpipe through
+// LIBGL_ALWAYS_SOFTWARE=1 (and GBM_ALWAYS_SOFTWARE=1, so nothing in it loads
+// the hardware driver through GBM either) and hands cage shared-memory
+// buffers, which pixman composites. ISOTOPE_SOFTWARE_RENDERING=1 makes the
+// GUI say so on its first page, and ISOTOPE_GPU_CLASS says why; not on a
+// virtual GPU (class virtual), where software is normal and nothing is
+// missing.
+func guiEnv(run string, software bool, class string) []string {
 	env := os.Environ()
 	set := func(k, v string) {
 		for i, e := range env {
@@ -156,6 +219,15 @@ func guiEnv(run string) []string {
 	// rootfs/usr/share/icons/isotope-installer/index.theme.
 	if os.Getenv("XCURSOR_THEME") == "" {
 		set("XCURSOR_THEME", "isotope-installer")
+	}
+	if software {
+		set("WLR_RENDERER", "pixman")
+		set("LIBGL_ALWAYS_SOFTWARE", "1")
+		set("GBM_ALWAYS_SOFTWARE", "1")
+		if class != gpuVirtual {
+			set("ISOTOPE_SOFTWARE_RENDERING", "1")
+			set("ISOTOPE_GPU_CLASS", class)
+		}
 	}
 	set("ISOTOPE_INSTALL_GUI_RELAUNCH", "1")
 	if s, err := core.ReadGUIState(core.GUIStatePath()); err == nil && s.Layout != "" {
