@@ -512,7 +512,15 @@ jobs:
           docker push "$target"
           # Sign the digest the registry holds, never the tag: a tag can move
           # after signing, a digest cannot.
-          digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
+          # GHCR can answer 404 for a tag for a few seconds after the push
+          # returns, so ask again before giving up.
+          digest=""
+          for attempt in 1 2 3 4 5 6; do
+            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
+            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
+            sleep 10
+          done
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
 
@@ -740,7 +748,15 @@ jobs:
           set -euo pipefail
           target="${IMAGE_REPO}:${LINE}-${RELEASE_TAG}"
           docker push "$target"
-          digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
+          # GHCR can answer 404 for a tag for a few seconds after the push
+          # returns, so ask again before giving up.
+          digest=""
+          for attempt in 1 2 3 4 5 6; do
+            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
+            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
+            sleep 10
+          done
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
 
@@ -1055,7 +1071,15 @@ jobs:
           docker push "$target"
           # Sign the digest the registry holds, never the tag: a tag can move
           # after signing, a digest cannot.
-          digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' | jq -r .digest)"
+          # GHCR can answer 404 for a tag for a few seconds after the push
+          # returns, so ask again before giving up.
+          digest=""
+          for attempt in 1 2 3 4 5 6; do
+            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
+            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
+            sleep 10
+          done
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
           cosign sign --yes "${IMAGE_REPO}@${digest}"
 
