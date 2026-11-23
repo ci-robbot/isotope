@@ -1,0 +1,4 @@
+# smartmontools ships smartd.service (WantedBy=multi-user.target). It stays
+# off: `smartctl` is there for checks on demand, and a monitor that mails or
+# logs needs a configuration Isotope does not ship.
+disable smartd.service

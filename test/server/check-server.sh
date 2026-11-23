@@ -53,6 +53,7 @@ check "NetworkManager starts at boot" \
     "test -L /etc/systemd/system/multi-user.target.wants/NetworkManager.service"
 check "network changes need root" \
     "grep -qx 'auth-polkit=root-only' /etc/NetworkManager/NetworkManager.conf"
+check "smartctl runs, smartd is off" "smartctl --version && ! ls /etc/systemd/system/*.wants/smartd.service 2>/dev/null | grep -q ."
 check "sshd is installed" "test -x /usr/sbin/sshd || test -x /usr/bin/sshd"
 libs "polkitd finds its libraries" /usr/lib/polkit-1/polkitd
 check "polkit agent helper is setuid" "test -u /usr/lib/polkit-1/polkit-agent-helper-1"

@@ -21,6 +21,8 @@
 #   polkit rule and the udev rule that hides the Kairos partitions; the agent
 #   has none.
 #
+# - smartctl and smartd (off) from the smartmontools layer, on every image.
+#
 # Works on every desktop image, the agent and the server (which has no login
 # screen and no UPower, so only the first three groups apply).
 set -euo pipefail
@@ -147,5 +149,15 @@ else
     check "udisks2: the udev rule has no syntax errors" \
         "udevadm verify /usr/lib/udev/rules.d/90-isotope-udisks-ignore.rules"
 fi
+
+# Disk health: smartctl and smartd from the smartmontools layer, on every image
+# (desktops, agent and server). smartd is installed but off: no
+# *.target.wants link, and the preset that keeps preset-all from enabling it.
+check "smartctl runs" "smartctl --version"
+check "smartd is installed" "test -x /usr/sbin/smartd && test -f /usr/lib/systemd/system/smartd.service"
+check "smartd is not enabled" \
+    "! ls /etc/systemd/system/*.wants/smartd.service /usr/lib/systemd/system/*.wants/smartd.service 2>/dev/null | grep -q ."
+check "the preset keeps smartd off" \
+    "grep -qx 'disable smartd.service' /usr/lib/systemd/system-preset/80-isotope-smartd.preset"
 
 exit "$fail"

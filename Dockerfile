@@ -20,6 +20,11 @@
 # new release.
 ARG HADRON_VERSION=v0.6.6
 ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:${HADRON_VERSION}
+# smartmontools comes from its hadron-layers layer (statically linked, no shared
+# library a base or image already has), copied into every desktop image and the
+# server: see the smartmontools stage.
+# renovate: datasource=docker depName=ghcr.io/kairos-io/hadron-layers/smartmontools
+ARG SMARTMONTOOLS_LAYER_VERSION=7.5
 # Select the display server + window manager pair: sway, i3, cosmic or niri.
 # server builds the server edition instead, with no desktop (server-default).
 ARG DESKTOP=sway
@@ -4965,6 +4970,12 @@ RUN make && make install DESTDIR=/snixembed PREFIX=/usr && \
 # ===========================================================================
 FROM ${BASE_IMAGE} AS hadron-kernel
 
+# smartmontools (smartctl, smartd, the drive database and smartd.service) from
+# its hadron-layers layer, files under /usr only. smartd stays off: the preset
+# in rootfs/usr/lib/systemd/system-preset/ disables it, and it is not linked
+# into any target. Copied in desktop-default and server-default.
+FROM ghcr.io/kairos-io/hadron-layers/smartmontools:${SMARTMONTOOLS_LAYER_VERSION} AS smartmontools
+
 FROM alpine:3 AS firmware
 ARG FIRMWARE=false
 ARG DESKTOP
@@ -5570,6 +5581,8 @@ COPY rootfs/usr/lib/sysusers.d/tpm2-tss.conf /usr/lib/sysusers.d/tpm2-tss.conf
 COPY rootfs/etc/systemd/system/sysinit.target.wants/ /etc/systemd/system/sysinit.target.wants/
 COPY rootfs/usr/share/dbus-1/ /usr/share/dbus-1/
 COPY rootfs/usr/share/polkit-1/ /usr/share/polkit-1/
+# smartd stays off (smartmontools comes from its layer, copied in server-default).
+COPY rootfs/usr/lib/systemd/system-preset/80-isotope-smartd.preset /usr/lib/systemd/system-preset/80-isotope-smartd.preset
 # Backups: the daily timer of `isotope backup --scheduled`, and the one-shot
 # after a whole restore.
 COPY rootfs/usr/lib/systemd/system/isotope-backup.service rootfs/usr/lib/systemd/system/isotope-backup.timer rootfs/usr/lib/systemd/system/isotope-restore-finish.service /usr/lib/systemd/system/
@@ -5884,6 +5897,8 @@ COPY --from=docker /docker /
 COPY --from=distrobox /distrobox /
 # M6: optional real-hardware firmware (empty unless FIRMWARE=true)
 COPY --from=firmware /firmware /
+# Disk health: smartctl and smartd (off) from the hadron-layers layer.
+COPY --from=smartmontools / /
 # Shared + selected session config / launch layer
 COPY --from=desktop-config / /
 # The boot splash, at the path kairos-init's units and dracut module exec. It
@@ -6126,6 +6141,8 @@ COPY --from=toolchain /usr/lib/libgcc_s.so* /usr/lib/
 COPY --from=toolchain /usr/lib/libreadline.so* /usr/lib/
 # Network card firmware and CPU microcode (empty unless FIRMWARE=true).
 COPY --from=firmware /firmware /
+# Disk health: smartctl and smartd (off) from the hadron-layers layer.
+COPY --from=smartmontools / /
 # Docker, the same static bundle as the desktop (no Distrobox).
 COPY --from=docker /docker /
 COPY --from=server-config / /
