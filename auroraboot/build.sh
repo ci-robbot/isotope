@@ -25,7 +25,7 @@ ARCH="${ARCH:-amd64}"
 FLAVOR="${FLAVOR:?set FLAVOR to sway, i3, niri, cosmic, server or agent}"
 AURORA_IMAGE="${AURORA_IMAGE:-quay.io/kairos/auroraboot:v0.30.0}"
 
-THEME_SRC="rootfs/etc/kairos/branding/isotope-theme"
+THEME_SRC="rootfs/common/etc/kairos/branding/isotope-theme"
 OVERLAY_DIR="$OUT_DIR/iso-overlay"
 
 mkdir -p "$OUT_DIR"

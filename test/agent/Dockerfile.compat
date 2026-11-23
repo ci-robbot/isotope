@@ -42,16 +42,17 @@ RUN curl -fL --retry 5 \
     install -Dm755 xrandr /out/xrandr
 
 # Build the in-session Cua compatibility probe as a static binary. The probe's
-# main package lives outside the agent Go module tree (test/agent/cmd), so it is
-# copied INTO the module here to satisfy Go's internal-package import rule for
-# agent/internal/cua and agent/internal/probe. It is never compiled on the host
-# and never enters the production agent image.
+# main package (test/agent/cmd/cua-compat-probe) is in the root Go module and
+# imports internal/agent/cua and internal/agent/probe, so only those trees and
+# the module files are copied. It is never compiled on the host and never
+# enters the production agent image.
 FROM golang:1.25.0-alpine3.22 AS probe-build
 ENV CGO_ENABLED=0
-WORKDIR /build/agent
-COPY agent/ /build/agent/
-COPY test/agent/cmd/cua-compat-probe/ /build/agent/cmd/cua-compat-probe/
-RUN go build -trimpath -o /out/cua-compat-probe ./cmd/cua-compat-probe
+WORKDIR /build
+COPY go.mod go.sum ./
+COPY internal/agent/ internal/agent/
+COPY test/agent/cmd/cua-compat-probe/ test/agent/cmd/cua-compat-probe/
+RUN go build -trimpath -o /out/cua-compat-probe ./test/agent/cmd/cua-compat-probe
 
 FROM ${BASE_IMAGE} AS test
 COPY --from=fixture-build /out/isotope-cua-gtk-fixture /usr/local/libexec/isotope-cua-gtk-fixture

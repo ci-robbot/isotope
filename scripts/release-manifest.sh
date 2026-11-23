@@ -30,7 +30,7 @@ set -euo pipefail
 die() { echo "release-manifest: $*" >&2; exit 1; }
 
 # isotope-update decides an image is an Isotope one from these labels (the
-# keys equal the constants in update/policy.go), so an image whose labels
+# keys equal the constants in cmd/isotope/policy.go), so an image whose labels
 # disagree with where it is published would make every installed system
 # mis-detect it. Fail the release instead.
 label_flavor=io.kairos.isotope.flavor

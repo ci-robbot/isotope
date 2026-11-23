@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Test rootfs/usr/bin/isotope-live-install and
-# rootfs/usr/libexec/isotope-live-install-run in an alpine container
+# Test rootfs/common/usr/bin/isotope-live-install and
+# rootfs/common/usr/libexec/isotope-live-install-run in an alpine container
 # (busybox sh), with stubs for sudo, flock, swaymsg, i3-msg, niri and
 # notify-send that log their argv.
 #
@@ -15,8 +15,8 @@ if [ "${1:-}" != "--inner" ]; then
 fi
 
 # ---- inside the container (busybox sh) ----
-launcher=/repo/rootfs/usr/bin/isotope-live-install
-helper=/repo/rootfs/usr/libexec/isotope-live-install-run
+launcher=/repo/rootfs/common/usr/bin/isotope-live-install
+helper=/repo/rootfs/common/usr/libexec/isotope-live-install-run
 fail=0
 pass() { echo "PASS: $*"; }
 bad()  { echo "FAIL: $*"; fail=1; }

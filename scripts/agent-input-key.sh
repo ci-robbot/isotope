@@ -28,8 +28,8 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 stage_key="$here/../tools/stage-key.py"
 
 # Files the gates or the ISO build read straight from the checkout, outside
-# any Dockerfile COPY. agent/, rootfs-agent/, rootfs-i3/ and the rest of the
-# image inputs are covered by the stage keys.
+# any Dockerfile COPY. cmd/isotope-agent/, internal/agent/, rootfs/agent/,
+# rootfs/i3/ and the rest of the image inputs are covered by the stage keys.
 AGENT_HARNESS=(
   .github/workflows/agent-gates.yml
   auroraboot

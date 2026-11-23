@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test rootfs/usr/libexec/isotope-live-boot in an alpine container, against a
+# Test rootfs/common/usr/libexec/isotope-live-boot in an alpine container, against a
 # temporary root. No image build.
 #
 #   test/live/test-live-stage.sh
@@ -12,7 +12,7 @@ fi
 
 # ---- inside the container (busybox sh) ----
 cd /repo
-script=/repo/rootfs/usr/libexec/isotope-live-boot
+script=/repo/rootfs/common/usr/libexec/isotope-live-boot
 fail=0
 pass() { echo "PASS: $*"; }
 bad()  { echo "FAIL: $*"; fail=1; }
@@ -33,7 +33,7 @@ new_root() {
     printf 'root:!:1::::::\nkairos:!:1::::::\n' >"$r/etc/shadow"
     printf '# ly\nauto_login_user = null\nbox_title = Isotope\n' >"$r/etc/ly/config.ini"
     mkdir -p "$r/usr/share/applications"
-    cp /repo/rootfs/usr/share/applications/isotope-install.desktop "$r/usr/share/applications/"
+    cp /repo/rootfs/common/usr/share/applications/isotope-install.desktop "$r/usr/share/applications/"
     echo "$r"
 }
 run() { # run ROOT CMDLINE
@@ -132,7 +132,7 @@ check "niri: no Noctalia override off the live path" test -z "$(find "$r4/home" 
 # logind, with no setting to turn that off). The real service files are used.
 pam_root() { # pam_root CMDLINE -> a root with the repo's three lock services
     pr=$(new_root); : >"$pr/run/cos/live_mode"; mkdir -p "$pr/etc/pam.d"
-    cp rootfs-cosmic/etc/pam.d/cosmic-greeter rootfs-sway/etc/pam.d/swaylock rootfs-i3/etc/pam.d/i3lock "$pr/etc/pam.d/"
+    cp rootfs/cosmic/etc/pam.d/cosmic-greeter rootfs/sway/etc/pam.d/swaylock rootfs/i3/etc/pam.d/i3lock "$pr/etc/pam.d/"
     printf '#%%PAM-1.0\nauth       required     pam_unix.so\n' >"$pr/etc/pam.d/login"
     cp "$pr/etc/pam.d/login" "$pr/login.orig"
     run "$pr" "$1"
@@ -148,7 +148,7 @@ for svc in cosmic-greeter swaylock i3lock; do
     eq "pam: $svc has the rule as its first auth line" "$rule" "$first_auth"
     check "pam: $svc keeps its own auth include" grep -q 'auth .*include .*login' "$f"
     check "pam: $svc has the rule once" test "$(grep -c pam_succeed_if "$f")" = 1
-    check "pam: the image's $svc has no such rule" sh -c "! grep -rqs pam_succeed_if rootfs*/etc/pam.d/$svc"
+    check "pam: the image's $svc has no such rule" sh -c "! grep -rqs pam_succeed_if rootfs/*/etc/pam.d/$svc"
 done
 check "pam: the rule is for the user live only" sh -c "! grep -h pam_succeed_if $pr/etc/pam.d/* | grep -v 'user = live\$'"
 check "pam: other services are untouched" cmp -s "$pr/etc/pam.d/login" "$pr/login.orig"
@@ -156,14 +156,14 @@ run "$pr" "$live_cmd"
 check "pam: a second run adds nothing" test "$(grep -c pam_succeed_if "$pr/etc/pam.d/cosmic-greeter")" = 1
 pr=$(pam_root "$plain_cmd")
 check "pam: no rule without isotope.live" test -z "$(grep -rl pam_succeed_if "$pr/etc/pam.d")"
-pr=$(new_root); mkdir -p "$pr/etc/pam.d"; cp rootfs-cosmic/etc/pam.d/cosmic-greeter "$pr/etc/pam.d/"
+pr=$(new_root); mkdir -p "$pr/etc/pam.d"; cp rootfs/cosmic/etc/pam.d/cosmic-greeter "$pr/etc/pam.d/"
 run "$pr" "$live_cmd"
 check "pam: no rule without live_mode" test -z "$(grep -rl pam_succeed_if "$pr/etc/pam.d")"
-pr=$(new_root); : >"$pr/run/cos/live_mode"; mkdir -p "$pr/etc/pam.d"; cp rootfs-cosmic/etc/pam.d/cosmic-greeter "$pr/etc/pam.d/"
+pr=$(new_root); : >"$pr/run/cos/live_mode"; mkdir -p "$pr/etc/pam.d"; cp rootfs/cosmic/etc/pam.d/cosmic-greeter "$pr/etc/pam.d/"
 printf 'install:\n  auto: true\n' >"$pr/oem/99_install.yaml"
 run "$pr" "$live_cmd"
 check "pam: no rule when an install config wins" test -z "$(grep -rl pam_succeed_if "$pr/etc/pam.d")"
-check "pam: no service file in the repo carries the rule" sh -c "! grep -rqs pam_succeed_if rootfs*/etc/pam.d Dockerfile Dockerfile.agent"
+check "pam: no service file in the repo carries the rule" sh -c "! grep -rqs pam_succeed_if rootfs/*/etc/pam.d Dockerfile Dockerfile.agent"
 
 # live without a greetd file or a ly config: nothing is invented for greetd
 r=$(new_root); : >"$r/run/cos/live_mode"; rm -rf "$r/etc/greetd"
@@ -185,7 +185,7 @@ r=$(new_root); : >"$r/run/cos/live_mode"; : >"$r/etc/isotope/session"; before=$(
 run "$r" "$live_cmd"
 eq "ly: no SESSION key, config untouched" "$before" "$(cat "$r/etc/ly/config.ini")"
 
-# install-config: each fixture, mirroring install-ui/core ConfigPresent
+# install-config: each fixture, mirroring pkg/installer ConfigPresent
 cfgcase() { # cfgcase NAME EXPECT(yes|no) CONTENT [FILE]
     r=$(new_root); : >"$r/run/cos/live_mode"
     mkdir -p "$(dirname "$r/oem/${4:-99_install.yaml}")"
@@ -222,31 +222,31 @@ eq "idempotent: a second run changes nothing" "$first" "$(snapshot "$r")"
 
 # image-clean: nothing the stage writes comes from the image
 dirty=$(grep -rlE 'auto_login_user[[:space:]]*=[[:space:]]*live|initial_session' \
-    rootfs*/etc/ly rootfs*/etc/greetd 2>/dev/null || true)
+    rootfs/*/etc/ly rootfs/*/etc/greetd 2>/dev/null || true)
 eq "image-clean: no autologin or initial_session in the image overlays" "" "$dirty"
 dirty=$(grep -nE 'auto_login_user[[:space:]]*=[[:space:]]*live|initial_session|^live:' Dockerfile Dockerfile.agent 2>/dev/null || true)
 eq "image-clean: no Dockerfile writes the live user or autologin" "" "$dirty"
-dirty=$(grep -rlE '(^|[^a-z])live:x:' rootfs* --include=passwd 2>/dev/null || true)
+dirty=$(grep -rlE '(^|[^a-z])live:x:' rootfs --include=passwd 2>/dev/null || true)
 eq "image-clean: no baked passwd entry" "" "$dirty"
 
 # stage file: runs the script in initramfs, ordered as yip orders it.
 # Upstream names, fixed by kairos-init (pkg/bundled/cloudconfigs):
 # https://github.com/kairos-io/kairos-init/tree/main/pkg/bundled/cloudconfigs
-check "stage: initramfs runs the script" grep -q '/usr/libexec/isotope-live-boot' rootfs/system/oem/51_isotope_live.yaml
-check "stage: the script is in the initramfs stage" grep -q '^  initramfs:' rootfs/system/oem/51_isotope_live.yaml
-check "stage: 90 installer is in the initramfs stage" grep -q '^  initramfs:' rootfs/system/oem/90_desktop_installer.yaml
-order=$( { ls rootfs/system/oem; printf '10_accounting.yaml\n51_reset.yaml\n52_installer.yaml\n'; } | sort | grep -E '^(10_accounting|51_isotope_live|52_installer|90_desktop_installer)\.yaml$' | tr '\n' ' ')
+check "stage: initramfs runs the script" grep -q '/usr/libexec/isotope-live-boot' rootfs/common/system/oem/51_isotope_live.yaml
+check "stage: the script is in the initramfs stage" grep -q '^  initramfs:' rootfs/common/system/oem/51_isotope_live.yaml
+check "stage: 90 installer is in the initramfs stage" grep -q '^  initramfs:' rootfs/common/system/oem/90_desktop_installer.yaml
+order=$( { ls rootfs/common/system/oem; printf '10_accounting.yaml\n51_reset.yaml\n52_installer.yaml\n'; } | sort | grep -E '^(10_accounting|51_isotope_live|52_installer|90_desktop_installer)\.yaml$' | tr '\n' ' ')
 eq "stage: yip order is accounting, live, installer, desktop installer" \
     "10_accounting.yaml 51_isotope_live.yaml 52_installer.yaml 90_desktop_installer.yaml " "$order"
-check "stage: no 89_isotope_live.yaml left" test ! -e rootfs/system/oem/89_isotope_live.yaml
+check "stage: no 89_isotope_live.yaml left" test ! -e rootfs/common/system/oem/89_isotope_live.yaml
 
 # each variant's SESSION names a session file the variant ships
 for v in sway i3 niri cosmic; do
-    name=$(sed -n 's/^SESSION=//p' "rootfs-$v/etc/isotope/session")
+    name=$(sed -n 's/^SESSION=//p' "rootfs/$v/etc/isotope/session")
     eq "session: $v sets SESSION" "$v" "$name"
     case $v in
-        sway|niri) f="rootfs-$v/usr/share/wayland-sessions/$name.desktop" ;;
-        i3) f="rootfs-$v/usr/share/xsessions/$name.desktop" ;;
+        sway|niri) f="rootfs/$v/usr/share/wayland-sessions/$name.desktop" ;;
+        i3) f="rootfs/$v/usr/share/xsessions/$name.desktop" ;;
         # cosmic-session installs cosmic.desktop; the image build runs cosmic-build cosmic-session
         cosmic) f=""; check "session: cosmic builds cosmic-session" grep -q 'cosmic-build cosmic-session' Dockerfile ;;
     esac

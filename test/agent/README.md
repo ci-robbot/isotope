@@ -198,7 +198,7 @@ service.
 
 `make-seed.sh` mints two bearers per VM: a user-class `hdn_u_…` and an
 admin-class `hdn_a_…`, each 32 crypto-random bytes in unpadded base64url,
-mirroring `agent/internal/auth.Generate` exactly.
+mirroring `internal/agent/auth.Generate` exactly.
 
 The rules the whole harness obeys, and that you should keep obeying:
 
@@ -378,16 +378,13 @@ text artifacts through `hdn_agent_redact` first.
 
 ## A minimal Go client invocation
 
-The ready-made client is `test/agent/cmd/mcp-smoke`. Its `main` package lives
-outside the agent Go module so it can sit under `test/agent`, and all its
-assertion logic lives in `agent/internal/smoke` — so it must be copied into the
-module tree before building (which is what `_agent_build_mcp_smoke` does):
+The ready-made client is `test/agent/cmd/mcp-smoke`. Its `main` package sits
+under `test/agent`, and all its assertion logic lives in
+`internal/agent/smoke`; both are in the root Go module, so it builds from the
+repository root (which is what `_agent_build_mcp_smoke` does):
 
 ```bash
-mkdir -p agent/cmd/mcp-smoke
-cp test/agent/cmd/mcp-smoke/main.go agent/cmd/mcp-smoke/main.go
-(cd agent && CGO_ENABLED=0 go build -trimpath -o /tmp/mcp-smoke ./cmd/mcp-smoke)
-rm -rf agent/cmd/mcp-smoke
+CGO_ENABLED=0 go build -trimpath -o /tmp/mcp-smoke ./test/agent/cmd/mcp-smoke
 
 /tmp/mcp-smoke \
   --descriptor test/agent/artifacts/fixture/fixture.json \
@@ -540,7 +537,7 @@ path, in your repository's checkout. The workflow always stops the VM
 
 The appliance learns its bearer digests from a cloud-config that AuroraBoot
 writes to the ISO root as `/config.yaml`; on boot,
-`rootfs-agent/system/oem/89_agent_cloudconfig.yaml` publishes it into `/oem`
+`rootfs/agent/system/oem/89_agent_cloudconfig.yaml` publishes it into `/oem`
 where the provisioner reads it. A released ISO — the kind `agent_iso_url` points
 at — carries none, because `make agent-iso` builds the appliance without one.
 

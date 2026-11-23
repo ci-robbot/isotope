@@ -1,0 +1,12 @@
+#!/bin/sh
+# COSMIC's login screen, as greetd starts it (rootfs/cosmic/etc/greetd/
+# cosmic-greeter.toml): the GPU check, then upstream's cosmic-greeter-start,
+# which runs its own cosmic-comp as the cosmic-greeter user. greetd already
+# sources /etc/profile (and so /etc/profile.d/isotope-gpu.sh) before this
+# command; sourcing the hook here as well keeps the login screen out of a
+# black screen on a GPU Mesa has no working driver for even if that changes
+# (greetd's source_profile = false, or a profile that stops early). The
+# second source costs nothing (ISOTOPE_GPU_CHECKED). See
+# /usr/libexec/isotope-gpu-env.
+[ -r /usr/libexec/isotope-gpu-env ] && . /usr/libexec/isotope-gpu-env
+exec cosmic-greeter-start "$@"

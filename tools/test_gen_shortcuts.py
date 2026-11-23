@@ -148,13 +148,13 @@ class Repository(unittest.TestCase):
     def test_tiling_variants_document_the_help_key(self):
         # AGENTS.md: Super+F1 opens the shortcut sheet on the tiling variants.
         for v in ("sway", "i3", "niri"):
-            with open(os.path.join(gen.ROOT, "rootfs-" + v, gen.OUT), encoding="utf-8") as f:
+            with open(os.path.join(gen.ROOT, "rootfs", v, gen.OUT), encoding="utf-8") as f:
                 got = rows(f.read())
             self.assertIn(("Basics", "Super + F1", "This help"), got, v)
 
     def test_every_variant_documents_the_isotope_menu(self):
         for v in ("sway", "i3", "niri", "cosmic"):
-            with open(os.path.join(gen.ROOT, "rootfs-" + v, gen.OUT), encoding="utf-8") as f:
+            with open(os.path.join(gen.ROOT, "rootfs", v, gen.OUT), encoding="utf-8") as f:
                 keys = [r[1] for r in rows(f.read())]
             self.assertIn("Super + Escape", keys, v)
 

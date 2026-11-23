@@ -9,7 +9,7 @@
 # run}_test.sh -- which exercise the scripts/stages statically with no image --
 # this one proves the overlay actually lands the units in agent-desktop:dev and
 # that the committed multi-user.target.wants symlink (the ONLY enablement
-# mechanism, since `COPY rootfs-agent/ /` never processes a unit's [Install]
+# mechanism, since `COPY rootfs/agent/ /` never processes a unit's [Install]
 # section) survives into the built image.
 set -euo pipefail
 IMAGE="${1:-agent-desktop:dev}"

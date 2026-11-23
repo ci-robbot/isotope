@@ -6,7 +6,7 @@
 # without its dashes, while a passphrase is used byte for byte.
 set -u
 repo=$(cd "$(dirname "$0")/../.." && pwd)
-script=$repo/rootfs/usr/lib/dracut/modules.d/45isotope-unlock/isotope-unlock.sh
+script=$repo/rootfs/common/usr/lib/dracut/modules.d/45isotope-unlock/isotope-unlock.sh
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 fail=0
 expect() { if [ "$2" = "$3" ]; then echo "ok: $1"; else echo "FAIL: $1: got [$2] want [$3]"; fail=1; fi; }

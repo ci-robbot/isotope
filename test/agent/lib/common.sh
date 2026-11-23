@@ -23,7 +23,7 @@ umask 077
 #     to put fixture text -- logs, descriptors, command output, CI artifacts
 #     -- anywhere it might be printed or uploaded. It scrubs both hdn_u_
 #     (user-class) and hdn_a_ (admin-class) bearer tokens (see
-#     agent/internal/auth/token.go).
+#     internal/agent/auth/token.go).
 #
 #   - This file MUST NEVER `set -x` / `set -o xtrace` itself, and no caller
 #     that has sourced it should re-enable tracing after a token has been
@@ -122,7 +122,7 @@ PY
 
 # hdn_agent_redact -- reads text on stdin, writes it to stdout with every
 # hdn_u_<...> / hdn_a_<...> bearer token replaced by a fixed placeholder.
-# Tokens are 32 random bytes, base64url-encoded (see agent/internal/auth),
+# Tokens are 32 random bytes, base64url-encoded (see internal/agent/auth),
 # so the body alphabet is [A-Za-z0-9_-]; match it greedily.
 hdn_agent_redact() {
   sed -E \

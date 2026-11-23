@@ -5,7 +5,7 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-stage="$repo_root/rootfs-agent/system/oem/94_agent_browser_persistence.yaml"
+stage="$repo_root/rootfs/agent/system/oem/94_agent_browser_persistence.yaml"
 
 fail=0
 err() { echo "FAIL: $*" >&2; fail=1; }

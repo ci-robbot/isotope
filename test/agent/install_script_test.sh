@@ -27,7 +27,7 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-script="$repo_root/rootfs-agent/usr/local/bin/isotope-agent-install"
+script="$repo_root/rootfs/agent/usr/local/bin/isotope-agent-install"
 
 fail=0
 err() { echo "FAIL: $*" >&2; fail=1; }
@@ -50,7 +50,7 @@ trap 'rm -rf "$workdir"' EXIT
 # inspect-seed gate (not a stub).
 # ---------------------------------------------------------------------------
 agent_bin="$workdir/isotope-agent"
-if ! ( cd "$repo_root/agent" && CGO_ENABLED=0 go build -o "$agent_bin" ./cmd/isotope-agent ) 2>"$workdir/build.log"; then
+if ! ( cd "$repo_root" && CGO_ENABLED=0 go build -o "$agent_bin" ./cmd/isotope-agent ) 2>"$workdir/build.log"; then
   echo "FATAL: could not build isotope-agent:" >&2
   cat "$workdir/build.log" >&2
   exit 1

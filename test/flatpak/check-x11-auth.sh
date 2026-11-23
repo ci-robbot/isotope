@@ -8,7 +8,7 @@
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-launcher="$here/../../rootfs-i3/usr/bin/start-desktop"
+launcher="$here/../../rootfs/i3/usr/bin/start-desktop"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin"

@@ -1,0 +1,252 @@
+#!/bin/sh
+# The live desktop boot stage (51_isotope_live.yaml runs it in the initramfs).
+#
+# On a live ISO boot of a desktop image (isotope.live on the cmdline, and
+# immucore's /run/cos/live_mode) it does one of two things:
+#
+#   - The ISO carries an install config: it writes /run/cos/install_mode, so the
+#     boot installs unattended as before. Nothing else is written.
+#   - No install config: it writes the marker /run/isotope/live-desktop, adds
+#     the user `live` and sets up automatic login (ly, or greetd on COSMIC).
+#
+# Everything lands in /etc and /run, which are tmpfs on a live boot, so the
+# image never holds the user or the login settings. This is the only place
+# that reads /proc/cmdline for the live decision.
+#
+# Paths for tests: ISOTOPE_LIVE_ROOT, ISOTOPE_LIVE_CMDLINE, ISOTOPE_LIVE_OEM.
+set -eu
+
+root="${ISOTOPE_LIVE_ROOT:-/}"
+root="${root%/}"
+cmdline="${ISOTOPE_LIVE_CMDLINE:-/proc/cmdline}"
+oem="${ISOTOPE_LIVE_OEM:-/oem}"
+# The ISO's root, where AuroraBoot --cloud-config puts the install config.
+iso="${ISOTOPE_LIVE_ISO:-/run/initramfs/live}"
+
+# The groups pkg/installer gives a desktop user (desktopGroups). Only those
+# the image has are used.
+live_groups="admin audio video render input bluetooth seat docker"
+
+# The keyword must be a whole word: isotope.live, not isotope.liveness.
+have_cmdline_word() {
+	[ -r "$cmdline" ] || return 1
+	# One word per line; the file is a single line of space-separated words.
+	tr ' ' '\n' <"$cmdline" | grep -qxF "$1"
+}
+
+# Same predicate as pkg/installer ConfigPresent: a users: or install: key at
+# the start of a line (leading blanks allowed) in any *.yaml or *.yml file of
+# /oem or of the ISO root, or in a file of /oem/95_userdata (the cdrom
+# datasource). An install config on the ISO wins over the live desktop.
+install_config_present() {
+	for f in "$oem"/*.yaml "$oem"/*.yml "$iso"/*.yaml "$iso"/*.yml \
+		"$oem"/95_userdata "$oem"/95_userdata/*; do
+		[ -f "$f" ] || continue
+		if grep -Eq '^[[:space:]]*(users|install):' "$f" 2>/dev/null; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+# The session name the variant sets at build time (SESSION= in
+# /etc/isotope/session). It is read as text, never sourced.
+session_name() {
+	f="$root/etc/isotope/session"
+	[ -f "$f" ] || return 1
+	name=$(sed -n 's/^SESSION=//p' "$f" | head -n 1)
+	[ -n "$name" ] || return 1
+	printf '%s\n' "$name"
+}
+
+# Set key = value in an ini file: replace the line (commented or not) or append.
+set_kv() {
+	cfg="$1"; key="$2"; val="$3"
+	if grep -Eq "^[[:space:]]*#?[[:space:]]*${key}[[:space:]]*=" "$cfg"; then
+		sed -i "s|^[[:space:]]*#\{0,1\}[[:space:]]*${key}[[:space:]]*=.*|${key} = ${val}|" "$cfg"
+	else
+		printf '%s = %s\n' "$key" "$val" >>"$cfg"
+	fi
+}
+
+# Give the live user ownership of PATH (a file or a tree). A failure stops the
+# stage: a home the user cannot write would only show later as a broken login.
+live_chown() {
+	uid=$(awk -F: '$1=="live"{print $3}' "$root/etc/passwd")
+	gid=$(awk -F: '$1=="live"{print $4}' "$root/etc/passwd")
+	chown -R "$uid:$gid" "$1"
+}
+
+group_gid() { awk -F: -v g="$1" '$1==g{print $3; exit}' "$root/etc/group"; }
+
+# Add the user to a group, only when the image has it.
+add_to_group() {
+	g="$1"
+	[ -n "$(group_gid "$g")" ] || return 0
+	awk -F: -v OFS=: -v g="$g" -v u=live '
+		$1==g { n=split($4, m, ","); found=0; for (i=1;i<=n;i++) if (m[i]==u) found=1
+		        if (!found) $4 = ($4=="" ? u : $4 "," u) }
+		{ print }' "$root/etc/group" >"$root/etc/group.new"
+	cat "$root/etc/group.new" >"$root/etc/group"
+	rm -f "$root/etc/group.new"
+}
+
+# Lowest number at or above $3 not used in column $2 of file $1.
+next_free() {
+	awk -F: -v col="$2" -v floor="$3" '
+		{ used[$col] = 1 }
+		END { n = floor; while (n in used) n++; print n }' "$1"
+}
+
+# A range of 65536 ids after the last one in a subuid/subgid file, at least
+# from 100000, for rootless Podman and Distrobox.
+add_subid() {
+	f="$root/etc/$1"
+	[ -f "$f" ] || : >"$f"
+	awk -F: '$1=="live"{f=1} END{exit !f}' "$f" && return 0
+	start=$(awk -F: '{ e = $2 + $3; if (e > n) n = e } END { print (n < 100000 ? 100000 : n) }' "$f")
+	printf 'live:%s:65536\n' "$start" >>"$f"
+}
+
+add_user() {
+	mkdir -p "$root/etc"
+	[ -f "$root/etc/passwd" ] || : >"$root/etc/passwd"
+	[ -f "$root/etc/group" ] || : >"$root/etc/group"
+	if awk -F: '$1=="live"{f=1} END{exit !f}' "$root/etc/passwd"; then
+		return 0
+	fi
+	# UID 1000 belongs to kairos (kairos-init's accounting stage runs first).
+	uid=$(next_free "$root/etc/passwd" 3 1001)
+	gid=$(next_free "$root/etc/group" 3 "$uid")
+	# passwd first: the live check above reads it, so a crash between these
+	# writes cannot make a re-run add the group twice.
+	printf 'live:x:%s:%s:Isotope Live:/home/live:/bin/bash\n' "$uid" "$gid" >>"$root/etc/passwd"
+	printf 'live:x:%s:\n' "$gid" >>"$root/etc/group"
+	if [ -f "$root/etc/shadow" ]; then
+		printf 'live:!:19000:0:99999:7:::\n' >>"$root/etc/shadow"
+	fi
+	for g in $live_groups; do
+		add_to_group "$g"
+	done
+	add_subid subuid
+	add_subid subgid
+	mkdir -p "$root/home/live"
+	live_chown "$root/home/live"
+	chmod 0700 "$root/home/live"
+}
+
+setup_ly() {
+	sess=$(session_name) || return 0
+	# ly is not in every variant (COSMIC uses greetd): act only on its config.
+	cfg="$root/etc/ly/config.ini"
+	[ -f "$cfg" ] || return 0
+	set_kv "$cfg" auto_login_user live
+	set_kv "$cfg" auto_login_session "$sess"
+	set_kv "$cfg" auto_login_service ly-autologin
+}
+
+setup_greetd() {
+	cfg="$root/etc/greetd/cosmic-greeter.toml"
+	[ -f "$cfg" ] || return 0
+	grep -q '^\[initial_session\]' "$cfg" && return 0
+	# The base file may be a read-only image file under an overlay; rewrite it.
+	{
+		cat "$cfg"
+		printf '\n[initial_session]\ncommand = "start-cosmic"\nuser = "live"\n'
+	} >"$cfg.new"
+	cat "$cfg.new" >"$cfg"
+	rm -f "$cfg.new"
+}
+
+# COSMIC locks the screen when cosmic-idle has switched the outputs off: it runs
+# the LockScreen system action (`loginctl lock-session` by default), and the
+# Super+Alt+L key runs the same action. `live` has no password, so a lock could
+# shut the user out of the installer. A per-user override of that one action
+# turns the lock off and leaves idle blanking alone. cosmic-settings-config
+# merges the user's system_actions over the system's, so only LockScreen is
+# named. It goes in the live user's home (tmpfs here), not into the image.
+# Only on COSMIC, which is the variant with the greetd config.
+setup_cosmic_lock() {
+	[ -f "$root/etc/greetd/cosmic-greeter.toml" ] || return 0
+	d="$root/home/live/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1"
+	mkdir -p "$d"
+	printf '{LockScreen: "true"}' >"$d/system_actions"
+	live_chown "$root/home/live/.config"
+}
+
+# Noctalia (niri) has one switch for every lock it offers: with
+# [lockscreen] enabled = false its session panel and launcher hide Lock, a
+# `noctalia msg session lock` does nothing, and nothing locks before suspend.
+# Noctalia merges ~/.config/noctalia/*.toml in name order, so a file sorting
+# after isotope-noctalia's 00-isotope-defaults.toml wins. For the live user
+# only, on niri only (the variant that ships Noctalia's defaults).
+setup_noctalia_lock() {
+	[ -f "$root/usr/share/isotope/noctalia-defaults.toml" ] || return 0
+	d="$root/home/live/.config/noctalia"
+	mkdir -p "$d"
+	printf '# The live user has no password: nothing may lock the screen.\n[lockscreen]\nenabled = false\n' >"$d/99-isotope-live.toml"
+	live_chown "$root/home/live/.config"
+}
+
+# The screen lockers check the password through PAM. Locks that no setting
+# turns off can still happen on COSMIC: cosmic-greeter's locker locks when logind
+# prepares to sleep. `live` has no password, so the lock screens accept it:
+# `auth sufficient pam_succeed_if.so user = live` is the first auth line of each
+# locker's PAM service (any character then opens the lock; an empty submit is
+# ignored by the locker). It matches the user `live` only, and is written to the
+# files of the live /etc (tmpfs overlay), never to the image. A service the
+# image lacks gets nothing.
+pam_live_bypass() {
+	f="$root/etc/pam.d/$1"
+	[ -f "$f" ] || return 0
+	grep -q 'pam_succeed_if.so user = live' "$f" && return 0
+	{
+		# keep the "#%PAM-1.0" banner first
+		sed -n '1{/^#%PAM/p}' "$f"
+		printf 'auth       sufficient   pam_succeed_if.so user = live\n'
+		sed '1{/^#%PAM/d}' "$f"
+	} >"$f.new"
+	cat "$f.new" >"$f"
+	rm -f "$f.new"
+}
+
+setup_pam() {
+	for svc in cosmic-greeter swaylock i3lock; do
+		pam_live_bypass "$svc"
+	done
+}
+
+# "Install Isotope" in the launchers. The image ships the desktop file with
+# NoDisplay=true. A file with the same desktop-file ID in the user's
+# ~/.local/share/applications wins over /usr/share/applications in fuzzel,
+# isotope-apps, Noctalia, COSMIC's launcher and dock (the user's directory is
+# always searched first, so no variant depends on XDG_DATA_DIRS from the login
+# environment). The copy lives in the live user's tmpfs home, never in the
+# image.
+setup_installer_launcher() {
+	src="$root/usr/share/applications/isotope-install.desktop"
+	[ -f "$src" ] || return 0
+	d="$root/home/live/.local/share/applications"
+	mkdir -p "$d"
+	grep -v '^NoDisplay=' "$src" >"$d/isotope-install.desktop"
+	live_chown "$root/home/live/.local"
+}
+
+have_cmdline_word isotope.live || exit 0
+[ -e "$root/run/cos/live_mode" ] || exit 0
+
+if install_config_present; then
+	mkdir -p "$root/run/cos"
+	: >"$root/run/cos/install_mode"
+	exit 0
+fi
+
+mkdir -p "$root/run/isotope"
+: >"$root/run/isotope/live-desktop"
+add_user
+setup_ly
+setup_greetd
+setup_cosmic_lock
+setup_noctalia_lock
+setup_installer_launcher
+setup_pam

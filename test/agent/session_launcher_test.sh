@@ -12,7 +12,7 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-bin="$repo_root/rootfs-agent/usr/bin"
+bin="$repo_root/rootfs/agent/usr/bin"
 launcher="$bin/start-desktop"
 ready="$bin/isotope-agent-session-ready"
 
@@ -167,8 +167,8 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Unit / drop-in shapes: watchdog install-mode exclusion + Ly agent profile.
 # ---------------------------------------------------------------------------
-wd="$repo_root/rootfs-agent/etc/systemd/system/isotope-agent-display-watchdog.service"
-lydrop="$repo_root/rootfs-agent/etc/systemd/system/ly@.service.d/20-agent-profile.conf"
+wd="$repo_root/rootfs/agent/etc/systemd/system/isotope-agent-display-watchdog.service"
+lydrop="$repo_root/rootfs/agent/etc/systemd/system/ly@.service.d/20-agent-profile.conf"
 
 if [ -f "$wd" ]; then
   ok "display-watchdog unit exists"

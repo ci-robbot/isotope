@@ -9,7 +9,7 @@ both halves of the boot:
   switch-root.
 - **booted system**: `kairos-splash.service` runs it with `--duration=3s`
   before the login screen. A drop-in in
-  `rootfs/usr/lib/systemd/system/kairos-splash.service.d/` orders it before
+  `rootfs/common/usr/lib/systemd/system/kairos-splash.service.d/` orders it before
   `ly@tty1`.
 
 `kairos.splash=0` on the kernel command line turns it off for one boot.
@@ -74,7 +74,7 @@ otherwise. The VT stays in graphics mode, so no kernel text shows.
 - **Only one agent asks.** The splash is an agent only with a framebuffer,
   the VT on stdin and the right to answer; then it writes its PID to
   `/run/isotope-ask/splash-agent`. The `51isotope-askpass` dracut module
-  (`rootfs/usr/lib/dracut/modules.d/`) makes `kairos-splash.service`
+  (`rootfs/common/usr/lib/dracut/modules.d/`) makes `kairos-splash.service`
   `Type=notify` (READY=1 comes after that decision) and gives
   `systemd-ask-password-console.service` an `ExecStartPre=` gate ordered after
   the splash. The gate waits while that PID lives. With no PID it stops the

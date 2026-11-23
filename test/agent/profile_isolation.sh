@@ -115,7 +115,7 @@ extract_one() {
 
 # scan_bearer <dir> -> stdout: any live hdn_u_/hdn_a_ bearer found under <dir>.
 # Prefix + exactly the 43-char unpadded base64url payload (32 random bytes)
-# that auth.Generate produces -- see agent/internal/auth/token.go.
+# that auth.Generate produces -- see internal/agent/auth/token.go.
 scan_bearer() {
   grep -rIoE 'hdn_[ua]_[A-Za-z0-9_-]{43}' "$1" 2>/dev/null || true
 }
@@ -158,12 +158,12 @@ AGENT_USER_UNIT_BASENAMES=(
   isotope-agent-session.service
 )
 
-# Additional agent-exclusive paths introduced by rootfs-agent/ that exist in
-# NO other rootfs overlay (rootfs, rootfs-sway, rootfs-i3). Matched via
-# in_list on the exact exported-tar path (as COPY rootfs-agent/ / in
+# Additional agent-exclusive paths introduced by rootfs/agent/ that exist in
+# NO other rootfs overlay (rootfs/common, rootfs/sway, rootfs/i3). Matched via
+# in_list on the exact exported-tar path (as COPY rootfs/agent/ / in
 # Dockerfile.agent places them 1:1 at the filesystem root). NOTE:
-# usr/bin/isotope-status is deliberately NOT included here: rootfs-agent's
-# copy is a CONTENT OVERRIDE of a path that already exists in rootfs-i3, not
+# usr/bin/isotope-status is deliberately NOT included here: rootfs/agent's
+# copy is a CONTENT OVERRIDE of a path that already exists in rootfs/i3, not
 # a novel path, so it would be a false positive in an absence check.
 AGENT_ONLY_PATHS=(
   system/oem/90_agent_profile.yaml
@@ -202,7 +202,7 @@ assert_ordinary_lacks_agent() {
   local u hit=0
   for u in "${AGENT_UNIT_BASENAMES[@]}" "${AGENT_USER_UNIT_BASENAMES[@]}"; do
     if grep -q "$u\$" "$listfile"; then
-      err "$label: unexpectedly ships rootfs-agent unit $u"
+      err "$label: unexpectedly ships rootfs/agent unit $u"
       hit=1
     fi
   done
@@ -276,7 +276,7 @@ else
   err "agent: missing /etc/isotope-agent/profile"
 fi
 
-# Content, not just presence: rootfs-agent/etc/isotope-agent/profile ships
+# Content, not just presence: rootfs/agent/etc/isotope-agent/profile ships
 # `PROFILE=agent` (plus ENABLED=true) -- assert the exported file actually
 # carries that marker, not merely that a path with this name exists.
 profile_content="$(extract_one "$AGENT_TAR" etc/isotope-agent/profile)"
@@ -288,7 +288,7 @@ fi
 
 miss=0
 for u in "${AGENT_UNIT_BASENAMES[@]}" "${AGENT_USER_UNIT_BASENAMES[@]}"; do
-  grep -q "$u\$" "$AGENT_LIST" || { err "agent: missing rootfs-agent unit $u"; miss=1; }
+  grep -q "$u\$" "$AGENT_LIST" || { err "agent: missing rootfs/agent unit $u"; miss=1; }
 done
 [ "$miss" -eq 0 ] && ok "agent: has all isotope-agent-*.service units"
 

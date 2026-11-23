@@ -20,9 +20,9 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-bin="$repo_root/rootfs-agent/usr/bin"
+bin="$repo_root/rootfs/agent/usr/bin"
 script="$bin/isotope-status"
-i3conf="$repo_root/rootfs-agent/etc/i3/config.d/90-isotope-agent.conf"
+i3conf="$repo_root/rootfs/agent/etc/i3/config.d/90-isotope-agent.conf"
 
 fail=0
 err() { echo "FAIL: $*" >&2; fail=1; }
@@ -167,11 +167,11 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7. no automatic screen lock on the agent: rootfs-agent shadows the i3
+# 7. no automatic screen lock on the agent: rootfs/agent shadows the i3
 #    drop-in that starts xss-lock, and starts nothing in its place
 # ---------------------------------------------------------------------------
-lock_base="$repo_root/rootfs-i3/etc/i3/config.d/10-screen-lock.conf"
-lock_agent="$repo_root/rootfs-agent/etc/i3/config.d/10-screen-lock.conf"
+lock_base="$repo_root/rootfs/i3/etc/i3/config.d/10-screen-lock.conf"
+lock_agent="$repo_root/rootfs/agent/etc/i3/config.d/10-screen-lock.conf"
 if grep -q '^exec .*xss-lock' "$lock_base" 2>/dev/null; then
   ok "i3 starts xss-lock from ${lock_base#$repo_root/}"
 else

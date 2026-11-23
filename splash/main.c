@@ -575,7 +575,7 @@ typedef struct {
 /* While the initramfs splash answers systemd's password questions it says so
    in this file (its PID), and the console agent's gate waits for that PID
    instead of asking on the console too. See
-   rootfs/usr/lib/dracut/modules.d/51isotope-askpass/. */
+   rootfs/common/usr/lib/dracut/modules.d/51isotope-askpass/. */
 #define AGENT_PIDDIR  "/run/isotope-ask"
 #define AGENT_PIDFILE AGENT_PIDDIR "/splash-agent"
 

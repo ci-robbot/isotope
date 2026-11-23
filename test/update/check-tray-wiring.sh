@@ -12,8 +12,8 @@
 #   test/update/check-tray-wiring.sh --root DIR FLAVOR
 #
 # FLAVOR is sway, i3, cosmic, niri or agent. With --root the checks read a
-# directory tree instead of an image (for example the rootfs/ and
-# rootfs-<variant>/ overlays plus stage output), so the wiring can be tested
+# directory tree instead of an image (for example the rootfs/common/ and
+# rootfs/<variant>/ overlays plus stage output), so the wiring can be tested
 # without building an image. Checks that must run a program or read the
 # image's users (ldd, /etc/passwd written by the build) need an image and are
 # reported as SKIP under --root.

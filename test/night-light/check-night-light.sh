@@ -1,5 +1,5 @@
 #!/bin/sh
-# Check rootfs/usr/bin/isotope-night-light: the saved setting, toggle, restore
+# Check rootfs/common/usr/bin/isotope-night-light: the saved setting, toggle, restore
 # at session start, and that each variant starts and stops its own tool. The
 # tools (wlsunset, xsct, noctalia, busctl) and the clock are fakes that log
 # their arguments, so no display is needed.
@@ -16,7 +16,7 @@ if [ "${NIGHT_LIGHT_IN_CONTAINER:-}" != 1 ]; then
         alpine:3.22 sh /src/test/night-light/check-night-light.sh
 fi
 
-script=/src/rootfs/usr/bin/isotope-night-light
+script=/src/rootfs/common/usr/bin/isotope-night-light
 fail=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fail=1; }

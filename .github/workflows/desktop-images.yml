@@ -33,11 +33,11 @@ on:
     paths:
       - "Dockerfile"
       - "Makefile"
-      - "rootfs/**"
-      - "rootfs-sway/**"
-      - "rootfs-cosmic/**"
-      - "rootfs-niri/**"
-      - "rootfs-i3/**"
+      - "rootfs/common/**"
+      - "rootfs/sway/**"
+      - "rootfs/cosmic/**"
+      - "rootfs/niri/**"
+      - "rootfs/i3/**"
       - "patches/**"
       - "tools/cosmic-build.sh"
       - "tools/stage-key.py"
@@ -47,14 +47,19 @@ on:
       - "test/vm/**"
       - "test/live/check-live.sh"
       - "test/welcome/**"
-      - "welcome/**"
-      - "system/**"
+      - "cmd/isotope-welcome/**"
+      - "cmd/isotope-system/**"
       - "test/system/**"
       - "test/bluetooth/**"
       - "test/network/**"
-      - "guikit/**"
-      - "install-ui/**"
-      - "install-gui/**"
+      - "go.mod"
+      - "go.sum"
+      - "pkg/guikit/**"
+      - "pkg/installer/**"
+      - "pkg/isorelease/**"
+      - "pkg/recoverykey/**"
+      - "cmd/isotope-install-ui/**"
+      - "cmd/isotope-install-gui/**"
       - "scripts/ci-containerd-store.sh"
       - ".github/workflows/desktop-images.yml"
   # Refresh the build cache from main (see above) when an input of the image
@@ -64,18 +69,20 @@ on:
     paths:
       - "Dockerfile"
       - "Makefile"
-      - "rootfs*/**"
+      - "rootfs/**"
       - "patches/**"
       - "applets/**"
-      - "guikit/**"
-      - "install-gui/**"
-      - "install-ui/**"
+      - "go.mod"
+      - "go.sum"
+      - "cmd/isotope/**"
+      - "cmd/isotope-install-gui/**"
+      - "cmd/isotope-install-ui/**"
+      - "cmd/isotope-system/**"
+      - "cmd/isotope-welcome/**"
+      - "pkg/**"
       - "splash/**"
-      - "system/**"
       - "theme/**"
       - "tools/**"
-      - "update/**"
-      - "welcome/**"
       - "docs/assets/**"
       - "scripts/kairos-user-live-only.sh"
       - ".github/workflows/desktop-images.yml"
@@ -98,8 +105,8 @@ permissions:
 
 jobs:
   # Pick the desktops whose inputs the pull request changes. A change to a
-  # shared input (Dockerfile, Makefile, rootfs/, the GL check, this workflow)
-  # builds all four; a change only under rootfs-<desktop>/ builds that one.
+  # shared input (Dockerfile, Makefile, rootfs/common/, the GL check, this workflow)
+  # builds all four; a change only under rootfs/<desktop>/ builds that one.
   plan:
     name: Pick desktops
     runs-on: ubuntu-24.04
@@ -129,15 +136,16 @@ jobs:
               "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
             for f in "${files[@]}"; do
               case "$f" in
-                Dockerfile|Makefile|rootfs/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|\
-                test/welcome/*|welcome/*|guikit/*|install-ui/*|install-gui/*|test/system/*|system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|\
+                test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
-                rootfs-sway/*) want[sway]=1 ;;
-                rootfs-cosmic/*|tools/cosmic-build.sh|test/cosmic/*) want[cosmic]=1 ;;
-                rootfs-niri/*) want[niri]=1 ;;
+                rootfs/sway/*) want[sway]=1 ;;
+                rootfs/cosmic/*|tools/cosmic-build.sh|test/cosmic/*) want[cosmic]=1 ;;
+                rootfs/niri/*) want[niri]=1 ;;
                 # The only patch today is i3lock's; any other patch builds all.
-                rootfs-i3/*|patches/i3lock-*) want[i3]=1 ;;
+                rootfs/i3/*|patches/i3lock-*) want[i3]=1 ;;
                 patches/*) for d in "${all[@]}"; do want[$d]=1; done ;;
               esac
             done

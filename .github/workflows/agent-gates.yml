@@ -6,13 +6,17 @@ on:
     # Dockerfile and Makefile are shared with the desktops, so the scope job
     # below then decides whether the change reaches the agent at all.
     paths:
-      - "agent/**"
-      - "rootfs-agent/**"
+      - "cmd/isotope-agent/**"
+      - "internal/agent/**"
+      - "go.mod"
+      - "go.sum"
+      - "rootfs/agent/**"
       - "Dockerfile.agent"
       - "test/agent/**"
-      - "install-ui/**"
+      - "cmd/isotope-install-ui/**"
+      - "pkg/installer/**"
       - "test/boot-ux/**"
-      - "rootfs/etc/kairos/branding/**"
+      - "rootfs/common/etc/kairos/branding/**"
       - "auroraboot/**"
       - "Dockerfile"
       - "Makefile"
@@ -98,7 +102,7 @@ jobs:
             decide true "Running every gate: the agent inputs changed ($base_key -> $head_key)."
           fi
 
-  # The agent/ unit tests, the harness shell parse, and the hermetic browser
+  # The agent's unit tests (cmd/isotope-agent, internal/agent), the harness shell parse, and the hermetic browser
   # unit tests run in ci.yml on every pull request; this workflow only builds
   # the appliance and runs the VM gates on it.
   build-agent-iso:
@@ -321,8 +325,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: agent/go.mod
-          cache-dependency-path: agent/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Download the agent image
         uses: actions/download-artifact@v8

@@ -14,7 +14,7 @@ import math, sys
 from PIL import Image, ImageDraw, ImageFont
 
 import os
-GUI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "install-gui", "fonts") + "/"
+GUI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pkg", "guikit", "fonts") + "/"
 URB = GUI + "Urbanist-SemiBold.ttf"
 WORD, TRACKING = "isotope", 0.07          # Urbanist SemiBold (600)
 WORD_XH = (21, 30, 40, 60)            # x-heights: 768p, 1080p, 1440p-1600p, 2160p

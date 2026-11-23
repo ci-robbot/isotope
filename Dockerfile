@@ -1664,7 +1664,7 @@ RUN mkdir -p /vpnc-script/usr/share/vpnc-scripts && \
 
 # NetworkManager-openconnect: the VPN service plugin (nm-openconnect-service,
 # its helper, the D-Bus policy and the .name file). No GNOME editor and no
-# GTK auth dialog: the tray's secret agent (update/openconnect.go) does the
+# GTK auth dialog: the tray's secret agent (cmd/isotope/openconnect.go) does the
 # auth dialog's job and returns the cookie, gateway and gwcert secrets.
 # configure checks for WebKitGTK even without the auth dialog that uses it;
 # setting WEBKIT_CFLAGS/LIBS skips that check (nothing built here reads them).
@@ -2040,7 +2040,7 @@ RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://github.com/rya
 
 # The Isotope typefaces: Inter for the interface, JetBrains Mono for terminals,
 # both SIL OFL 1.1, with their licences. Data only: the variable TTFs (one file
-# covers every weight), no static cuts, no web fonts. rootfs/etc/fonts/conf.d/
+# covers every weight), no static cuts, no web fonts. rootfs/common/etc/fonts/conf.d/
 # 60-isotope.conf makes them the sans-serif and monospace defaults; DejaVu and
 # the Nerd Font symbols stay as fallbacks. Neither project publishes checksums,
 # so the release zips are checked against SHA256s computed when pinned: a
@@ -2107,7 +2107,7 @@ RUN n=https://raw.githubusercontent.com/googlefonts/noto-emoji/v${NOTO_EMOJI_VER
     rm -f NotoColorEmoji.ttf OFL.txt emoji-test.txt
 
 # The desktop wallpaper is the release's (Isotope 1, Hydrogen), committed in
-# rootfs/usr/share/backgrounds/isotope/ and reached through the stable name
+# rootfs/common/usr/share/backgrounds/isotope/ and reached through the stable name
 # isotope-desktop-night.png; tools/wallpapers/ renders it and the build
 # wallpaper a development build points that link at instead. Drawn here at
 # build time, from theme/palette.toml by tools/gen-wallpaper.py (stdlib
@@ -2134,7 +2134,7 @@ RUN python3 /build/tools/gen-wallpaper.py /isotope-wallpapers-day/usr/share/back
 # only, about 3 s each. A development build makes its own in build-wallpaper.
 FROM toolchain AS isotope-wallpapers-blur
 COPY tools/gen-wallpaper.py /build/tools/gen-wallpaper.py
-COPY rootfs/usr/share/backgrounds/isotope/ /build/wallpapers/
+COPY rootfs/common/usr/share/backgrounds/isotope/ /build/wallpapers/
 RUN for mode in night day; do \
       python3 /build/tools/gen-wallpaper.py --blur /build/wallpapers/isotope-desktop-$mode.png \
         /isotope-wallpapers-blur/usr/share/backgrounds/isotope/isotope-desktop-$mode-blur.png || exit 1; \
@@ -2793,9 +2793,9 @@ RUN DESTDIR=/swayidle ninja -C buildDir install
 
 # swaylock — screen locker, run by the Super+Alt+L binding and by swayidle on
 # idle and before sleep. Built against PAM: it checks the password through the
-# service in rootfs-sway/etc/pam.d/swaylock (pam_unix's setuid unix_chkpwd
+# service in rootfs/sway/etc/pam.d/swaylock (pam_unix's setuid unix_chkpwd
 # helper reads /etc/shadow for it), so the binary itself is not setuid.
-# Colours come from rootfs-sway/etc/swaylock/config.
+# Colours come from rootfs/sway/etc/swaylock/config.
 FROM toolchain AS swaylock
 COPY --from=wayland /wayland /
 COPY --from=libxkb /libxkb /
@@ -3576,7 +3576,7 @@ RUN DESTDIR=/dunst ninja -C buildDir install
 # i3lock — the i3 screen locker, run by Super+Alt+L and by xss-lock. Every
 # library it needs is already in the i3 image (XCB utils, xcb-xrm and libev
 # from x11-libs, xkbcommon-x11, X11 Cairo). It checks the password through PAM
-# (rootfs-i3/etc/pam.d/i3lock), so the binary is not setuid.
+# (rootfs/i3/etc/pam.d/i3lock), so the binary is not setuid.
 FROM toolchain AS i3lock
 COPY --from=xorgproto /xorgproto /
 COPY --from=xcbproto /xcbproto /
@@ -4865,7 +4865,7 @@ RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry
 
 # niri's release profile keeps line-table debug info (~130 MB binary); the
 # installed copy is stripped.
-# rootfs-niri's niri.desktop replaces the one installed here: it starts
+# rootfs/niri's niri.desktop replaces the one installed here: it starts
 # isotope-niri-session (the GPU check, then niri-session).
 FROM niri-build AS niri
 # renovate: datasource=github-tags depName=YaLTeR/niri extractVersion=^v(?<version>\d+(\.\d+)*)$
@@ -4980,7 +4980,7 @@ RUN d=/adwaita-cursors/usr/share/icons && mkdir -p $d/Adwaita $d/default && \
 # the host's font files but not its fontconfig aliases. GTK3 has the dark
 # Adwaita built in only as a variant, so the theme named Adwaita-dark is a
 # one-line stylesheet that imports it. COSMIC adds its own override
-# (rootfs-cosmic/usr/share/glib-2.0/schemas/91_isotope-cosmic.gschema.override)
+# (rootfs/cosmic/usr/share/glib-2.0/schemas/91_isotope-cosmic.gschema.override)
 # that puts GTK's window buttons on the left, as its patched libcosmic does.
 #
 # No dconf: GLib then uses its keyfile backend, which reads the compiled schemas
@@ -5370,7 +5370,7 @@ FROM ${BASE_IMAGE} AS hadron-kernel
 
 # smartmontools (smartctl, smartd, the drive database and smartd.service) from
 # its hadron-layers layer, files under /usr only. smartd stays off: the preset
-# in rootfs/usr/lib/systemd/system-preset/ disables it, and it is not linked
+# in rootfs/common/usr/lib/systemd/system-preset/ disables it, and it is not linked
 # into any target. Copied in desktop-default and server-default.
 FROM ghcr.io/kairos-io/hadron-layers/smartmontools:${SMARTMONTOOLS_LAYER_VERSION} AS smartmontools
 
@@ -5767,12 +5767,12 @@ COPY --from=wl-clipboard /wl-clipboard /
 COPY --from=cliphist /cliphist /
 COPY --from=cosmic-fonts /cosmic-fonts /
 # gsettings-desktop-schemas, for the GTK window-button override in
-# rootfs-cosmic/usr/share/glib-2.0/schemas (and Isotope's shared override).
+# rootfs/cosmic/usr/share/glib-2.0/schemas (and Isotope's shared override).
 COPY --from=gsettings-desktop-schemas /gsettings-desktop-schemas /
 # xdg-desktop-portal-gtk, as the second Settings backend after COSMIC's: it
 # serves org.gnome.desktop.wm.preferences button-layout and
 # org.gnome.desktop.interface icon-theme (the two keys xdg-desktop-portal-cosmic
-# lacks), so Flatpak GTK apps follow the Isotope look. rootfs-cosmic's
+# lacks), so Flatpak GTK apps follow the Isotope look. rootfs/cosmic's
 # cosmic-portals.conf lists it after cosmic, so the colour scheme still comes
 # from COSMIC. It needs the GTK3 stack, which COSMIC's own apps do not.
 COPY --from=cairo /cairo /
@@ -5901,17 +5901,17 @@ COPY --from=adwaita-cursors /adwaita-cursors /
 COPY --from=ly /ly /
 
 
-# Static configuration is also selected as a rootfs stage. rootfs/ is shared;
+# Static configuration is also selected as a rootfs stage. rootfs/common/ is shared;
 # the overlay contains only files for the chosen session, so the i3 image never
 # advertises a broken Sway session (and vice versa).
 FROM scratch AS common-config
-COPY rootfs/ /
+COPY rootfs/common/ /
 
 FROM common-config AS sway-config
-COPY rootfs-sway/ /
+COPY rootfs/sway/ /
 
 FROM common-config AS i3-config
-COPY rootfs-i3/ /
+COPY rootfs/i3/ /
 
 # The Isotope theme as COSMIC's system defaults: the builder and the computed
 # theme, dark and light, written by libcosmic's own cosmic-theme crate from
@@ -5966,7 +5966,7 @@ RUN --mount=type=cache,id=cosmic-cargo-registry,target=/usr/local/cargo/registry
     test -f /cosmic/usr/share/icons/hicolor/scalable/apps/io.kairos.Isotope.QuickSettings-symbolic.svg
 
 FROM common-config AS cosmic-config
-COPY rootfs-cosmic/ /
+COPY rootfs/cosmic/ /
 # Isotope's own applets (the isotope-applets stage), next to COSMIC's.
 COPY --from=isotope-applets /cosmic/ /
 # The Isotope panel defaults live once, in the Isotope layout (the Layout page
@@ -5974,14 +5974,14 @@ COPY --from=isotope-applets /cosmic/ /
 # it, so the two cannot drift. No RUN: this stage has no shell. Each COPY
 # below is one config dir of the layout (a new one needs a line here);
 # test/look/check-look.sh diffs them against the layout.
-COPY rootfs-cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel /usr/share/cosmic/com.system76.CosmicPanel
-COPY rootfs-cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel.Panel /usr/share/cosmic/com.system76.CosmicPanel.Panel
-COPY rootfs-cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel.Dock /usr/share/cosmic/com.system76.CosmicPanel.Dock
+COPY rootfs/cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel /usr/share/cosmic/com.system76.CosmicPanel
+COPY rootfs/cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel.Panel /usr/share/cosmic/com.system76.CosmicPanel.Panel
+COPY rootfs/cosmic/usr/share/cosmic-layouts/isotope/com.system76.CosmicPanel.Dock /usr/share/cosmic/com.system76.CosmicPanel.Dock
 COPY --from=cosmic-theme /cosmic-theme/ /
 COPY --from=isotope-wallpapers-blur /isotope-wallpapers-blur/ /
 
 FROM common-config AS niri-config
-COPY rootfs-niri/ /
+COPY rootfs/niri/ /
 
 # ---------------------------------------------------------------------------
 # Server edition (DESKTOP=server): no display server, compositor, login
@@ -5990,7 +5990,7 @@ COPY rootfs-niri/ /
 # names a desktop stage, so BuildKit builds none of them. What it keeps from
 # the desktop build is the network stack (NetworkManager, nmcli and nmtui), polkit
 # for the update service, and the boot, installer and update parts of
-# rootfs/, taken file by file because most of rootfs/ is desktop scripts.
+# rootfs/common/, taken file by file because most of rootfs/common/ is desktop scripts.
 # ---------------------------------------------------------------------------
 FROM scratch AS server-rootfs
 COPY --from=libucontext /libucontext /
@@ -6008,40 +6008,40 @@ COPY --from=polkit /polkit /
 FROM scratch AS server-config
 # The disk passphrase prompt in the initramfs (isotope-unlock, and the splash
 # answering the password agent), the console font and the GRUB theme.
-COPY rootfs/etc/dracut.conf.d/ /etc/dracut.conf.d/
-COPY rootfs/usr/lib/dracut/ /usr/lib/dracut/
-COPY rootfs/etc/vconsole.conf /etc/vconsole.conf
-COPY rootfs/etc/kairos/ /etc/kairos/
-COPY rootfs/usr/libexec/isotope-grub-theme /usr/libexec/isotope-grub-theme
-COPY rootfs/system/oem/08_isotope_rename.yaml rootfs/system/oem/09_isotope_grub_theme.yaml rootfs/system/oem/10_isotope_grub_env.yaml rootfs/system/oem/11_isotope_efi_boot_entry.yaml /system/oem/
+COPY rootfs/common/etc/dracut.conf.d/ /etc/dracut.conf.d/
+COPY rootfs/common/usr/lib/dracut/ /usr/lib/dracut/
+COPY rootfs/common/etc/vconsole.conf /etc/vconsole.conf
+COPY rootfs/common/etc/kairos/ /etc/kairos/
+COPY rootfs/common/usr/libexec/isotope-grub-theme /usr/libexec/isotope-grub-theme
+COPY rootfs/common/system/oem/08_isotope_rename.yaml rootfs/common/system/oem/09_isotope_grub_theme.yaml rootfs/common/system/oem/10_isotope_grub_env.yaml rootfs/common/system/oem/11_isotope_efi_boot_entry.yaml /system/oem/
 # The installer, and system extensions.
-COPY rootfs/system/oem/90_desktop_installer.yaml rootfs/system/oem/93_isotope_extensions.yaml /system/oem/
-COPY rootfs/etc/isotope/extensions.conf /etc/isotope/extensions.conf
+COPY rootfs/common/system/oem/90_desktop_installer.yaml rootfs/common/system/oem/93_isotope_extensions.yaml /system/oem/
+COPY rootfs/common/etc/isotope/extensions.conf /etc/isotope/extensions.conf
 # The update service, its D-Bus activation and its polkit policy.
-COPY rootfs/usr/lib/systemd/system/isotope-updated.service /usr/lib/systemd/system/isotope-updated.service
+COPY rootfs/common/usr/lib/systemd/system/isotope-updated.service /usr/lib/systemd/system/isotope-updated.service
 # Kernel errors off the boot screen: the command line's loglevel= applied again
 # in the real root (isotope-console-level.service).
-COPY rootfs/usr/lib/systemd/system/isotope-console-level.service /usr/lib/systemd/system/isotope-console-level.service
-COPY rootfs/usr/libexec/isotope-console-level /usr/libexec/isotope-console-level
+COPY rootfs/common/usr/lib/systemd/system/isotope-console-level.service /usr/lib/systemd/system/isotope-console-level.service
+COPY rootfs/common/usr/libexec/isotope-console-level /usr/libexec/isotope-console-level
 # A serial getty only on a port with a UART behind it, and the tss user for the
 # TPM udev rules.
-COPY rootfs/usr/lib/systemd/system/serial-getty@.service.d/ /usr/lib/systemd/system/serial-getty@.service.d/
-COPY rootfs/usr/libexec/isotope-serial-present /usr/libexec/isotope-serial-present
-COPY rootfs/usr/lib/sysusers.d/tpm2-tss.conf /usr/lib/sysusers.d/tpm2-tss.conf
-COPY rootfs/etc/systemd/system/sysinit.target.wants/ /etc/systemd/system/sysinit.target.wants/
-COPY rootfs/usr/share/dbus-1/ /usr/share/dbus-1/
-COPY rootfs/usr/share/polkit-1/ /usr/share/polkit-1/
+COPY rootfs/common/usr/lib/systemd/system/serial-getty@.service.d/ /usr/lib/systemd/system/serial-getty@.service.d/
+COPY rootfs/common/usr/libexec/isotope-serial-present /usr/libexec/isotope-serial-present
+COPY rootfs/common/usr/lib/sysusers.d/tpm2-tss.conf /usr/lib/sysusers.d/tpm2-tss.conf
+COPY rootfs/common/etc/systemd/system/sysinit.target.wants/ /etc/systemd/system/sysinit.target.wants/
+COPY rootfs/common/usr/share/dbus-1/ /usr/share/dbus-1/
+COPY rootfs/common/usr/share/polkit-1/ /usr/share/polkit-1/
 # smartd stays off (smartmontools comes from its layer, copied in server-default).
-COPY rootfs/usr/lib/systemd/system-preset/80-isotope-smartd.preset /usr/lib/systemd/system-preset/80-isotope-smartd.preset
+COPY rootfs/common/usr/lib/systemd/system-preset/80-isotope-smartd.preset /usr/lib/systemd/system-preset/80-isotope-smartd.preset
 # Backups: the daily timer of `isotope backup --scheduled`, and the one-shot
 # after a whole restore.
-COPY rootfs/usr/lib/systemd/system/isotope-backup.service rootfs/usr/lib/systemd/system/isotope-backup.timer rootfs/usr/lib/systemd/system/isotope-restore-finish.service /usr/lib/systemd/system/
+COPY rootfs/common/usr/lib/systemd/system/isotope-backup.service rootfs/common/usr/lib/systemd/system/isotope-backup.timer rootfs/common/usr/lib/systemd/system/isotope-restore-finish.service /usr/lib/systemd/system/
 # Docker: its units, and the boot stage that persists /var/lib/docker and
 # starts the daemon on the installed system only.
-COPY rootfs/usr/lib/systemd/system/docker.service rootfs/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
-COPY rootfs/system/oem/92_docker.yaml /system/oem/92_docker.yaml
-COPY rootfs/system/oem/94_isotope_state.yaml /system/oem/94_isotope_state.yaml
-COPY rootfs-server/ /
+COPY rootfs/common/usr/lib/systemd/system/docker.service rootfs/common/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
+COPY rootfs/common/system/oem/92_docker.yaml /system/oem/92_docker.yaml
+COPY rootfs/common/system/oem/94_isotope_state.yaml /system/oem/94_isotope_state.yaml
+COPY rootfs/server/ /
 
 FROM ${DESKTOP}-rootfs AS desktop-rootfs
 FROM ${DESKTOP}-config AS desktop-config
@@ -6060,29 +6060,30 @@ FROM ${DESKTOP}-config AS desktop-config
 # Deliberately NOT in the Makefile's --no-cache-filter list. That list exists
 # because the kairos stage's `dracut -f` bakes the splash branding and every
 # other initramfs input behind BuildKit's back, and because it follows the
-# moving kairos-init:master tag. Here the cache key is honest: `COPY install-ui/ ./` is
+# moving kairos-init:master tag. Here the cache key is honest: the source COPYs are
 # content-addressed, so any source change invalidates the build, and the output
 # is COPYied straight into the image rather than swallowed by a later step. Busting
 # it every build would re-run `go mod download` (network) for no correctness gain.
 # ---------------------------------------------------------------------------
 FROM golang:1.25.0-alpine3.22 AS install-ui-build
 WORKDIR /src
-COPY install-ui/go.mod install-ui/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY install-ui/ ./
+COPY cmd/isotope-install-ui/ cmd/isotope-install-ui/
+COPY pkg/installer/ pkg/installer/
 # The trailing check is a smoke test: the binary must run and reject an unknown
 # flag with exit 2, so a binary that segfaults on startup fails the build here
 # rather than on tty1 during an install. Braced so a FAILED `go build` still
 # fails the RUN -- written as `... && bin --nonsense; [ $? -eq 2 ]` the RUN's
 # status would be the test's alone, and a build that happened to exit 2 would
 # "pass" having produced no binary at all.
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope-install-ui . \
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope-install-ui ./cmd/isotope-install-ui \
     && { /out/isotope-install-ui --nonsense 2>/dev/null; [ $? -eq 2 ]; }
 
 
 # ---------------------------------------------------------------------------
-# The graphical installer of the desktop ISOs: isotope-install-gui (install-gui/,
-# Gio over install-ui/core) inside cage, a kiosk Wayland compositor.
+# The graphical installer of the desktop ISOs: isotope-install-gui
+# (cmd/isotope-install-gui, Gio over pkg/installer) inside cage, a kiosk Wayland compositor.
 # isotope-install-ui starts it and keeps the text installer as the fallback;
 # see docs/superpowers/specs/2026-11-17-graphical-installer-design.md. Only the
 # desktop images get it (desktop-default); the server keeps the text installer.
@@ -6176,18 +6177,15 @@ COPY --from=libxkb-x11 /libxkb-x11 /
 COPY --from=golang:1.25.0-alpine3.22 /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=local
 WORKDIR /src
-COPY install-ui/go.mod install-ui/go.sum install-ui/
-COPY guikit/go.mod guikit/go.sum guikit/
-COPY install-gui/go.mod install-gui/go.sum install-gui/
-RUN cd install-gui && go mod download
-COPY install-ui/ install-ui/
-COPY guikit/ guikit/
-COPY install-gui/ install-gui/
-RUN cd install-gui && \
-    CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan . && \
-    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-install-gui . && \
+COPY go.mod go.sum ./
+RUN go mod download
+COPY pkg/installer/ pkg/installer/
+COPY pkg/guikit/ pkg/guikit/
+COPY cmd/isotope-install-gui/ cmd/isotope-install-gui/
+RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-install-gui && \
+    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-install-gui ./cmd/isotope-install-gui && \
     { /out/wayland/isotope-install-gui --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
-    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-install-gui . && \
+    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-install-gui ./cmd/isotope-install-gui && \
     { /out/x11/isotope-install-gui --nonsense 2>/dev/null; [ $? -eq 2 ]; }
 
 FROM scratch AS install-gui-sway
@@ -6208,7 +6206,7 @@ COPY --from=install-gui-build /out/x11/isotope-install-gui /usr/bin/isotope-inst
 FROM scratch AS install-gui-server
 FROM install-gui-${DESKTOP} AS install-gui
 
-# Isotope Welcome (welcome/), the graphical first-login flow, built like the
+# Isotope Welcome (cmd/isotope-welcome), the graphical first-login flow, built like the
 # installer above. Two builds of the same source: Gio's X11 backend links
 # libX11, libX11-xcb, libXcursor, libXfixes and libxkbcommon-x11, which sway,
 # COSMIC and niri do not ship, so they get the -tags nox11 build, and i3 (which
@@ -6230,27 +6228,24 @@ COPY --from=libxkb-x11 /libxkb-x11 /
 COPY --from=golang:1.25.0-alpine3.22 /usr/local/go /usr/local/go
 ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=local
 WORKDIR /src
-COPY install-ui/go.mod install-ui/go.sum install-ui/
-COPY guikit/go.mod guikit/go.sum guikit/
-COPY welcome/go.mod welcome/go.sum welcome/
-RUN cd welcome && go mod download
-# The live page takes the keyboard list and checks from install-ui/core.
-COPY install-ui/ install-ui/
-COPY guikit/ guikit/
-COPY welcome/ welcome/
+COPY go.mod go.sum ./
+RUN go mod download
+# The live page takes the keyboard list and checks from pkg/installer.
+COPY pkg/installer/ pkg/installer/
+COPY pkg/guikit/ pkg/guikit/
+COPY cmd/isotope-welcome/ cmd/isotope-welcome/
 # The tests read the app list and the shortcut sheets from the rootfs trees.
-COPY rootfs/usr/share/isotope/first-run-apps.list rootfs/usr/share/isotope/
-COPY rootfs-sway/usr/share/isotope/shortcuts.txt rootfs-sway/usr/share/isotope/
-COPY rootfs-i3/usr/share/isotope/shortcuts.txt rootfs-i3/usr/share/isotope/
-COPY rootfs-cosmic/usr/share/isotope/shortcuts.txt rootfs-cosmic/usr/share/isotope/
-COPY rootfs-niri/usr/share/isotope/shortcuts.txt rootfs-niri/usr/share/isotope/
+COPY rootfs/common/usr/share/isotope/first-run-apps.list rootfs/common/usr/share/isotope/
+COPY rootfs/sway/usr/share/isotope/shortcuts.txt rootfs/sway/usr/share/isotope/
+COPY rootfs/i3/usr/share/isotope/shortcuts.txt rootfs/i3/usr/share/isotope/
+COPY rootfs/cosmic/usr/share/isotope/shortcuts.txt rootfs/cosmic/usr/share/isotope/
+COPY rootfs/niri/usr/share/isotope/shortcuts.txt rootfs/niri/usr/share/isotope/
 # ...and niri's config, which must include the live keyboard file.
-COPY rootfs-niri/etc/niri/config.kdl rootfs-niri/etc/niri/
-RUN cd welcome && \
-    CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan . && \
-    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-welcome . && \
+COPY rootfs/niri/etc/niri/config.kdl rootfs/niri/etc/niri/
+RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-welcome && \
+    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-welcome ./cmd/isotope-welcome && \
     { /out/wayland/isotope-welcome --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
-    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-welcome . && \
+    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-welcome ./cmd/isotope-welcome && \
     { /out/x11/isotope-welcome --nonsense 2>/dev/null; [ $? -eq 2 ]; }
 
 FROM scratch AS welcome-sway
@@ -6266,21 +6261,18 @@ COPY --from=welcome-build /out/x11/isotope-welcome /usr/bin/isotope-welcome
 FROM scratch AS welcome-server
 FROM welcome-${DESKTOP} AS welcome
 
-# Isotope System (system/), the window for the system's jobs (updates,
+# Isotope System (cmd/isotope-system), the window for the system's jobs (updates,
 # desktop, extensions, backup, the disk's keys, network), built like Isotope
 # Welcome: the same two builds, system-${DESKTOP} picks one. It imports
-# update/isorelease, so the update module's source is copied too.
+# pkg/isorelease and pkg/recoverykey, shared with the isotope CLI.
 FROM welcome-build AS system-build
-COPY update/go.mod update/go.sum update/
-COPY system/go.mod system/go.sum system/
-RUN cd system && go mod download
-COPY update/ update/
-COPY system/ system/
-RUN cd system && \
-    CGO_ENABLED=1 go test -tags nox11,novulkan . && \
-    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system . && \
+COPY pkg/isorelease/ pkg/isorelease/
+COPY pkg/recoverykey/ pkg/recoverykey/
+COPY cmd/isotope-system/ cmd/isotope-system/
+RUN CGO_ENABLED=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
+    CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
     { /out/wayland/isotope-system --nonsense 2>/dev/null; [ $? -eq 2 ]; } && \
-    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-system . && \
+    CGO_ENABLED=1 go build -tags novulkan -trimpath -ldflags="-s -w" -o /out/x11/isotope-system ./cmd/isotope-system && \
     { /out/x11/isotope-system --nonsense 2>/dev/null; [ $? -eq 2 ]; }
 
 FROM scratch AS system-sway
@@ -6306,16 +6298,18 @@ FROM system-${DESKTOP} AS system
 # user's upgrade; the ones that need a dbus-daemon skip, as this stage has none.
 # ---------------------------------------------------------------------------
 FROM golang:1.25.0-alpine3.22 AS update-build
-# The module sits at /src/update, as in the repo, because its locale tests
-# read the installer's golden files at ../install-ui/core/testdata: both
-# writers of /oem/91_isotope_locale.yaml are held to the same bytes.
-WORKDIR /src/update
-COPY update/go.mod update/go.sum ./
+# The tree sits at /src as in the repo, because the locale tests read the
+# installer's golden files at ../../pkg/installer/testdata: both writers of
+# /oem/91_isotope_locale.yaml are held to the same bytes.
+WORKDIR /src
+COPY go.mod go.sum ./
 RUN go mod download
-COPY install-ui/core/testdata/oem-locale-de_DE.golden install-ui/core/testdata/locale.conf-de_DE.golden /src/install-ui/core/testdata/
-COPY update/ ./
-RUN CGO_ENABLED=0 go test ./... \
-    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope . \
+COPY pkg/installer/testdata/oem-locale-de_DE.golden pkg/installer/testdata/locale.conf-de_DE.golden pkg/installer/testdata/
+COPY pkg/isorelease/ pkg/isorelease/
+COPY pkg/recoverykey/ pkg/recoverykey/
+COPY cmd/isotope/ cmd/isotope/
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... \
+    && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 
 
@@ -6415,7 +6409,7 @@ RUN chmod 1777 /tmp; \
     fc-cache -f 2>/dev/null || true; \
     # Compile the GSettings schemas the variant ships (GTK's, and
     # gsettings-desktop-schemas with Isotope's dark override; COSMIC adds its
-    # window-button override from rootfs-cosmic): the
+    # window-button override from rootfs/cosmic): the
     # stages install them under DESTDIR, where meson skips this, and GLib
     # aborts a GTK app that opens a file chooser with no compiled schemas. On
     # i3 the AT-SPI bus launcher, which GTK starts for snixembed, aborts too.
@@ -6474,7 +6468,7 @@ RUN chmod 1777 /tmp; \
     mkdir -p /etc/systemd/system/multi-user.target.wants; \
     ln -sf /usr/lib/systemd/system/ly@.service /etc/systemd/system/multi-user.target.wants/ly@tty1.service; \
     else \
-    # COSMIC: greetd runs cosmic-greeter on tty1 instead of ly (rootfs-cosmic/).
+    # COSMIC: greetd runs cosmic-greeter on tty1 instead of ly (rootfs/cosmic/).
     # The greeter runs as its own system user, which needs the seat groups for
     # its compositor.
       useradd -r -M -d /var/lib/cosmic-greeter -s /usr/sbin/nologin -G video,render,input,seat cosmic-greeter; \
@@ -6599,7 +6593,7 @@ COPY --from=install-ui-build /out/isotope-install-ui /usr/bin/isotope-install-ui
 COPY --from=install-gui / /
 COPY --from=cage /cage/usr/bin/cage /usr/bin/cage
 # The GPU probe, for the sessions' and the installer's software fallback
-# (rootfs/usr/libexec/isotope-gpu-env).
+# (rootfs/common/usr/libexec/isotope-gpu-env).
 COPY --from=isotope-gpu-probe /isotope-gpu-probe /
 # Isotope Welcome, the variant's build (welcome-${DESKTOP}). The sessions
 # start `isotope-welcome --login`; Dockerfile.agent removes it.
@@ -6648,10 +6642,10 @@ COPY --from=server-config / /
 # passphrase (51isotope-askpass), and falls back to text without a framebuffer.
 COPY --from=isotope-splash /build/splash/isotope-splash /usr/bin/kairos-splash
 COPY --from=bootvine /bootvine/ /
-# The installer puts its user in the desktop groups (install-ui/core/config.go);
+# The installer puts its user in the desktop groups (pkg/installer/config.go);
 # a group that does not exist would stop the user from being created.
 # NetworkManager starts at boot; nmcli changes need root (sudo), see
-# rootfs-server/etc/NetworkManager/NetworkManager.conf. polkit answers the
+# rootfs/server/etc/NetworkManager/NetworkManager.conf. polkit answers the
 # update service only (50-isotope-update.rules: the admin group, no prompt),
 # so it works the same from SSH and from the console. Docker stays disabled
 # in the image, as on the desktop: the live ISO's /var is an overlayfs, where
@@ -6756,8 +6750,8 @@ RUN systemd-sysusers tpm2-tss.conf && \
 RUN [ ! -f /usr/lib/sysusers.d/nm-openconnect.conf ] || \
     { systemd-sysusers nm-openconnect.conf && grep -q '^nm-openconnect:' /etc/passwd; }
 # System extensions from the catalogs are unsigned; the normal install merges
-# them anyway (rootfs/etc/kairos/90_isotope_extensions.yaml and
-# rootfs/system/oem/93_isotope_extensions.yaml). A Trusted Boot image keeps
+# them anyway (rootfs/common/etc/kairos/90_isotope_extensions.yaml and
+# rootfs/common/system/oem/93_isotope_extensions.yaml). A Trusted Boot image keeps
 # signatures on: it gets neither file.
 RUN [ "${TRUSTED_BOOT}" = false ] || \
     rm -f /etc/kairos/90_isotope_extensions.yaml /system/oem/93_isotope_extensions.yaml
@@ -6808,7 +6802,7 @@ RUN case "${GPU}" in full|vm) ;; *) echo "GPU must be full or vm, not '${GPU}'" 
 # image from any other one without pulling it (the registry config blob carries
 # them). Kept in this last stage, after every expensive one, because the value
 # changes per release and a LABEL ahead of them would invalidate their cache.
-# The keys must match the constants in update/policy.go.
+# The keys must match the constants in cmd/isotope/policy.go.
 LABEL io.kairos.isotope.flavor="${DESKTOP}" \
       io.kairos.isotope.version="${VERSION}" \
       io.kairos.isotope.hadron-version="${HADRON_VERSION}" \
@@ -6829,10 +6823,10 @@ RUN [ "${TRUSTED_BOOT}" = true ] || sed -i '/^loadfont unicode/a set color_norma
 # runs /usr/libexec/isotope-grub-theme, which puts the theme dir, the font and the
 # EFI grub modules on STATE so gfxmenu/tga/the theme all resolve there.
 # (isotope-theme/ isn't written by kairos-init, so its COPY at line ~1982 survives.)
-COPY rootfs/etc/kairos/branding/grubmenu.cfg /etc/kairos/branding/grubmenu.cfg
+COPY rootfs/common/etc/kairos/branding/grubmenu.cfg /etc/kairos/branding/grubmenu.cfg
 # Console font. kairos-init may regenerate /etc/vconsole.conf, so re-apply ours
 # after it — same treatment as /etc/issue and /etc/motd below.
-COPY rootfs/etc/vconsole.conf /etc/vconsole.conf
+COPY rootfs/common/etc/vconsole.conf /etc/vconsole.conf
 # Per-variant GRUB theme subtitle. theme.txt ships in the COMMON overlay with an
 # @VARIANT_SUBTITLE@ placeholder; the variant overlay supplies DESKTOP_NAME and
 # DISPLAY_NAME via /etc/isotope/session. Lowercased to match the theme's

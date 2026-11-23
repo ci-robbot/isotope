@@ -71,7 +71,7 @@ run() {
     mkdir -p "$work/$name"
     env -u WAYLAND_DISPLAY PATH="$work/bin:$PATH" LOG="$work/$name" PICK="$pick" \
         ISOTOPE_EMOJI_LIST="$here/fixtures/emoji.txt" "$@" \
-        sh "$repo/rootfs/usr/bin/isotope-emoji" && echo 0 > "$work/$name/status" \
+        sh "$repo/rootfs/common/usr/bin/isotope-emoji" && echo 0 > "$work/$name/status" \
         || echo $? > "$work/$name/status"
 }
 log() { cat "$work/$1/$2" 2>/dev/null || echo "<none>"; }
@@ -119,21 +119,21 @@ esac
 check() {
     if grep -Eq -- "$3" "$repo/$2"; then pass "$1"; else bad "$1"; fi
 }
-check "sway binds Super+; to isotope-emoji" rootfs-sway/etc/sway/config \
+check "sway binds Super+; to isotope-emoji" rootfs/sway/etc/sway/config \
     '^bindsym \$mod\+semicolon +exec isotope-emoji$'
-check "i3 binds Super+; to isotope-emoji" rootfs-i3/etc/i3/config \
+check "i3 binds Super+; to isotope-emoji" rootfs/i3/etc/i3/config \
     '^bindsym \$mod\+semicolon +exec --no-startup-id isotope-emoji$'
-check "niri binds Super+; to isotope-emoji" rootfs-niri/etc/niri/config.kdl \
+check "niri binds Super+; to isotope-emoji" rootfs/niri/etc/niri/config.kdl \
     '^ +Mod\+Semicolon .*\{ spawn "isotope-emoji"; \}$'
 check "COSMIC binds Super+; to isotope-emoji (Dockerfile)" Dockerfile \
     'key: "semicolon"\): Spawn\("isotope-emoji"\)'
-check "the Isotope menu has an Emoji entry" rootfs/usr/bin/isotope-menu \
+check "the Isotope menu has an Emoji entry" rootfs/common/usr/bin/isotope-menu \
     '^ +Emoji\) +exec isotope-emoji ;;$'
 for v in sway i3 cosmic niri; do
-    check "the $v shortcut sheet lists Super+;" "rootfs-$v/usr/share/isotope/shortcuts.txt" \
+    check "the $v shortcut sheet lists Super+;" "rootfs/$v/usr/share/isotope/shortcuts.txt" \
         'Super \+ ;'
 done
-check "fontconfig names Noto Color Emoji" rootfs/usr/share/fontconfig/conf.avail/60-isotope.conf \
+check "fontconfig names Noto Color Emoji" rootfs/common/usr/share/fontconfig/conf.avail/60-isotope.conf \
     '<family>Noto Color Emoji</family>'
 for v in sway i3 cosmic niri; do
     if awk -v s="$v-rootfs" '$1 == "FROM" { in_s = ($NF == s) } in_s && /^COPY --from=emoji \/emoji \/$/ { f = 1 } END { exit !f }' "$repo/Dockerfile"; then

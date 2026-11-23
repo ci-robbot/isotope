@@ -8,7 +8,7 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-script="$repo_root/rootfs-agent/usr/bin/isotope-agent-browser-install"
+script="$repo_root/rootfs/agent/usr/bin/isotope-agent-browser-install"
 
 fail=0
 err() { echo "FAIL: $*" >&2; fail=1; }

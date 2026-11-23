@@ -26,7 +26,7 @@ package main
 import (
 	"os"
 
-	"github.com/kairos-community/isotope/agent/internal/smoke"
+	"github.com/kairos-community/isotope/internal/agent/smoke"
 )
 
 func main() {

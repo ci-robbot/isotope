@@ -56,7 +56,7 @@ fake foot 'shift 3; printf "%s\n" "$1" > "$T/term"'
 
 menu() {
     rm -f "$T/term" "$T/pick.in"
-    "$repo/rootfs/usr/bin/isotope-menu" Extensions
+    "$repo/rootfs/common/usr/bin/isotope-menu" Extensions
     # term runs in the background.
     i=0; while [ ! -s "$T/term" ] && [ $i -lt 20 ]; do sleep 0.05; i=$((i + 1)); done
     sed 's/; printf.*//' "$T/term" 2>/dev/null
@@ -80,19 +80,19 @@ expect "no catalog: a terminal shows why" "$(menu)" "isotope ext browse"
 
 # --- isotope-help ------------------------------------------------------------
 printf '# x\nBasics\tSuper + F1\tThis help\n' > "$T/sheet"
-expect "isotope-help lists isotope ext" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 2
+expect "isotope-help lists isotope ext" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 2
 rm "$B/isotope-ext"
-expect "isotope-help hides isotope ext without it (agent)" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 0
-expect "isotope-help still ends with the update rows" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/usr/bin/isotope-help" --text | tail -n 1 | grep -c 'isotope upgrade')" 1
+expect "isotope-help hides isotope ext without it (agent)" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 0
+expect "isotope-help still ends with the update rows" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | tail -n 1 | grep -c 'isotope upgrade')" 1
 
 # --- wiring -----------------------------------------------------------------
 # Every stage that installs isotope (the desktop and the server) links
 # isotope-ext to it.
 expect "the image links isotope-ext to isotope" "$(grep -c '^RUN ln -sf isotope /usr/bin/isotope-ext$' /src/Dockerfile)" "$(grep -c '^COPY --from=update-build /out/isotope /usr/bin/isotope$' /src/Dockerfile)"
-expect "the polkit file declares the extensions action" "$(grep -c '<action id="io.kairos.isotope-update.extensions">' /src/rootfs/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
-expect "the Kairos config ignores extension signatures" "$(grep -c '^  ignore_signatures: true$' /src/rootfs/etc/kairos/90_isotope_extensions.yaml)" 1
+expect "the polkit file declares the extensions action" "$(grep -c '<action id="io.kairos.isotope-update.extensions">' /src/rootfs/common/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
+expect "the Kairos config ignores extension signatures" "$(grep -c '^  ignore_signatures: true$' /src/rootfs/common/etc/kairos/90_isotope_extensions.yaml)" 1
 expect "the default catalog list names Isotope's catalog, then hadron-layers" \
-    "$(grep '^catalog=' /src/rootfs/etc/isotope/extensions.conf | tr '\n' ' ')" \
+    "$(grep '^catalog=' /src/rootfs/common/etc/isotope/extensions.conf | tr '\n' ' ')" \
     "catalog=https://kairos-community.github.io/isotope/extensions.json catalog=https://kairos-io.github.io/hadron-layers/releases.json "
 expect "the agent image removes isotope-ext and the extension config" \
     "$(grep -c 'rm -f /usr/bin/isotope-ext /etc/isotope/extensions.conf /etc/kairos/90_isotope_extensions.yaml /system/oem/93_isotope_extensions.yaml' /src/Dockerfile.agent)" 1

@@ -14,7 +14,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-agent_root="$repo_root/rootfs-agent"
+agent_root="$repo_root/rootfs/agent"
 sys="$agent_root/etc/systemd/system"
 usr="$agent_root/usr/lib/systemd/user"
 tmpfiles="$agent_root/etc/tmpfiles.d/isotope-agent.conf"

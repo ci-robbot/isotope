@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test rootfs/usr/bin/isotope-not-live in an alpine container (busybox sh).
+# Test rootfs/common/usr/bin/isotope-not-live in an alpine container (busybox sh).
 #
 #   test/live/test-not-live.sh
 set -euo pipefail
@@ -10,7 +10,7 @@ if [ "${1:-}" != "--inner" ]; then
 fi
 
 # ---- inside the container (busybox sh) ----
-script=/repo/rootfs/usr/bin/isotope-not-live
+script=/repo/rootfs/common/usr/bin/isotope-not-live
 fail=0
 pass() { echo "PASS: $*"; }
 bad()  { echo "FAIL: $*"; fail=1; }

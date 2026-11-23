@@ -17,7 +17,7 @@
 #                          --no-admin is given.
 #
 # CLOUD-CONFIG SHAPE (must match what the Phase-3 provisioner parses; see
-# agent/internal/auth/token.go for the bearer/digest format this mirrors):
+# internal/agent/auth/token.go for the bearer/digest format this mirrors):
 #   Top-level `install:` (auto/device/reboot) is present ONLY in
 #   --mode=install (the default, a full zero-touch install seed) and is
 #   OMITTED ENTIRELY in --mode=live (a live/contract seed that boots an
@@ -162,7 +162,7 @@ hash_stdin() {
 }
 
 # --- bearer generation: 32 crypto-random bytes, base64url, unpadded --------
-# Mirrors agent/internal/auth.Generate exactly: prefix + RawURLEncoding of
+# Mirrors internal/agent/auth.Generate exactly: prefix + RawURLEncoding of
 # 32 random bytes (43 characters, no padding). openssl's *standard* base64
 # of exactly 32 bytes always emits one trailing '=' (32 % 3 == 2), so
 # translating the alphabet and stripping that one padding char is

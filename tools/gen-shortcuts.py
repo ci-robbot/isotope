@@ -3,15 +3,15 @@
 
     gen-shortcuts.py [--check] [--root DIR]
 
-isotope-help (Super+F1) shows rootfs-<variant>/usr/share/isotope/shortcuts.txt.
+isotope-help (Super+F1) shows rootfs/<variant>/usr/share/isotope/shortcuts.txt.
 This script writes that file from the key bindings of the variant, so the
 sheet cannot drift from the config. With --check it writes nothing and exits 1
 when a committed sheet differs from what the configs give (CI runs this).
 
 Sources
-  sway  rootfs-sway/etc/sway/config, then etc/sway/config.d/*
-  i3    rootfs-i3/etc/i3/config, then etc/i3/config.d/*
-  niri  rootfs-niri/etc/niri/config.kdl (the binds block)
+  sway  rootfs/sway/etc/sway/config, then etc/sway/config.d/*
+  i3    rootfs/i3/etc/i3/config, then etc/i3/config.d/*
+  niri  rootfs/niri/etc/niri/config.kdl (the binds block)
   cosmic  tools/shortcuts-cosmic.txt: COSMIC keeps its defaults upstream, so
         the keys Isotope documents are listed by hand. A line may end with
         "@ TEXT": the script fails unless the Dockerfile contains TEXT, which
@@ -261,7 +261,7 @@ def sheet(source):
 
 def variants(root):
     def i3like(name, cfg):
-        d = os.path.join(root, "rootfs-" + name, "etc", cfg)
+        d = os.path.join(root, "rootfs", name, "etc", cfg)
         paths = [os.path.join(d, "config")] + sorted(glob.glob(os.path.join(d, "config.d", "*")))
         return lambda: sheet(parse_i3(paths))
 
@@ -269,7 +269,7 @@ def variants(root):
         "sway": i3like("sway", "sway"),
         "i3": i3like("i3", "i3"),
         "niri": lambda: sheet(parse_niri(
-            os.path.join(root, "rootfs-niri/etc/niri/config.kdl"))),
+            os.path.join(root, "rootfs/niri/etc/niri/config.kdl"))),
         "cosmic": lambda: sheet(parse_cosmic(
             os.path.join(root, "tools/shortcuts-cosmic.txt"),
             os.path.join(root, "Dockerfile"))),
@@ -293,7 +293,7 @@ def main(argv=None):
         if not [l for l in text.splitlines() if not l.startswith("#")]:
             print("gen-shortcuts: %s: no documented bindings found" % name, file=sys.stderr)
             return 1
-        path = os.path.join(args.root, "rootfs-" + name, OUT)
+        path = os.path.join(args.root, "rootfs", name, OUT)
         try:
             with open(path, encoding="utf-8") as f:
                 old = f.read()

@@ -7,7 +7,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-exec docker run --rm -i -v "$root/rootfs/usr/bin:/isotope:ro" alpine:3.22 sh -eu <<'EOF'
+exec docker run --rm -i -v "$root/rootfs/common/usr/bin:/isotope:ro" alpine:3.22 sh -eu <<'EOF'
 log=/tmp/log
 mkdir -p /fake /etc/isotope
 for t in makoctl dunstctl noctalia; do

@@ -52,7 +52,7 @@ touch /etc/isotope/encryption
 
 entry() {
     rm -f "$T/ran" "$T/term"
-    "$repo/rootfs/usr/bin/isotope-menu" "$1"
+    "$repo/rootfs/common/usr/bin/isotope-menu" "$1"
     i=0; while [ ! -s "$T/ran" ] && [ ! -s "$T/term" ] && [ $i -lt 20 ]; do sleep 0.05; i=$((i + 1)); done
     cat "$T/ran" 2>/dev/null
 }
@@ -77,26 +77,26 @@ fake bluetoothctl 'case "$1" in show) printf "Controller 00:11:22:33:44:55 (publ
 fake isotope-pick 'cat > "$T/pick.in"
 grep -x "  Settings…" "$T/pick.in" | head -n 1'
 rm -f "$T/ran"
-"$repo/rootfs/usr/bin/isotope-bluetooth-menu" >/dev/null 2>&1
+"$repo/rootfs/common/usr/bin/isotope-bluetooth-menu" >/dev/null 2>&1
 expect "the Bluetooth menu has Settings…" "$(cat "$T/ran" 2>/dev/null)" "isotope system bluetooth"
 fake isotope-pick 'cat > "$T/pick.in"
 [ -f "$T/choice" ] || exit 1
 sed -n "$(cat "$T/choice")p" "$T/pick.in"'
 rm -f "$T/choice"
-"$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+"$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "the menu lists System" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 1
 
 # The live desktop: "Install Isotope" is the first entry, and opens the
 # launcher. Not live: no such entry.
 fake isotope-live-install 'echo "isotope-live-install" > "$T/ran"'
 rm -f "$T/choice"
-"$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+"$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "not live: no Install Isotope entry" "$(cut -f1 "$T/pick.in" | grep -c '^Install Isotope$')" 0
 : > "$T/live-marker"
-ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "live: Install Isotope is the first entry" "$(cut -f1 "$T/pick.in" | head -n 1)" "Install Isotope"
 rm -f "$T/ran"
-ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/usr/bin/isotope-menu" "Install Isotope"
+ISOTOPE_LIVE_MARKER="$T/live-marker" "$repo/rootfs/common/usr/bin/isotope-menu" "Install Isotope"
 expect "live: the entry runs isotope-live-install" "$(cat "$T/ran" 2>/dev/null)" "isotope-live-install"
 rm -f "$B/isotope-live-install"
 
@@ -104,11 +104,11 @@ rm -f "$B/isotope-live-install"
 rm "$B/isotope-system"
 echo 1 > "$T/choice"
 rm -f "$T/ran" "$T/term"
-"$repo/rootfs/usr/bin/isotope-menu" Update
+"$repo/rootfs/common/usr/bin/isotope-menu" Update
 i=0; while [ ! -s "$T/term" ] && [ $i -lt 20 ]; do sleep 0.05; i=$((i + 1)); done
 expect "without the app, Update checks in a terminal" "$(sed 's/;.*//' "$T/term" 2>/dev/null)" "isotope status"
 rm -f "$T/choice"
-"$repo/rootfs/usr/bin/isotope-menu" >/dev/null 2>&1
+"$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "without the app, no System entry" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 0
 
 # --- wiring -----------------------------------------------------------------
@@ -119,13 +119,13 @@ done
 expect "i3 gets the X11 build" "$(grep -A1 '^FROM scratch AS system-i3$' $D | grep -c '/out/x11/isotope-system /usr/bin/isotope-system')" 1
 expect "the desktop stage copies the variant's build" "$(grep -c '^COPY --from=system / /$' $D)" 1
 expect "the agent removes the app" "$(grep -c 'rm -f /usr/bin/isotope-system' /src/Dockerfile.agent)" 1
-expect "sway floats it" "$(grep -c '^for_window \[app_id="isotope-system"\] floating enable$' /src/rootfs-sway/etc/sway/config)" 1
-expect "i3 floats it" "$(grep -c '^for_window \[class="isotope-system"\] floating enable$' /src/rootfs-i3/etc/i3/config)" 1
-expect "niri floats it" "$(grep -c 'match app-id="^isotope-system\$"' /src/rootfs-niri/etc/niri/config.kdl)" 1
-expect "the launchers list it" "$(grep -c '^Exec=isotope-system$' /src/rootfs/usr/share/applications/isotope-system.desktop)" 1
-expect "the polkit file declares the backup action" "$(grep -c '<action id="io.kairos.isotope-update.backup">' /src/rootfs/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
+expect "sway floats it" "$(grep -c '^for_window \[app_id="isotope-system"\] floating enable$' /src/rootfs/sway/etc/sway/config)" 1
+expect "i3 floats it" "$(grep -c '^for_window \[class="isotope-system"\] floating enable$' /src/rootfs/i3/etc/i3/config)" 1
+expect "niri floats it" "$(grep -c 'match app-id="^isotope-system\$"' /src/rootfs/niri/etc/niri/config.kdl)" 1
+expect "the launchers list it" "$(grep -c '^Exec=isotope-system$' /src/rootfs/common/usr/share/applications/isotope-system.desktop)" 1
+expect "the polkit file declares the backup action" "$(grep -c '<action id="io.kairos.isotope-update.backup">' /src/rootfs/common/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
 for a in users restore; do
-    expect "the polkit file declares the $a action" "$(grep -c "<action id=\"io.kairos.isotope-update.$a\">" /src/rootfs/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
+    expect "the polkit file declares the $a action" "$(grep -c "<action id=\"io.kairos.isotope-update.$a\">" /src/rootfs/common/usr/share/polkit-1/actions/io.kairos.isotope-update.policy)" 1
 done
 
 rm -rf "$T"

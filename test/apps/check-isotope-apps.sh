@@ -5,7 +5,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
-docker run --rm -i -v "$ROOT/rootfs/usr/bin/isotope-apps:/usr/bin/isotope-apps:ro" \
+docker run --rm -i -v "$ROOT/rootfs/common/usr/bin/isotope-apps:/usr/bin/isotope-apps:ro" \
     alpine:3.22 sh -eu -s <<'INNER'
 sys=/usr/share/applications fp=/var/lib/flatpak/exports/share/applications
 home=/root/.local/share/applications

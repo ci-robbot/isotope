@@ -27,7 +27,7 @@ env:
   # machines) or $IMAGE_REPO:<flavor>-vm-<tag> (GPU=vm, for virtual machines),
   # by the GPU line in /etc/isotope/release, and only for a
   # published release that carries an uploaded .build.json manifest
-  # (update/github.go), so an image pushed here is invisible to users until
+  # (cmd/isotope/github.go), so an image pushed here is invisible to users until
   # the release job below has verified and uploaded every asset.
   IMAGE_REPO: ghcr.io/${{ github.repository }}
   # Isotope was Hadron Desktop. A system installed before the rename runs an
@@ -892,8 +892,8 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: agent/go.mod
-          cache-dependency-path: agent/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Use the containerd image store
         shell: bash

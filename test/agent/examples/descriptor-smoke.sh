@@ -45,7 +45,7 @@ SCHEMA="$AGENT_DIR/fixture.schema.json"
 FIXTURE_RUNTIME="${FIXTURE_RUNTIME:-$AGENT_DIR/runtime/fixture}"
 FIXTURE_ART="${FIXTURE_ART:-$AGENT_DIR/artifacts/fixture}"
 
-# Match the harness's own exit-code vocabulary (see agent/internal/smoke/run.go)
+# Match the harness's own exit-code vocabulary (see internal/agent/smoke/run.go)
 # so a caller can distinguish "the appliance is broken" from "we never got to
 # ask it anything".
 EXIT_ASSERTION=1
@@ -157,25 +157,18 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Build mcp-smoke and run the contract suite
 #
-# The main package lives under test/agent so it ships with the harness, but it
-# imports the agent module's internal/smoke package -- Go's internal rule means
-# it can only build from INSIDE that module, so it is copied in and removed
-# again. This mirrors _agent_build_mcp_smoke in run.sh.
+# The main package lives under test/agent so it ships with the harness. It
+# imports internal/agent/smoke; both are in the root module, so it builds from
+# the repository root. This mirrors _agent_build_mcp_smoke in run.sh.
 # ---------------------------------------------------------------------------
 SMOKE="${MCP_SMOKE_BIN:-}"
 if [ -z "$SMOKE" ]; then
   command -v go >/dev/null 2>&1 \
     || { err "a Go toolchain is required to build mcp-smoke (or set MCP_SMOKE_BIN)"; exit "$EXIT_DESCRIPTOR"; }
-  moddir="$REPO_ROOT/agent/cmd/mcp-smoke"
-  mkdir -p "$moddir"
-  cp -f "$AGENT_DIR/cmd/mcp-smoke/main.go" "$moddir/main.go" \
-    || { err "could not stage mcp-smoke into the agent module"; exit "$EXIT_DESCRIPTOR"; }
-  hdn_agent_on_exit "rm -rf '$moddir'"
-
   SMOKE="$(mktemp -d)/mcp-smoke"
   hdn_agent_on_exit "rm -rf '$(dirname "$SMOKE")'"
   log "Building mcp-smoke"
-  ( cd "$REPO_ROOT/agent" && CGO_ENABLED=0 go build -trimpath -o "$SMOKE" ./cmd/mcp-smoke ) >&2 \
+  ( cd "$REPO_ROOT" && CGO_ENABLED=0 go build -trimpath -o "$SMOKE" ./test/agent/cmd/mcp-smoke ) >&2 \
     || { err "mcp-smoke build failed"; exit "$EXIT_DESCRIPTOR"; }
 fi
 

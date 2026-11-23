@@ -26,13 +26,12 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version-file: agent/go.mod
-          cache-dependency-path: agent/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: agent formatting
-        working-directory: agent
         run: |
-          unformatted="$(gofmt -l .)"
+          unformatted="$(gofmt -l cmd/isotope-agent internal/agent test/agent/cmd)"
           if [[ -n "$unformatted" ]]; then
             echo "These files are not gofmt-clean:" >&2
             echo "$unformatted" >&2
@@ -40,11 +39,10 @@ jobs:
           fi
 
       - name: agent vet, build, and tests with the race detector
-        working-directory: agent
         run: |
-          go vet ./...
-          go build ./...
-          go test -race ./...
+          go vet ./cmd/isotope-agent/... ./internal/agent/... ./test/agent/cmd/...
+          go build ./cmd/isotope-agent/... ./internal/agent/...
+          go test -race ./cmd/isotope-agent/... ./internal/agent/... ./test/agent/cmd/...
 
       - name: Agent harness shell sources parse
         run: |
@@ -84,9 +82,10 @@ jobs:
         with:
           persist-credentials: false
 
+      # Not go-version-file: go.mod pins 1.25.0, and the restic install below needs 1.25.8 or later.
       - uses: actions/setup-go@v6
         with:
-          go-version-file: update/go.mod
+          go-version: "1.25"
           cache: false
 
       # The backup test that runs the real restic needs it on PATH: the
@@ -97,19 +96,23 @@ jobs:
           go install "github.com/restic/restic/cmd/restic@v$v"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
+      - name: every Go package is covered by a job
+        run: scripts/check-go-coverage.sh
+
       - name: isotope tests
-        working-directory: update
-        run: go vet ./... && go test ./...
+        run: |
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/...
 
       - name: install-ui tests
-        working-directory: install-ui
         run: |
-          test -z "$(gofmt -l .)"
-          go vet ./... && go test -race ./...
+          test -z "$(gofmt -l cmd/isotope-install-ui pkg/installer)"
+          go vet ./cmd/isotope-install-ui/... ./pkg/installer/...
+          go test -race ./cmd/isotope-install-ui/... ./pkg/installer/...
 
       # The graphical installer needs cgo and, for its screenshot tests,
       # Mesa's software renderer (llvmpipe) behind EGL's surfaceless
-      # platform. The PNGs in install-gui/testdata are compared within a
+      # platform. The PNGs in cmd/isotope-install-gui/testdata are compared within a
       # small tolerance.
       - name: install-gui build dependencies
         run: |
@@ -117,42 +120,38 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends \
             libwayland-dev libxkbcommon-dev libegl-dev libgles-dev libegl-mesa0 libgl1-mesa-dri
 
-      # The shared look of the graphical tools (guikit/): pure Go, no GPU.
+      # The shared look of the graphical tools (pkg/guikit): pure Go, no GPU.
       - name: guikit tests
-        working-directory: guikit
         run: |
-          test -z "$(gofmt -l .)"
-          go vet ./... && go test ./...
+          test -z "$(gofmt -l pkg/guikit)"
+          go vet ./pkg/guikit/... && go test ./pkg/guikit/...
 
       - name: install-gui tests
-        working-directory: install-gui
         env:
           CGO_ENABLED: "1"
           EGL_PLATFORM: surfaceless
           # Fail, not skip, when Mesa cannot give a context.
           ISOTOPE_GUI_REQUIRE_SCREENSHOTS: "1"
         run: |
-          test -z "$(gofmt -l .)"
-          go vet -tags nox11,novulkan ./... && go test -tags nox11,novulkan ./...
+          test -z "$(gofmt -l cmd/isotope-install-gui)"
+          go vet -tags nox11,novulkan ./cmd/isotope-install-gui/... && go test -tags nox11,novulkan ./cmd/isotope-install-gui/...
 
       - name: welcome tests
-        working-directory: welcome
         env:
           CGO_ENABLED: "1"
           EGL_PLATFORM: surfaceless
         run: |
-          test -z "$(gofmt -l .)"
-          go vet -tags nox11,novulkan ./... && go test -tags nox11,novulkan ./...
+          test -z "$(gofmt -l cmd/isotope-welcome)"
+          go vet -tags nox11,novulkan ./cmd/isotope-welcome/... && go test -tags nox11,novulkan ./cmd/isotope-welcome/...
 
       # Isotope System: its models and pages against a fake daemon and a
       # fake NetworkManager. No golden screenshots yet.
       - name: system tests
-        working-directory: system
         env:
           CGO_ENABLED: "1"
         run: |
-          test -z "$(gofmt -l .)"
-          go vet -tags nox11,novulkan ./... && go test -race -tags nox11,novulkan ./...
+          test -z "$(gofmt -l cmd/isotope-system)"
+          go vet -tags nox11,novulkan ./cmd/isotope-system/... && go test -race -tags nox11,novulkan ./cmd/isotope-system/...
 
       # A rename that moves a file but not the links to it leaves the link
       # dangling, and systemd then refuses the unit with no build error.
@@ -200,7 +199,7 @@ jobs:
           python3 tools/gen-grub-bg.py "$RUNNER_TEMP/grub"
           # The background is the splash's float arithmetic; another compiler
           # or libm may round a pixel differently, so allow one step.
-          python3 - "$RUNNER_TEMP/grub" rootfs/etc/kairos/branding/isotope-theme <<'PY'
+          python3 - "$RUNNER_TEMP/grub" rootfs/common/etc/kairos/branding/isotope-theme <<'PY'
           import sys, pathlib
           new, old = map(pathlib.Path, sys.argv[1:])
           for f in sorted(new.glob("*.tga")):
@@ -273,15 +272,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in rootfs*/usr/bin/* scripts/*.sh test/boot-ux/*.sh test/notify/*.sh test/bluetooth/*.sh test/network/*.sh test/vm/*.sh; do
+          for f in rootfs/*/usr/bin/* scripts/*.sh test/boot-ux/*.sh test/notify/*.sh test/bluetooth/*.sh test/network/*.sh test/vm/*.sh; do
             if head -n1 "$f" | grep -q bash; then bash -n "$f"; else sh -n "$f"; fi
           done
-          jq empty rootfs-sway/etc/xdg/waybar/config
-          jq empty rootfs-niri/usr/share/isotope/noctalia-palettes/Isotope.json
+          jq empty rootfs/sway/etc/xdg/waybar/config
+          jq empty rootfs/niri/usr/share/isotope/noctalia-palettes/Isotope.json
           # The COSMIC dock pins only apps the image ships. Isotope has no
           # browser (Flathub's Firefox is org.mozilla.firefox), so upstream's
           # "firefox" pin would show a broken icon.
-          dock=rootfs-cosmic/usr/share/cosmic/com.system76.CosmicAppList/v1/favorites
+          dock=rootfs/cosmic/usr/share/cosmic/com.system76.CosmicAppList/v1/favorites
           grep -q '"com.system76.CosmicFiles"' "$dock"
           ! grep -qi firefox "$dock"
 

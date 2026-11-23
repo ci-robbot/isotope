@@ -4,7 +4,7 @@
 # Welcome's Apps page (`isotope welcome apps`); as the login hook of a config
 # from before Isotope Welcome (`--login`) it is `isotope-welcome --login`,
 # which opens nothing once the user went through it or skipped it. The login
-# gate and its stamps are Isotope Welcome's (welcome/, its Go tests).
+# gate and its stamps are Isotope Welcome's (cmd/isotope-welcome/, its Go tests).
 # Runs in an Alpine container, with fake isotope and isotope-welcome that log
 # their arguments.
 #
@@ -33,7 +33,7 @@ for c in "|isotope welcome apps" "--login|isotope-welcome --login"; do
     args=${c%%|*} want=${c#*|}
     : > "$work/log"
     # shellcheck disable=SC2086
-    sh "$src/rootfs/usr/bin/isotope-first-run-apps" $args
+    sh "$src/rootfs/common/usr/bin/isotope-first-run-apps" $args
     got=$(cat "$work/log")
     if [ "$got" = "$want" ]; then
         echo "PASS: isotope-first-run-apps $args runs '$want'"

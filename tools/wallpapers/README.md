@@ -21,7 +21,7 @@ centre of the screen, for the lock screen idea. `--preview` writes a quick
 two majors.
 
 The current release's two images are committed in
-`rootfs/usr/share/backgrounds/isotope/`, so the image build does not need
+`rootfs/common/usr/share/backgrounds/isotope/`, so the image build does not need
 these libraries.
 
 ## Build wallpapers

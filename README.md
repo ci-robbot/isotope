@@ -120,8 +120,8 @@ installed machine to another desktop and keeps your files.
    questions.
 
    <p>
-     <img src="install-gui/testdata/2-keyboard-1440x900.png" alt="The graphical installer: keyboard layout and time zone" width="49%">
-     <img src="install-gui/testdata/4-disk-1440x900.png" alt="The graphical installer: the disk page" width="49%">
+     <img src="cmd/isotope-install-gui/testdata/2-keyboard-1440x900.png" alt="The graphical installer: keyboard layout and time zone" width="49%">
+     <img src="cmd/isotope-install-gui/testdata/4-disk-1440x900.png" alt="The graphical installer: the disk page" width="49%">
    </p>
 
 **Try it first.** The first entry of the desktop ISOs' boot menu, "Isotope",

@@ -33,8 +33,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/kairos-community/isotope/agent/internal/cua"
-	"github.com/kairos-community/isotope/agent/internal/probe"
+	"github.com/kairos-community/isotope/internal/agent/cua"
+	"github.com/kairos-community/isotope/internal/agent/probe"
 )
 
 const (

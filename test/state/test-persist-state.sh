@@ -1,12 +1,12 @@
 #!/bin/sh
-# Runs the rootfs stage of rootfs/system/oem/94_isotope_state.yaml against a
+# Runs the rootfs stage of rootfs/common/system/oem/94_isotope_state.yaml against a
 # scratch cos-layout.env: every path is added once to CUSTOM_BIND_MOUNTS,
 # what 92_docker.yaml set there is kept, and a second run changes nothing.
 #
 #   test/state/test-persist-state.sh
 set -eu
 cd "$(dirname "$0")/../.."
-yaml=rootfs/system/oem/94_isotope_state.yaml
+yaml=rootfs/common/system/oem/94_isotope_state.yaml
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 

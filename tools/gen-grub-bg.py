@@ -3,7 +3,7 @@
 
     python3 tools/gen-grub-bg.py OUTDIR [SPLASH]
 
-writes into OUTDIR (rootfs/etc/kairos/branding/isotope-theme in the repo):
+writes into OUTDIR (rootfs/common/etc/kairos/branding/isotope-theme in the repo):
 
 - background.tga: the "One light" scene asleep, a dark shell lit only on its
   inner edge by the core. The boot splash draws it (`isotope-splash --grub`;
@@ -25,7 +25,7 @@ which makes gfxmenu discard the whole theme; tga.mod decodes cleanly. Colours
 from theme/palette.toml (brand roles). Stdlib only. Regenerate after a palette
 or splash change with:
 
-    make -C splash && python3 tools/gen-grub-bg.py rootfs/etc/kairos/branding/isotope-theme
+    make -C splash && python3 tools/gen-grub-bg.py rootfs/common/etc/kairos/branding/isotope-theme
 """
 import math
 import os

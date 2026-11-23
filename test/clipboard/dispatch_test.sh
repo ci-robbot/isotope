@@ -38,7 +38,7 @@ B="$T/bin"
 mkdir -p "$B" "$T/run"
 export XDG_RUNTIME_DIR="$T/run" T
 PATH="$B:$PATH"
-ln -s "$repo/rootfs/usr/bin/isotope-clipboard" "$B/isotope-clipboard"
+ln -s "$repo/rootfs/common/usr/bin/isotope-clipboard" "$B/isotope-clipboard"
 mkdir -p /etc/isotope
 
 fake() { printf '#!/bin/sh\n%s\n' "$2" > "$B/$1"; chmod +x "$B/$1"; }
@@ -145,27 +145,27 @@ expect "i3: clear removes every entry" "$(find "$h" -name '[0-9]*' | wc -l)" 0
 
 # --- 3. isotope-menu ---------------------------------------------------------
 fake isotope-pick 'cat > "$T/pick.in"; exit 1'
-session Sway; "$repo/rootfs/usr/bin/isotope-menu"
+session Sway; "$repo/rootfs/common/usr/bin/isotope-menu"
 expect "isotope-menu offers Clipboard" "$(cut -f1 "$T/pick.in" | grep -c '^Clipboard$')" 1
-rm "$B/isotope-clipboard"; "$repo/rootfs/usr/bin/isotope-menu"
+rm "$B/isotope-clipboard"; "$repo/rootfs/common/usr/bin/isotope-menu"
 expect "isotope-menu hides Clipboard without isotope-clipboard (agent)" "$(cut -f1 "$T/pick.in" | grep -c '^Clipboard$')" 0
 expect "isotope-menu keeps the other entries" "$(cut -f1 "$T/pick.in" | tr '\n' ' ')" "Apps Wi-Fi Bluetooth Audio Capture Emoji Night light Update Help Power "
-fake isotope-ext 'exit 0'; "$repo/rootfs/usr/bin/isotope-menu"
+fake isotope-ext 'exit 0'; "$repo/rootfs/common/usr/bin/isotope-menu"
 expect "isotope-menu offers Extensions after Update when isotope-ext is there" "$(cut -f1 "$T/pick.in" | tr '\n' ' ')" "Apps Wi-Fi Bluetooth Audio Capture Emoji Night light Update Extensions Help Power "
-fake restic 'exit 0'; "$repo/rootfs/usr/bin/isotope-menu"
+fake restic 'exit 0'; "$repo/rootfs/common/usr/bin/isotope-menu"
 expect "isotope-menu offers Backup after Extensions when restic is there" "$(cut -f1 "$T/pick.in" | tr '\n' ' ')" "Apps Wi-Fi Bluetooth Audio Capture Emoji Night light Update Extensions Backup Help Power "
 rm "$B/isotope-ext" "$B/restic"
 # Isotope Welcome: "Install apps" opens its Apps page, "Welcome" the whole
 # flow; both only where the image has it (not on the agent).
-fake isotope-welcome 'exit 0'; "$repo/rootfs/usr/bin/isotope-menu"
+fake isotope-welcome 'exit 0'; "$repo/rootfs/common/usr/bin/isotope-menu"
 expect "isotope-menu offers Install apps and Welcome when isotope-welcome is there" "$(cut -f1 "$T/pick.in" | tr '\n' ' ')" "Apps Install apps Wi-Fi Bluetooth Audio Capture Emoji Night light Update Welcome Help Power "
 fake isotope 'echo "isotope $*" > "$T/isotope.log"'
-"$repo/rootfs/usr/bin/isotope-menu" "Install apps"
+"$repo/rootfs/common/usr/bin/isotope-menu" "Install apps"
 expect "Install apps runs 'isotope welcome apps'" "$(cat "$T/isotope.log")" "isotope welcome apps"
-"$repo/rootfs/usr/bin/isotope-menu" Welcome
+"$repo/rootfs/common/usr/bin/isotope-menu" Welcome
 expect "Welcome runs 'isotope welcome'" "$(cat "$T/isotope.log")" "isotope welcome"
 for d in Sway i3 COSMIC niri; do
-    session "$d"; "$repo/rootfs/usr/bin/isotope-menu"
+    session "$d"; "$repo/rootfs/common/usr/bin/isotope-menu"
     expect "$d: isotope-menu offers Welcome" "$(cut -f1 "$T/pick.in" | grep -c '^Welcome$')" 1
 done
 session Sway
@@ -173,15 +173,15 @@ rm "$B/isotope-welcome" "$B/isotope"
 
 # --- 4. wiring --------------------------------------------------------------
 count() { grep -v '^[[:space:]]*\(#\|//\)' "$2" | grep -ci -- "$1"; }
-expect "sway starts the recorder" "$(count 'exec isotope-clipboard daemon' /src/rootfs-sway/etc/sway/config)" 1
-expect "sway binds Super+Ctrl+V once" "$(count 'mod+ctrl+v' /src/rootfs-sway/etc/sway/config)" 1
-expect "i3 starts the recorder" "$(cat /src/rootfs-i3/etc/i3/config.d/*.conf | grep -c '^exec --no-startup-id isotope-clipboard daemon$')" 1
-expect "i3 binds Super+Ctrl+V once" "$(cat /src/rootfs-i3/etc/i3/config /src/rootfs-i3/etc/i3/config.d/*.conf | grep -v '^#' | grep -ci 'mod+ctrl+v')" 1
-expect "niri binds Super+Ctrl+V once" "$(count 'Mod+Ctrl+V' /src/rootfs-niri/etc/niri/config.kdl)" 1
-expect "niri keeps 200 entries in Noctalia" "$(grep -c '^clipboard_history_max_entries = 200$' /src/rootfs-niri/usr/share/isotope/noctalia-defaults.toml)" 1
-expect "COSMIC starts the recorder" "$(grep -c '^Exec=isotope-clipboard daemon$' /src/rootfs-cosmic/etc/xdg/autostart/isotope-clipboard.desktop)" 1
+expect "sway starts the recorder" "$(count 'exec isotope-clipboard daemon' /src/rootfs/sway/etc/sway/config)" 1
+expect "sway binds Super+Ctrl+V once" "$(count 'mod+ctrl+v' /src/rootfs/sway/etc/sway/config)" 1
+expect "i3 starts the recorder" "$(cat /src/rootfs/i3/etc/i3/config.d/*.conf | grep -c '^exec --no-startup-id isotope-clipboard daemon$')" 1
+expect "i3 binds Super+Ctrl+V once" "$(cat /src/rootfs/i3/etc/i3/config /src/rootfs/i3/etc/i3/config.d/*.conf | grep -v '^#' | grep -ci 'mod+ctrl+v')" 1
+expect "niri binds Super+Ctrl+V once" "$(count 'Mod+Ctrl+V' /src/rootfs/niri/etc/niri/config.kdl)" 1
+expect "niri keeps 200 entries in Noctalia" "$(grep -c '^clipboard_history_max_entries = 200$' /src/rootfs/niri/usr/share/isotope/noctalia-defaults.toml)" 1
+expect "COSMIC starts the recorder" "$(grep -c '^Exec=isotope-clipboard daemon$' /src/rootfs/cosmic/etc/xdg/autostart/isotope-clipboard.desktop)" 1
 expect "COSMIC binds Super+Ctrl+V" "$(grep -c 'key: "v"): Spawn("isotope-clipboard")' /src/Dockerfile)" 2
-expect "the agent image shadows the i3 file with comments only" "$(grep -cv '^#' /src/rootfs-agent/etc/i3/config.d/40-clipboard.conf)" 0
+expect "the agent image shadows the i3 file with comments only" "$(grep -cv '^#' /src/rootfs/agent/etc/i3/config.d/40-clipboard.conf)" 0
 expect "the agent image removes the scripts" "$(grep -c 'rm -f /usr/bin/isotope-clipboard /usr/bin/clipnotify' /src/Dockerfile.agent)" 1
 
 rm -rf "$T"

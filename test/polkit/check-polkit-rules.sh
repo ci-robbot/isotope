@@ -4,7 +4,7 @@
 # Uses node when it is on PATH, else the node:22-alpine container.
 set -eu
 repo=$(cd "$(dirname "$0")/../.." && pwd)
-rules=rootfs/usr/share/polkit-1/rules.d
+rules=rootfs/common/usr/share/polkit-1/rules.d
 set -- test/polkit/rules-harness.js "$rules/50-isotope-udisks.rules" "$rules/50-isotope-update.rules"
 if command -v node >/dev/null 2>&1; then
     cd "$repo"

@@ -3,7 +3,7 @@
 # the repo tree.
 #
 #   test/live/check-live.sh IMAGE        a built desktop image (CI)
-#   test/live/check-live.sh --repo       rootfs/ plus each rootfs-VARIANT/
+#   test/live/check-live.sh --repo       rootfs/common/ plus each rootfs/VARIANT/
 #
 # - ly and cosmic-greeter start unless an install runs (not on live_mode), and
 #   both boot stage files have the twin stage that starts the login screen on
@@ -55,8 +55,8 @@ roots=()
 if [ "$mode" = repo ]; then
     for v in sway i3 niri cosmic; do
         mkdir -p "$work/$v"
-        cp -a rootfs/. "$work/$v/"
-        cp -a "rootfs-$v/." "$work/$v/"
+        cp -a rootfs/common/. "$work/$v/"
+        cp -a "rootfs/$v/." "$work/$v/"
         roots+=("$v:$work/$v")
     done
 else
@@ -329,7 +329,7 @@ done
 
 if [ "$mode" = repo ]; then
     echo "== agent"
-    ag=rootfs-agent/etc/systemd/system/ly@.service.d/20-agent-profile.conf
+    ag=rootfs/agent/etc/systemd/system/ly@.service.d/20-agent-profile.conf
     check "agent: its drop-in sorts after ly's 10-conditions.conf" test "$(printf '%s\n' 10-conditions.conf 20-agent-profile.conf | sort | tail -n 1)" = 20-agent-profile.conf
     check "agent: its drop-in resets ConditionPathExists= (clears the | conditions too)" grep -qx 'ConditionPathExists=' "$ag"
     check "agent: the reset comes before its own conditions" test "$(grep -n '^ConditionPathExists=$' "$ag" | head -n1 | cut -d: -f1)" -lt "$(grep -n '^ConditionPathExists=!' "$ag" | head -n1 | cut -d: -f1)"

@@ -233,7 +233,7 @@ iso: image
 # carries the whole image as its initramfs). UKI_FROM skips the desktop build:
 # it re-runs only the kairos stage, with TRUSTED_BOOT=true, on a published
 # image such as ghcr.io/kairos-community/isotope:sway-vm-v0.0.8. Changes
-# to rootfs/ in this tree are then not in the ISO, only the kairos stage's.
+# to rootfs/common/ in this tree are then not in the ISO, only the kairos stage's.
 KEYS_DIR  ?= build/uki-keys
 UKI_IMAGE ?= $(DESKTOP)-desktop:uki
 UKI_FROM  ?=

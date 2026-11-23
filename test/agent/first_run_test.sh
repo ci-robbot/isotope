@@ -22,7 +22,7 @@
 set -u
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-bin="$repo_root/rootfs-agent/usr/bin"
+bin="$repo_root/rootfs/agent/usr/bin"
 script="$bin/isotope-agent-first-run"
 
 fail=0

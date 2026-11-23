@@ -1,7 +1,7 @@
 #!/bin/sh
 # Check the software-rendering fallback without a GPU: the session hook
-# (rootfs/usr/libexec/isotope-gpu-env and /etc/profile.d/isotope-gpu.sh), the
-# notice (rootfs/usr/bin/isotope-gpu-notice), and that every variant wires
+# (rootfs/common/usr/libexec/isotope-gpu-env and /etc/profile.d/isotope-gpu.sh), the
+# notice (rootfs/common/usr/bin/isotope-gpu-notice), and that every variant wires
 # them before its compositor and at session start. isotope-gpu-probe,
 # busctl, systemctl and id are fakes.
 #
@@ -13,9 +13,9 @@
 # shellcheck disable=SC2016,SC2317
 set -eu
 root=$(cd "$(dirname "$0")/../.." && pwd)
-env_hook=$root/rootfs/usr/libexec/isotope-gpu-env
-profile=$root/rootfs/etc/profile.d/isotope-gpu.sh
-notice=$root/rootfs/usr/bin/isotope-gpu-notice
+env_hook=$root/rootfs/common/usr/libexec/isotope-gpu-env
+profile=$root/rootfs/common/etc/profile.d/isotope-gpu.sh
+notice=$root/rootfs/common/usr/bin/isotope-gpu-notice
 fail=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; fail=1; }
@@ -172,18 +172,18 @@ check "notice: through Notify, with the server's own timeout (-1)" \
 
 # Wiring: every variant sources the hook before its compositor and starts
 # the notice at session start.
-check "sway: start-desktop sources the hook" grep -q '^\[ -r /usr/libexec/isotope-gpu-env \] && \. /usr/libexec/isotope-gpu-env' "$root/rootfs-sway/usr/bin/start-desktop"
-check "i3: start-desktop sources the hook" grep -q '^\[ -r /usr/libexec/isotope-gpu-env \] && \. /usr/libexec/isotope-gpu-env' "$root/rootfs-i3/usr/bin/start-desktop"
-check "COSMIC login screen: greetd runs isotope-greeter-start" grep -qx 'command = "isotope-greeter-start"' "$root/rootfs-cosmic/etc/greetd/cosmic-greeter.toml"
+check "sway: start-desktop sources the hook" grep -q '^\[ -r /usr/libexec/isotope-gpu-env \] && \. /usr/libexec/isotope-gpu-env' "$root/rootfs/sway/usr/bin/start-desktop"
+check "i3: start-desktop sources the hook" grep -q '^\[ -r /usr/libexec/isotope-gpu-env \] && \. /usr/libexec/isotope-gpu-env' "$root/rootfs/i3/usr/bin/start-desktop"
+check "COSMIC login screen: greetd runs isotope-greeter-start" grep -qx 'command = "isotope-greeter-start"' "$root/rootfs/cosmic/etc/greetd/cosmic-greeter.toml"
 check "COSMIC login screen: isotope-greeter-start sources the hook, then cosmic-greeter-start" \
-    sh -c 'grep -q "\. /usr/libexec/isotope-gpu-env" "$1" && grep -q "^exec cosmic-greeter-start" "$1" && test -x "$1"' sh "$root/rootfs-cosmic/usr/bin/isotope-greeter-start"
+    sh -c 'grep -q "\. /usr/libexec/isotope-gpu-env" "$1" && grep -q "^exec cosmic-greeter-start" "$1" && test -x "$1"' sh "$root/rootfs/cosmic/usr/bin/isotope-greeter-start"
 check "COSMIC session: /etc/profile.d/isotope-gpu.sh (greetd sources /etc/profile first)" test -r "$profile"
-check "niri: the session entry runs isotope-niri-session" grep -qx 'Exec=isotope-niri-session' "$root/rootfs-niri/usr/share/wayland-sessions/niri.desktop"
+check "niri: the session entry runs isotope-niri-session" grep -qx 'Exec=isotope-niri-session' "$root/rootfs/niri/usr/share/wayland-sessions/niri.desktop"
 check "niri: isotope-niri-session sources the hook, then niri-session" \
-    sh -c 'grep -q "\. /usr/libexec/isotope-gpu-env" "$1" && grep -q "^exec niri-session" "$1" && test -x "$1"' sh "$root/rootfs-niri/usr/bin/isotope-niri-session"
-check "sway: the config starts the notice" sh -c 'grep -v "^[[:space:]]*#" "$1" | grep -qx "exec isotope-gpu-notice"' sh "$root/rootfs-sway/etc/sway/config"
-check "i3: the config starts the notice" sh -c 'grep -v "^[[:space:]]*#" "$1" | grep -qx "exec --no-startup-id isotope-gpu-notice"' sh "$root/rootfs-i3/etc/i3/config"
-check "niri: spawn-at-startup starts the notice" sh -c 'grep -v "^[[:space:]]*//" "$1" | grep -qx "spawn-at-startup \"isotope-gpu-notice\""' sh "$root/rootfs-niri/etc/niri/config.kdl"
-check "COSMIC: an autostart entry starts the notice" grep -qx 'Exec=isotope-gpu-notice' "$root/rootfs-cosmic/etc/xdg/autostart/isotope-gpu-notice.desktop"
+    sh -c 'grep -q "\. /usr/libexec/isotope-gpu-env" "$1" && grep -q "^exec niri-session" "$1" && test -x "$1"' sh "$root/rootfs/niri/usr/bin/isotope-niri-session"
+check "sway: the config starts the notice" sh -c 'grep -v "^[[:space:]]*#" "$1" | grep -qx "exec isotope-gpu-notice"' sh "$root/rootfs/sway/etc/sway/config"
+check "i3: the config starts the notice" sh -c 'grep -v "^[[:space:]]*#" "$1" | grep -qx "exec --no-startup-id isotope-gpu-notice"' sh "$root/rootfs/i3/etc/i3/config"
+check "niri: spawn-at-startup starts the notice" sh -c 'grep -v "^[[:space:]]*//" "$1" | grep -qx "spawn-at-startup \"isotope-gpu-notice\""' sh "$root/rootfs/niri/etc/niri/config.kdl"
+check "COSMIC: an autostart entry starts the notice" grep -qx 'Exec=isotope-gpu-notice' "$root/rootfs/cosmic/etc/xdg/autostart/isotope-gpu-notice.desktop"
 check "the notice is executable" test -x "$notice"
 exit $fail

@@ -80,26 +80,26 @@ FOOT = [
 
 # file -> (literal kind or None for "not strict", comment kind, rules)
 RULES = {
-    "rootfs-sway/etc/sway/config": ("hash", "hash", WM_VARS),
-    "rootfs-i3/etc/i3/config": ("hash", "hash", WM_VARS + [
+    "rootfs/sway/etc/sway/config": ("hash", "hash", WM_VARS),
+    "rootfs/i3/etc/i3/config": ("hash", "hash", WM_VARS + [
         DMENU,
         (r"^exec_always --no-startup-id isotope-xroot '#{hex}' /usr/share/backgrounds/isotope/[\w.-]+\.png$", "base"),
         (r"^set \$lock i3lock .*--color={hex}$", "base"),
     ]),
-    "rootfs-i3/usr/bin/isotope-screenshot": ("hash", "hash", [
+    "rootfs/i3/usr/bin/isotope-screenshot": ("hash", "hash", [
         (r"hacksaw -c '#{hex}'", "accent"),
     ]),
     # The i3 menus pick through isotope-pick; strict, so no colour comes back.
-    "rootfs-i3/usr/bin/isotope-audio-menu": ("hash", "hash", []),
-    "rootfs-i3/usr/bin/isotope-power-menu": ("hash", "hash", [
+    "rootfs/i3/usr/bin/isotope-audio-menu": ("hash", "hash", []),
+    "rootfs/i3/usr/bin/isotope-power-menu": ("hash", "hash", [
         (r"^\s+Lock\)\s+(?:isotope-not-live )?i3lock .*--color={hex} ;;$", "base"),
     ]),
-    "rootfs-i3/usr/bin/isotope-wifi-menu": ("hash", "hash", []),
-    "rootfs/usr/bin/isotope-pick": ("hash", "hash", [DMENU]),
-    "rootfs-sway/etc/xdg/waybar/style.css": ("hash", "css", [
+    "rootfs/i3/usr/bin/isotope-wifi-menu": ("hash", "hash", []),
+    "rootfs/common/usr/bin/isotope-pick": ("hash", "hash", [DMENU]),
+    "rootfs/sway/etc/xdg/waybar/style.css": ("hash", "css", [
         (r"^@define-color (?P<role>\w+)\s+#{hex};$", None),  # role = the name
     ]),
-    "rootfs/etc/xdg/fuzzel/fuzzel.ini": ("ini", "hash", [
+    "rootfs/common/etc/xdg/fuzzel/fuzzel.ini": ("ini", "hash", [
         (r"^background={hex}[0-9a-fA-F]{{2}}$", "base"),
         (r"^text={hex}ff$", "text"),
         (r"^prompt={hex}ff$", "glow"),
@@ -110,7 +110,7 @@ RULES = {
         (r"^border={hex}ff$", "border"),
     ]),
     # COSMIC's own fuzzel: a translucent base, the accent as the selected row.
-    "rootfs-cosmic/etc/xdg/fuzzel/fuzzel.ini": ("ini", "hash", [
+    "rootfs/cosmic/etc/xdg/fuzzel/fuzzel.ini": ("ini", "hash", [
         (r"^background={hex}[0-9a-fA-F]{{2}}$", "base"),
         (r"^text={hex}ff$", "text"),
         (r"^prompt={hex}ff$", "glow"),
@@ -120,14 +120,14 @@ RULES = {
         (r"^selection-match={hex}ff$", "on_accent"),
         (r"^border={hex}ff$", "border"),
     ]),
-    "rootfs-sway/etc/mako/config": ("hash", "hash", [
+    "rootfs/sway/etc/mako/config": ("hash", "hash", [
         (r"^background-color=#{hex}[0-9a-fA-F]{{2}}$", "base"),
         (r"^text-color=#{hex}$", "text"),
         (r"^border-color=#{hex}$", ["accent", "error"]),  # normal, urgency=high
         (r"^progress-color=over #{hex}55$", "accent"),  # a third, text stays 5.6:1
     ]),
-    "rootfs-sway/etc/xdg/foot/foot.ini": ("ini", "hash", FOOT),
-    "rootfs-sway/etc/swaylock/config": ("ini", "hash", [
+    "rootfs/sway/etc/xdg/foot/foot.ini": ("ini", "hash", FOOT),
+    "rootfs/sway/etc/swaylock/config": ("ini", "hash", [
         (r"^color={hex}$", "base"),
         (r"^inside(?:-clear|-caps-lock|-ver|-wrong)?-color={hex}$", "base"),
         (r"^layout-bg-color={hex}$", "base"),
@@ -138,22 +138,22 @@ RULES = {
         (r"^(?:ring-wrong|text-wrong|bs-hl|caps-lock-bs-hl)-color={hex}$", "error"),
         (r"^(?:layout-)?text-color={hex}$", "text"),
     ]),
-    "rootfs-niri/etc/xdg/foot/foot.ini": ("ini", "hash", FOOT),
-    "rootfs-i3/etc/dunst/dunstrc": ("hash", "hash", [
+    "rootfs/niri/etc/xdg/foot/foot.ini": ("ini", "hash", FOOT),
+    "rootfs/i3/etc/dunst/dunstrc": ("hash", "hash", [
         (r"^\s+frame_color = \"#{hex}\"$", ["accent", "error"]),  # global, critical
         (r"^\s+background = \"#{hex}\"$", "base"),
         (r"^\s+foreground = \"#{hex}\"$", ["subtext", "text", "error"]),  # low, normal, critical
         # The progress bar fill (the volume and brightness pop-up).
         (r"^\s+highlight = \"#{hex}\"$", ["accent", "accent", "error"]),  # low, normal, critical
     ]),
-    "rootfs-niri/etc/niri/config.kdl": ("hash", "kdl", [
+    "rootfs/niri/etc/niri/config.kdl": ("hash", "kdl", [
         (r"^\s+active-color \"#{hex}\"$", "accent"),     # focus ring, border
         (r"^\s+inactive-color \"#{hex}\"$", "border"),
         (r"^\s+urgent-color \"#{hex}\"$", "error"),
     ]),
     # GRUB menu theme (live and installed). Brand: the countdown line and the
     # selected entry are the brand's light; the rest is the theme's greys.
-    "rootfs/etc/kairos/branding/isotope-theme/theme.txt": ("hash", "hash", [
+    "rootfs/common/etc/kairos/branding/isotope-theme/theme.txt": ("hash", "hash", [
         (r'^desktop-color: "#{hex}"$', "crust"),
         (r'^\s+color\s+= "#{hex}"$', ["muted", "dim", "muted"]),  # subtitle, countdown, keys
         (r'^\s+item_color\s+= "#{hex}"$', "dim"),
@@ -190,8 +190,8 @@ RULES = {
     # The Isotope mark at the top left of the COSMIC login screen: brand, so
     # the night brand roles, the shell in brand and the lifted side and core
     # in brand_glow, as in docs/assets/isotope-mark.svg (and the tray icon's
-    # shapes in update/icons.go).
-    "rootfs-cosmic/usr/share/isotope/greeter-mark.svg": ("hash", "hash", [
+    # shapes in cmd/isotope/icons.go).
+    "rootfs/cosmic/usr/share/isotope/greeter-mark.svg": ("hash", "hash", [
         (r'^<path fill="#{hex}" d="M423\.12 171\.21L', "brand"),
         (r'^<path fill="#{hex}" d="M266\.24 33\.34L', "brand_glow"),
         (r'^<circle fill="#{hex}" cx="245\.76" cy="273\.61"', "brand_glow"),
@@ -200,7 +200,7 @@ RULES = {
     # mark and palette.toml's day brand_deep): the shell in ink (text), the
     # lifted side and core in brand_deep, so it reads on the light soft
     # wallpaper. The greeter picks it when its theme is light.
-    "rootfs-cosmic/usr/share/isotope/greeter-mark-day.svg": ("hash", "hash", [
+    "rootfs/cosmic/usr/share/isotope/greeter-mark-day.svg": ("hash", "hash", [
         (r'^<path fill="#{hex}" d="M423\.12 171\.21L', "day.text"),
         (r'^<path fill="#{hex}" d="M266\.24 33\.34L', "day.brand_deep"),
         (r'^<circle fill="#{hex}" cx="245\.76" cy="273\.61"', "day.brand_deep"),
@@ -208,7 +208,7 @@ RULES = {
     # The update tray icon: the mark in the panel's text colour, a badge per
     # daemon state, the badge glyph in on_accent. One set for dark panels
     # (night), then one for light panels (day).
-    "update/icons.go": (None, "kdl", [
+    "cmd/isotope/icons.go": (None, "kdl", [
         (r"^\t\tmark:\s+rgb\(0x{hex}\),$", ["text", "day.text"]),
         (r'^\t\t\t"update":\s+rgb\(0x{hex}\),$', ["accent", "day.accent"]),
         (r'^\t\t\t"busy":\s+rgb\(0x{hex}\),$', ["warning", "day.warning"]),
@@ -218,7 +218,7 @@ RULES = {
     ]),
 }
 
-NOCTALIA = "rootfs-niri/usr/share/isotope/noctalia-palettes/Isotope.json"
+NOCTALIA = "rootfs/niri/usr/share/isotope/noctalia-palettes/Isotope.json"
 COSMIC_THEME = "theme/cosmic-theme.json"
 
 # COSMIC's non-colour theme keys, the same in both modes. Types at the libcosmic
@@ -229,7 +229,7 @@ COSMIC_THEME = "theme/cosmic-theme.json"
 # was hard to tell from the others, so a thin outline, in the neutral
 # WINDOW_HINT role below rather than the accent.
 #
-# CosmicComp's own `active_hint` switch (rootfs-cosmic, com.system76.CosmicComp)
+# CosmicComp's own `active_hint` switch (rootfs/cosmic, com.system76.CosmicComp)
 # must be true for the outline to show.
 COSMIC_LOOK = {
     "frosted": "Medium",
@@ -256,7 +256,7 @@ WINDOW_HINT = "dim"
 VT_ROLES = ["base"] + ANSI + ["subtext"] + ["dim"] + ANSI_BRIGHT + ["text"]
 VT_PARAMS = re.compile(r"vt\.default_red=\S+ vt\.default_grn=\S+ vt\.default_blu=[0-9a-fx,]+")
 VT_PALETTE = [
-    "rootfs/etc/kairos/branding/grubmenu.cfg",
+    "rootfs/common/etc/kairos/branding/grubmenu.cfg",
     "auroraboot/live-grub.cfg.tmpl",
     "auroraboot/live-grub-desktop.cfg.tmpl",
 ]

@@ -5,22 +5,23 @@ ARG HADRON_VERSION=v0.6.7
 FROM ${BASE_IMAGE} AS xlibre-desktop
 FROM rust:1.97.0-alpine3.22 AS rust-toolchain
 
-# isotope-agent: the single static MCP service binary (Phase 2/3 Go module at
-# agent/). go.mod/go.sum are copied and downloaded before the rest of the
-# module source so an unrelated source edit does not invalidate the module
-# cache layer.
+# isotope-agent: the single static MCP service binary (cmd/isotope-agent, with
+# its packages under internal/agent). The root go.mod/go.sum are copied and
+# downloaded before the source so an unrelated source edit does not invalidate
+# the module cache layer; only the agent's two trees are copied after them.
 FROM golang:1.25.0-alpine3.22 AS agent-gobuild
 ARG VERSION=v0.0.0
 ARG CUA_COMMIT=3cadb5f82e7d2ed071a2082764276ec872a52135
 WORKDIR /src
-COPY agent/go.mod agent/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
-COPY agent/ ./
-# The version banner is read from internal/buildinfo (main reads
+COPY cmd/isotope-agent/ cmd/isotope-agent/
+COPY internal/agent/ internal/agent/
+# The version banner is read from internal/agent/buildinfo (main reads
 # buildinfo.Version/buildinfo.CuaRevision), not from package main.
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath \
-    -ldflags="-s -w -X github.com/kairos-community/isotope/agent/internal/buildinfo.Version=${VERSION} -X github.com/kairos-community/isotope/agent/internal/buildinfo.CuaRevision=${CUA_COMMIT}" \
+    -ldflags="-s -w -X github.com/kairos-community/isotope/internal/agent/buildinfo.Version=${VERSION} -X github.com/kairos-community/isotope/internal/agent/buildinfo.CuaRevision=${CUA_COMMIT}" \
     -o /out/isotope-agent ./cmd/isotope-agent
 
 FROM ghcr.io/kairos-io/hadron-toolchain:${HADRON_VERSION} AS agent-native
@@ -157,7 +158,7 @@ RUN mkdir -p /cua/usr/bin && \
 FROM ${BASE_IMAGE} AS agent
 ENV CUA_DRIVER_RS_TELEMETRY_ENABLED=false \
     CUA_DRIVER_RS_UPDATE_CHECK=false
-COPY rootfs-agent/ /
+COPY rootfs/agent/ /
 COPY --from=agent-runtime-build /agent-runtime/ /
 COPY --from=cua-build /cua/ /
 COPY --from=agent-gobuild /out/isotope-agent /usr/bin/isotope-agent
@@ -185,7 +186,7 @@ LABEL io.kairos.isotope.flavor="agent"
 # No update service: isotope-update upgrade keeps its direct sudo path on the
 # appliance, so the root daemon, its D-Bus policy and activation, and its
 # polkit action and rule from the i3 image go. The update icon that talks to
-# it is shadowed by rootfs-agent/etc/i3/config.d/30-update-tray.conf.
+# it is shadowed by rootfs/agent/etc/i3/config.d/30-update-tray.conf.
 RUN rm -f /usr/share/dbus-1/system.d/io.kairos.IsotopeUpdate1.conf \
       /usr/share/dbus-1/system-services/io.kairos.IsotopeUpdate1.service \
       /usr/lib/systemd/system/isotope-updated.service \
@@ -223,7 +224,7 @@ RUN rm -f /usr/bin/isotope-system /usr/share/applications/isotope-system.desktop
 # back to anything that can run a command or read the screen, the agent
 # itself included in a later, unrelated task. The i3 image's
 # config.d/40-clipboard.conf (the recorder and Super+Ctrl+V) is shadowed by
-# rootfs-agent's empty file; isotope-menu and isotope-help hide the entry when
+# rootfs/agent's empty file; isotope-menu and isotope-help hide the entry when
 # isotope-clipboard is gone.
 RUN rm -f /usr/bin/isotope-clipboard /usr/bin/clipnotify && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-clipboard'

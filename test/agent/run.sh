@@ -205,22 +205,16 @@ _agent_inject_cloud_config() {
 }
 
 # _agent_build_mcp_smoke <out_bin> -- build the mcp-smoke client. Its main
-# package lives under test/agent/cmd/mcp-smoke but imports the agent module's
-# internal/smoke package, so it must be COPIED into the module tree
-# (agent/cmd/mcp-smoke) before `go build`. The copy is removed on process exit.
+# package lives under test/agent/cmd/mcp-smoke and imports internal/agent/smoke;
+# both are in the root module, so it builds from the repository root.
 # Honors a prebuilt MCP_SMOKE_BIN. Prints ONLY the binary path.
 _agent_build_mcp_smoke() {
-  local out="$1" moddir
+  local out="$1"
   if [ -n "${MCP_SMOKE_BIN:-}" ] && [ -x "$MCP_SMOKE_BIN" ]; then
     printf '%s' "$MCP_SMOKE_BIN"; return 0
   fi
   command -v go >/dev/null 2>&1 || { err "go toolchain required to build mcp-smoke (or set MCP_SMOKE_BIN)"; return 1; }
-  moddir="$REPO_ROOT/agent/cmd/mcp-smoke"
-  mkdir -p "$moddir"
-  cp -f "$SCRIPT_DIR/cmd/mcp-smoke/main.go" "$moddir/main.go" \
-    || { err "could not stage mcp-smoke into the module"; return 1; }
-  hdn_agent_on_exit "rm -rf '$moddir'"
-  ( cd "$REPO_ROOT/agent" && CGO_ENABLED=0 go build -trimpath -o "$out" ./cmd/mcp-smoke ) >&2 \
+  ( cd "$REPO_ROOT" && CGO_ENABLED=0 go build -trimpath -o "$out" ./test/agent/cmd/mcp-smoke ) >&2 \
     || { err "mcp-smoke build failed"; return 1; }
   printf '%s' "$out"
 }
