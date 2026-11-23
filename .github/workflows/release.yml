@@ -448,6 +448,12 @@ jobs:
         shell: bash
         run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
+      # Automatic updates: the daily timer is enabled and `isotope update
+      # auto` is there; the setting is off on a new machine.
+      - name: Check automatic updates
+        shell: bash
+        run: test/update/check-autoupdate.sh "${DESKTOP}-desktop:dev"
+
       # The firewall: its files and the daemon's output parse (nft -c) and the
       # unit is enabled; then, privileged on this throwaway runner, the
       # ruleset loads next to Docker's tables, a published port still answers
@@ -939,6 +945,12 @@ jobs:
       - name: Check guest agent
         shell: bash
         run: test/vm/check-guest-agent.sh "$AGENT_IMAGE" vm
+
+      # No automatic updates either: Dockerfile.agent removes the timer and
+      # the unit with the update service.
+      - name: Check automatic updates are off
+        shell: bash
+        run: test/update/check-autoupdate.sh "$AGENT_IMAGE"
 
       # The appliance has no firewall (Dockerfile.agent removes it): its MCP
       # gateway's port is configurable and it has no update service.

@@ -44,6 +44,10 @@ Commands:
                          REF "-", ask for the reference
       --reboot           reboot when the upgrade finishes, without asking
       --yes              do not ask for confirmation
+  update auto [status|on|off]
+                    automatic updates: a new release installs in the
+                    background and starts at the next restart; see
+                    "isotope update auto help"
   switch FLAVOR     install another desktop (sway, i3, cosmic, niri)
   switch [FLAVOR] --gpu LINE
                     install the hardware (full) or the virtual machine (vm)
@@ -81,6 +85,8 @@ Started by the desktop session and by systemd, not by hand:
   notify            the same as tray --no-icon
       --once             check once and exit
   daemon            the root update service on the system bus
+  update --auto     one automatic update, as root (isotope-autoupdate.timer);
+                     does nothing while automatic updates are off
   efi-boot-entry    at the end of an install: a UEFI boot entry for the
                      installed disk, first in the boot order
 
@@ -126,6 +132,18 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	case "rollback":
 		return cmdRollback(args, stdin, stdout, stderr)
 	case "upgrade", "update":
+		if len(args) > 0 && args[0] == "auto" {
+			return cmdAuto(args[1:], stdout, stderr)
+		}
+		for _, a := range args {
+			if a == "--auto" || a == "-auto" {
+				if len(args) != 1 {
+					fmt.Fprintf(stderr, "isotope: --auto takes no other argument\n\n%s", usage)
+					return exitUsage
+				}
+				return cmdAutoRun(stdout, stderr)
+			}
+		}
 		return cmdUpgrade(args, stdin, stdout, stderr)
 	case "tray":
 		return cmdTray(args, stderr)

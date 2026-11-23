@@ -57,6 +57,9 @@ func statusLine(st Status) string {
 		case pendingStarted:
 			return "Update interrupted; restart before trying again"
 		}
+		if st.Staged != "" {
+			return "Isotope " + st.Staged + " is installed: restart to finish"
+		}
 		return "Update installed; restart to use it"
 	case StateError:
 		return "Error: " + shorten(st.Detail, 80)

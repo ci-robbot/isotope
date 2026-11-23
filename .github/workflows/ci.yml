@@ -156,6 +156,16 @@ jobs:
           test -z "$(gofmt -l cmd/isotope-system)"
           go vet -tags nox11,novulkan ./cmd/isotope-system/... && go test -race -tags nox11,novulkan ./cmd/isotope-system/...
 
+      # The Updates page's automatic update screenshots
+      # (cmd/isotope-system/testdata/updates-auto-*.png), on the same Mesa
+      # as the install-gui tests: fail, not skip, without a GPU context.
+      - name: system screenshots, automatic updates
+        env:
+          CGO_ENABLED: "1"
+          EGL_PLATFORM: surfaceless
+          ISOTOPE_GUI_REQUIRE_SCREENSHOTS: "1"
+        run: go test -tags nox11,novulkan -run TestUpdatesAutoScreenshots ./cmd/isotope-system/
+
       # A rename that moves a file but not the links to it leaves the link
       # dangling, and systemd then refuses the unit with no build error.
       # Absolute targets resolve in the image, not here, so skip them.
@@ -275,6 +285,12 @@ jobs:
       # fake nft. The images are checked in desktop-images.yml and release.yml.
       - name: Firewall files and loader
         run: test/firewall/check-firewall.sh --repo
+
+      # The automatic update timer and unit, their conditions, the Dockerfile
+      # wiring and the agent removal. The images are checked in
+      # desktop-images.yml and release.yml.
+      - name: Automatic update files
+        run: test/update/check-autoupdate.sh --repo
 
       - name: Session scripts and configs parse
         shell: bash

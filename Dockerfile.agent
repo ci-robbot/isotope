@@ -184,14 +184,19 @@ RUN sed -i 's/^FLAVOR=.*/FLAVOR=agent/' /etc/isotope/release && \
 # The label follows the file: inherited from the i3 base it would say `i3`.
 LABEL io.kairos.isotope.flavor="agent"
 # No update service: isotope-update upgrade keeps its direct sudo path on the
-# appliance, so the root daemon, its D-Bus policy and activation, and its
-# polkit action and rule from the i3 image go. The update icon that talks to
-# it is shadowed by rootfs/agent/etc/i3/config.d/30-update-tray.conf.
+# appliance, so the root daemon, its D-Bus policy and activation, its polkit
+# action and rule, and the automatic update timer and unit from the i3 image
+# go. The update icon that talks to it is shadowed by
+# rootfs/agent/etc/i3/config.d/30-update-tray.conf.
 RUN rm -f /usr/share/dbus-1/system.d/io.kairos.IsotopeUpdate1.conf \
       /usr/share/dbus-1/system-services/io.kairos.IsotopeUpdate1.service \
       /usr/lib/systemd/system/isotope-updated.service \
       /usr/share/polkit-1/actions/io.kairos.isotope-update.policy \
-      /usr/share/polkit-1/rules.d/50-isotope-update.rules && \
+      /usr/share/polkit-1/rules.d/50-isotope-update.rules \
+      /usr/lib/systemd/system/isotope-autoupdate.service \
+      /usr/lib/systemd/system/isotope-autoupdate.timer \
+      /etc/systemd/system/timers.target.wants/isotope-autoupdate.timer && \
+    ! test -e /usr/lib/systemd/system/isotope-autoupdate.timer && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-update'
 # No firewall. The appliance is reached on its MCP gateway, whose port the
 # provisioning config may change (endpoint.listen, 7443 by default), and it

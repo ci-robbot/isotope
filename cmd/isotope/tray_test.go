@@ -140,6 +140,10 @@ type trayHarness struct {
 	notes    []string
 	launches [][]string
 	menus    []string
+	// actions are the notifications with a button; invoke presses the
+	// last one's button.
+	actions []string
+	invoke  func()
 }
 
 func (h *trayHarness) notified() []string {
@@ -166,6 +170,13 @@ func startTray(t *testing.T, dial func() (daemonClient, error), first, every tim
 	h.app.notify = func(summary, body string) error {
 		h.mu.Lock()
 		h.notes = append(h.notes, summary+" | "+body)
+		h.mu.Unlock()
+		return nil
+	}
+	h.app.notifyAction = func(summary, body, label string, invoked func()) error {
+		h.mu.Lock()
+		h.actions = append(h.actions, summary+" | "+body+" | "+label)
+		h.invoke = invoked
 		h.mu.Unlock()
 		return nil
 	}

@@ -57,6 +57,10 @@ type Status struct {
 	Pending                               string
 	ExtResult, ExtDetail                  string
 	BackupResult, BackupDetail            string
+	// Staged is the version a finished install waits to boot; StagedAuto
+	// says the automatic update installed it.
+	Staged     string
+	StagedAuto bool
 }
 
 // Busy says whether the daemon runs a job.
@@ -112,6 +116,17 @@ type User struct {
 // Firewall is the daemon's FirewallStatus: the saved setting, what is
 // loaded now, and the ports an administrator allowed.
 type Firewall = firewall.Status
+
+// AutoStatus is the daemon's AutoUpdateStatus: the setting (Broken: it
+// cannot be read, and so is off), the last automatic run and the staged
+// version.
+type AutoStatus struct {
+	Enabled                                     bool
+	Broken                                      string
+	LastTime                                    int64
+	LastResult, LastVersion, LastDetail, Staged string
+	StagedAuto                                  bool
+}
 
 // Credentials go to the daemon through a pipe, never as a D-Bus string:
 // the backup password, then the target's NAME=value lines.
@@ -190,6 +205,8 @@ type Daemon interface {
 	AllowPort(port uint16, proto, note string) error
 	DenyPort(port uint16, proto string) error
 	ResetFirewall() error
+	AutoUpdateStatus() (AutoStatus, error)
+	SetAutoUpdate(on bool) error
 	BackupInit(target string, opt TargetOptions, cred Credentials) error
 	BackupSSHKey() (string, error)
 	BackupHostKey(host string, port uint32) ([]string, error)
@@ -334,6 +351,7 @@ func statusFromDict(m map[string]dbus.Variant) Status {
 		Pin: str(m, "pin"), Detail: str(m, "detail"), Advanced: boolean(m, "advanced"),
 		Pending: str(m, "pending"), ExtResult: str(m, "ext_result"), ExtDetail: str(m, "ext_detail"),
 		BackupResult: str(m, "backup_result"), BackupDetail: str(m, "backup_detail"),
+		Staged: str(m, "staged"), StagedAuto: boolean(m, "staged_auto"),
 	}
 }
 
@@ -526,6 +544,23 @@ func (d *busDaemon) ResetFirewall() error { return d.call(0, "ResetFirewall", ni
 func (d *busDaemon) DenyPort(port uint16, proto string) error {
 	return d.call(0, "DenyPort", nil, port, proto)
 }
+
+func (d *busDaemon) AutoUpdateStatus() (AutoStatus, error) {
+	var m map[string]dbus.Variant
+	if err := d.call(0, "AutoUpdateStatus", []any{&m}); err != nil {
+		return AutoStatus{}, err
+	}
+	return autoFromDict(m), nil
+}
+
+func autoFromDict(m map[string]dbus.Variant) AutoStatus {
+	t, _ := m["last_time"].Value().(int64)
+	return AutoStatus{Enabled: boolean(m, "enabled"), Broken: str(m, "broken"), LastTime: t,
+		LastResult: str(m, "last_result"), LastVersion: str(m, "last_version"), LastDetail: str(m, "last_detail"),
+		Staged: str(m, "staged"), StagedAuto: boolean(m, "staged_auto")}
+}
+
+func (d *busDaemon) SetAutoUpdate(on bool) error { return d.call(0, "SetAutoUpdate", nil, on) }
 
 // optionsDict is TargetOptions as the daemon's a{sv}, without the zero
 // values: BackupList and Restore refuse a key they do not take.

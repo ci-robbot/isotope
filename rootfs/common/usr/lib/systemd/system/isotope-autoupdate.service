@@ -1,0 +1,27 @@
+[Unit]
+Description=Isotope automatic update
+Documentation=https://github.com/kairos-community/isotope
+# Started by isotope-autoupdate.timer. `isotope update --auto` does nothing
+# unless `isotope update auto on` (or Isotope System) turned automatic
+# updates on. Otherwise it asks isotope-updated to install the newest
+# release of this system's flavor and line into the other slot; nothing
+# restarts. The daemon skips a metered connection and a low battery.
+After=network-online.target
+Wants=network-online.target
+# Never on the live media, during an install or on the Trusted Boot medium:
+# the firewall's markers, and the live desktop's own.
+ConditionPathExists=!/run/cos/live_mode
+ConditionPathExists=!/run/cos/install_mode
+ConditionPathExists=!/run/cos/uki_install_mode
+ConditionPathExists=!/run/isotope/live-desktop
+# Nor from the previous system (a rollback, or the boot loader's fallback
+# after the new system did not boot) or the recovery system: immucore's
+# boot-mode sentinels. An install there would undo the rollback.
+ConditionPathExists=!/run/cos/passive_mode
+ConditionPathExists=!/run/cos/recovery_mode
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/isotope update --auto
+Nice=10
+IOSchedulingClass=idle

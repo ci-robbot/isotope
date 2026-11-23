@@ -33,8 +33,8 @@ const (
 	// actionRecovery covers the disk recovery key: reading which keyslots
 	// exist, adding a new key and resealing to the TPM.
 	actionRecovery = "io.kairos.isotope-update.recovery"
-	// actionSettings covers machine settings the Welcome app changes: the
-	// system language.
+	// actionSettings covers machine settings an administrator changes: the
+	// system language (the Welcome app), automatic updates.
 	actionSettings = "io.kairos.isotope-update.settings"
 	// actionBackup covers backing up now, the backup schedule and the backup
 	// target with its credentials: the backup reads every file on the
@@ -154,6 +154,13 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
     <method name="DenyPort">
       <arg name="port" type="q" direction="in"/>
       <arg name="proto" type="s" direction="in"/>
+    </method>
+    <method name="AutoUpdateStatus"><arg name="status" type="a{sv}" direction="out"/></method>
+    <method name="SetAutoUpdate"><arg name="on" type="b" direction="in"/></method>
+    <method name="RunAutoUpdate">
+      <arg name="result" type="s" direction="out"/>
+      <arg name="version" type="s" direction="out"/>
+      <arg name="detail" type="s" direction="out"/>
     </method>
     <signal name="StateChanged"><arg name="status" type="a{sv}"/></signal>
     <signal name="Progress"><arg name="line" type="s"/></signal>
@@ -464,6 +471,8 @@ func statusDict(s Status) map[string]dbus.Variant {
 		"ext_detail":    dbus.MakeVariant(s.ExtDetail),
 		"backup_result": dbus.MakeVariant(s.BackupResult),
 		"backup_detail": dbus.MakeVariant(s.BackupDetail),
+		"staged":        dbus.MakeVariant(s.Staged),
+		"staged_auto":   dbus.MakeVariant(s.StagedAuto),
 	}
 }
 
@@ -935,6 +944,7 @@ func cmdDaemon(args []string, stderr io.Writer) int {
 	sweepBackupWork(defaultBackupPaths(), stderr)
 	d := NewDaemon(kairosBackend{})
 	d.inhibitor = logindInhibitor{conn: conn}
+	d.autoEnv = busAutoEnv{conn: conn}
 	if err := serveCtx(ctx, conn, d, polkitAuthorizer{conn: conn}); err != nil {
 		fmt.Fprintln(stderr, "isotope daemon:", err)
 		return exitError

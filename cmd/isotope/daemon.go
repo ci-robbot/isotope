@@ -50,6 +50,11 @@ type Status struct {
 	// BackupResult and BackupDetail are the outcome of the last backup job
 	// the service ran: one of the backupResult* words and its sentence.
 	BackupResult, BackupDetail string
+	// Staged is the version a finished install waits to boot, while the
+	// state is reboot-pending with Pending "installed"; StagedAuto says the
+	// automatic run installed it (AutoUpdate).
+	Staged     string
+	StagedAuto bool
 }
 
 // The reboot marker's first word, and Status.Pending. Only "installed" means
@@ -165,6 +170,9 @@ type job struct {
 	prevDetail string
 	// cancelled is set by BackupCancel, so the job's outcome says so.
 	cancelled bool
+	// auto marks the install an automatic run started: its end is
+	// recorded as the last automatic run.
+	auto bool
 }
 
 // event is a queued callback: a status change, or a progress line.
@@ -219,6 +227,16 @@ type Daemon struct {
 	restore                    func(ctx context.Context, progress func(string), req restoreRequest) (string, error)
 	backupResult, backupDetail string // guarded by mu
 
+	// staged and stagedAuto are Status.Staged and StagedAuto, guarded by
+	// mu; kept in stagedFile across idle exits.
+	staged     string
+	stagedAuto bool
+	// autoEnv answers whether the connection is metered and the battery
+	// low, for AutoUpdate; nil asks nothing. now is the clock of the last
+	// automatic run; nil is time.Now. Set before the first job.
+	autoEnv autoEnvironment
+	now     func() time.Time
+
 	relMu    sync.Mutex
 	relCache []Latest
 	relOK    bool
@@ -248,6 +266,9 @@ func NewDaemon(b Backend) *Daemon {
 	// is recoverable, overwriting the known-good slot is not.
 	if word, ok := readRebootMarker(); ok {
 		d.state, d.pending, d.detail = StateRebootPending, word, pendingDetail(word)
+		if word == pendingInstalled {
+			d.staged, d.stagedAuto = readStaged()
+		}
 	}
 	return d
 }
@@ -289,7 +310,17 @@ func (d *Daemon) statusLocked() Status {
 
 		BackupResult: d.backupResult,
 		BackupDetail: d.backupDetail,
+
+		Staged:     d.stagedLocked(),
+		StagedAuto: d.stagedLocked() != "" && d.stagedAuto,
 	}
+}
+
+func (d *Daemon) stagedLocked() string {
+	if d.state != StateRebootPending || d.pending != pendingInstalled {
+		return ""
+	}
+	return d.staged
 }
 
 func (d *Daemon) pendingLocked() string {
@@ -513,6 +544,11 @@ func (d *Daemon) Inspect(ctx context.Context, ref string, advanced bool) (ImageI
 // resolves to digest, the one the user reviewed. Bad input is refused here,
 // before a job starts.
 func (d *Daemon) Apply(ctx context.Context, ref, digest string, advanced bool) error {
+	return d.apply(ref, digest, advanced, false)
+}
+
+// apply is Apply; auto marks the job of an automatic run.
+func (d *Daemon) apply(ref, digest string, advanced, auto bool) error {
 	r, err := ParseRef(ref)
 	if err != nil {
 		return err
@@ -538,7 +574,7 @@ func (d *Daemon) Apply(ctx context.Context, ref, digest string, advanced bool) e
 	// The job outlives the call (a D-Bus method returns at once), so it gets
 	// its own context; Cancel is the only way to stop it.
 	jctx, cancel := context.WithCancel(context.Background())
-	j := &job{cancel: cancel, prev: d.state, prevDetail: d.detail}
+	j := &job{cancel: cancel, prev: d.state, prevDetail: d.detail, auto: auto}
 	d.job = j
 	d.setLocked(StateInspecting, "")
 	d.wg.Add(1)
@@ -559,6 +595,9 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 	if d.job != j {
 		d.mu.Unlock() // cancelled; Cancel restored the state
 		recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "cancelled"})
+		if j.auto {
+			d.recordAuto(autoOutcome{Result: autoSkipped, Version: v.Version, Detail: "The automatic install was cancelled."})
+		}
 		return
 	}
 	if err == nil && d.rebooting {
@@ -579,6 +618,9 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		d.setLocked(StateError, err.Error())
 		d.mu.Unlock()
 		recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "failed"})
+		if j.auto {
+			d.recordAuto(autoOutcome{Result: autoFailed, Version: v.Version, Detail: "Nothing changed: " + err.Error()})
+		}
 		return
 	}
 	if l := newest(published); l != "" {
@@ -606,6 +648,10 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 			// The marker still says started: reboot-pending all the same.
 			fmt.Fprintln(os.Stderr, "isotope: could not record the failure in the marker:", werr)
 		}
+		if j.auto {
+			d.recordAuto(autoOutcome{Result: autoFailed, Version: v.Version,
+				Detail: "The update failed while it was written (" + err.Error() + "); restart before trying again."})
+		}
 		d.mu.Lock()
 		defer d.mu.Unlock()
 		d.job = nil
@@ -619,6 +665,19 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		fmt.Fprintln(os.Stderr, "isotope: could not record the finished install in the marker:", werr)
 	}
 	recordHistory(historyEntry{Kind: "install", Version: v.Version, Ref: ref, Digest: digest, Result: "installed"})
+	if werr := writeStaged(v.Version, j.auto); werr != nil {
+		// Only the "Restart to finish" line loses its version after an
+		// idle exit.
+		fmt.Fprintln(os.Stderr, "isotope: could not record the staged version:", werr)
+	}
+	if !j.auto {
+		// Installed by hand: the user wants it after all.
+		releaseHold(v.Version)
+	}
+	if j.auto {
+		d.recordAuto(autoOutcome{Result: autoInstalled, Version: v.Version,
+			Detail: "Isotope " + v.Version + " is installed and starts at the next restart."})
+	}
 
 	var notes []string
 	// A pin keeps "update available" quiet after a deliberate choice. The
@@ -641,6 +700,7 @@ func (d *Daemon) run(ctx context.Context, j *job, r ImageRef, ref, digest string
 		detail = strings.Join(notes, "; ")
 	}
 	d.pending = pendingInstalled
+	d.staged, d.stagedAuto = v.Version, j.auto
 	d.setLocked(StateRebootPending, detail)
 }
 
@@ -802,7 +862,12 @@ func (d *Daemon) RebootPrevious() error {
 	// Recorded when the previous system is selected: from then on the next
 	// boot starts it, also when the restart fails. Not after the restart,
 	// which can stop the daemon first.
-	err := d.backend.RebootPrevious(func() { recordHistory(historyEntry{Kind: "rollback"}) })
+	err := d.backend.RebootPrevious(func() {
+		recordHistory(historyEntry{Kind: "rollback"})
+		// The user left this release: the automatic run must not put it
+		// back.
+		holdVersion(d.rel.Version)
+	})
 	if err != nil {
 		d.mu.Lock()
 		d.rebooting = false

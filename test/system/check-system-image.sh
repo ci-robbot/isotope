@@ -82,7 +82,7 @@ check "the Isotope menu calls 'isotope system'" \
 # strings is not in the image; grep -a reads the binary the same way. The
 # introspection XML is a string in the binary: anchor on its method element,
 # not on the bare name, which other strings hold too.
-for m in AddUser BackupInit Restore UpdateHistory; do
+for m in AddUser BackupInit Restore UpdateHistory AutoUpdateStatus SetAutoUpdate; do
     check "isotope-updated's interface has the method $m" "grep -aq '<method name=\"$m\"' /usr/bin/isotope"
 done
 

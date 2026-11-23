@@ -56,6 +56,8 @@ type fakeDaemon struct {
 	// follows On unless fwBroken (the unit fails to load).
 	fw       Firewall
 	fwBroken bool
+	// auto is what AutoUpdateStatus answers; SetAutoUpdate edits it.
+	auto AutoStatus
 	// creds are the credentials of the backup calls, by call, for the
 	// tests to check (the call strings never hold one).
 	creds []Credentials
@@ -145,7 +147,7 @@ var (
 )
 
 // fakeOpen are the methods the daemon answers without polkit.
-var fakeOpen = map[string]bool{"Users": true, "UpdateHistory": true, "FirewallStatus": true}
+var fakeOpen = map[string]bool{"Users": true, "UpdateHistory": true, "FirewallStatus": true, "AutoUpdateStatus": true}
 
 // refusalLocked is the daemon's answer to method before it does anything,
 // in the daemon's order: polkit, then the machine-in-use check, then the
@@ -296,6 +298,15 @@ func (f *fakeDaemon) ResetFirewall() error {
 		f.fw.On, f.fw.Broken, f.fw.Reason = true, false, ""
 		return nil
 	})
+}
+func (f *fakeDaemon) AutoUpdateStatus() (AutoStatus, error) {
+	err := f.do("AutoUpdateStatus")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.auto, err
+}
+func (f *fakeDaemon) SetAutoUpdate(on bool) error {
+	return f.change("SetAutoUpdate", false, func() error { f.auto.Enabled, f.auto.Broken = on, ""; return nil }, fmt.Sprint(on))
 }
 func (f *fakeDaemon) SetFirewall(on bool) error {
 	return f.change("SetFirewall", false, func() error { f.fw.On = on; return nil }, fmt.Sprint(on))

@@ -382,6 +382,13 @@ jobs:
         shell: bash
         run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
+      # Automatic updates: the daily timer is enabled and `isotope update
+      # auto` is there; the setting is off on a new machine.
+      - name: Check automatic updates
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/update/check-autoupdate.sh "${DESKTOP}-desktop:dev"
+
       # The firewall: its files and the daemon's output parse (nft -c) and the
       # unit is enabled; then, privileged on this throwaway runner, the
       # ruleset loads next to Docker's tables, a published port still answers

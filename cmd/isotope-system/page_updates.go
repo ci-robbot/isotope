@@ -12,7 +12,7 @@ import (
 func init() {
 	pageMakers[PageUpdates] = func(u *UI) pageView {
 		p := &updatesPage{u: u}
-		u.onJobEnd(func(string, Status) { p.loadHistory() })
+		u.onJobEnd(func(string, Status) { p.loadHistory(); p.loadAuto() })
 		return p
 	}
 }
@@ -31,6 +31,11 @@ type updatesPage struct {
 	// history is UpdateHistory, oldest first, under u.mu.
 	history []HistoryEntry
 
+	// auto is AutoUpdateStatus, under u.mu; autoWorking is the change
+	// that runs.
+	auto                                                autoInput
+	autoWorking                                         string
+	autoToggle                                          widget.Clickable
 	check, install, cancel, restart, rollback, advanced widget.Clickable
 	others                                              []widget.Clickable
 	image                                               *guikit.Field
@@ -42,6 +47,56 @@ func (p *updatesPage) Shown() {
 	}
 	p.refresh(false)
 	p.loadHistory()
+	p.loadAuto()
+}
+
+// loadAuto reads the automatic update setting and its last run. Anyone
+// may read them.
+func (p *updatesPage) loadAuto() {
+	u, d := p.u, p.u.hooks.Daemon
+	if d == nil {
+		return
+	}
+	u.async(func() {
+		a, err := d.AutoUpdateStatus()
+		u.mu.Lock()
+		defer u.mu.Unlock()
+		p.auto.Loaded = true
+		p.auto.Err = ""
+		if err != nil {
+			p.auto.Err = "Could not read the automatic update setting: " + Describe(err)
+			return
+		}
+		p.auto.Auto = a
+	})
+}
+
+// autoInput is the section's input now.
+func (p *updatesPage) autoInputLocked() autoInput {
+	in := p.auto
+	in.Admin, in.Now = p.u.sys.Admin, p.u.now()
+	return in
+}
+
+// setAuto turns automatic updates on or off and reads the setting again.
+func (p *updatesPage) setAuto(on bool) {
+	u, d := p.u, p.u.hooks.Daemon
+	if d == nil || !u.sys.Admin {
+		return
+	}
+	u.mu.Lock()
+	p.autoWorking = map[bool]string{true: "Turning automatic updates on…", false: "Turning automatic updates off…"}[on]
+	u.mu.Unlock()
+	u.async(func() {
+		err := d.SetAutoUpdate(on)
+		u.mu.Lock()
+		p.autoWorking = ""
+		u.mu.Unlock()
+		if err != nil {
+			u.tell("Automatic updates", Describe(err))
+		}
+		p.loadAuto()
+	})
 }
 
 // loadHistory reads the install history. Anyone may read it.
@@ -117,6 +172,12 @@ func (p *updatesPage) Update(gtx layout.Context) {
 		if p.others[i].Clicked(gtx) && i < len(o.Others) && o.CanInstall {
 			p.installTag(o.Others[i])
 		}
+	}
+	u.mu.Lock()
+	av, autoOn, working := autoViewOf(p.autoInputLocked()), p.auto.Auto.Enabled && p.auto.Auto.Broken == "", p.autoWorking
+	u.mu.Unlock()
+	if p.autoToggle.Clicked(gtx) && av.Enabled && av.Toggle != "" && working == "" {
+		p.setAuto(!autoOn)
 	}
 	if p.cancel.Clicked(gtx) {
 		p.call("Cannot cancel", func(d Daemon) error { return d.Cancel() })
@@ -240,6 +301,8 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(16)
 			c.add(u.notice("Only an administrator (a member of the admin group) can install updates. You can still check for them."))
 		}
+		c.gap(28)
+		c.add(p.autoSection())
 		if len(o.Others) > 0 {
 			if len(p.others) < len(o.Others) {
 				p.others = make([]widget.Clickable, len(o.Others))
@@ -302,4 +365,40 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		return c.layout(gtx)
 	})
+}
+
+// autoSection is the AUTOMATIC UPDATES heading and its panel.
+func (p *updatesPage) autoSection() layout.Widget {
+	u := p.u
+	u.mu.Lock()
+	v, working := autoViewOf(p.autoInputLocked()), p.autoWorking
+	u.mu.Unlock()
+	return func(gtx layout.Context) layout.Dimensions {
+		var c col
+		c.add(u.caps("AUTOMATIC UPDATES"))
+		c.gap(10)
+		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+			var rows col
+			var right layout.Widget
+			if v.Toggle != "" {
+				right = u.buttons(guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle,
+					Disabled: !v.Enabled || working != ""})
+			}
+			rows.add(u.row("Install updates automatically", v.Sub, right))
+			if working != "" {
+				rows.gap(8)
+				rows.add(u.spinnerLine(working))
+			}
+			if v.Last != "" {
+				rows.gap(8)
+				rows.add(u.dim(v.Last))
+			}
+			if v.Hint != "" {
+				rows.gap(8)
+				rows.add(u.dim(v.Hint))
+			}
+			return rows.layout(gtx)
+		}))
+		return c.layout(gtx)
+	}
 }

@@ -63,6 +63,9 @@ func headline(st Status) string {
 		case pendingStarted:
 			return "The update was interrupted; restart before trying again"
 		}
+		if st.Staged != "" {
+			return "Version " + st.Staged + " is installed and starts at the next restart"
+		}
 		return "The update is installed; restart to use it"
 	case StateError:
 		return "The last check failed"
@@ -107,11 +110,12 @@ func OfferFor(st Status, tags []string, line string) UpdateOffer {
 	}
 	o.CanInstall = installsAllowed(st)
 	// A pinned system says up to date, but "latest" is how it leaves the pin.
-	if st.Latest != "" && (st.Pin != "" || isorelease.Newer(st.Latest, st.Installed)) {
+	// A staged version is installed already: it waits for the restart.
+	if st.Latest != "" && st.Latest != st.Staged && (st.Pin != "" || isorelease.Newer(st.Latest, st.Installed)) {
 		o.Latest = st.Latest
 	}
 	for _, t := range tags {
-		if isorelease.IsTag(t) && t != st.Installed && t != o.Latest {
+		if isorelease.IsTag(t) && t != st.Installed && t != o.Latest && t != st.Staged {
 			o.Others = append(o.Others, t)
 		}
 	}
@@ -533,4 +537,64 @@ func noVersionPhrase(result string) string {
 		return "An update was installed"
 	}
 	return "An update: " + result
+}
+
+// autoInput is what the AUTOMATIC UPDATES section of the Updates page is
+// drawn from.
+type autoInput struct {
+	Admin, Loaded bool
+	Err           string
+	Auto          AutoStatus
+	Now           time.Time
+}
+
+// autoView is the section: the setting's line, the button, and the last
+// automatic run.
+type autoView struct {
+	Sub, Toggle, Last, Hint string
+	Enabled                 bool
+}
+
+func autoViewOf(in autoInput) autoView {
+	switch {
+	case in.Err != "":
+		return autoView{Sub: in.Err}
+	case !in.Loaded:
+		return autoView{Sub: "Loading…"}
+	}
+	a := in.Auto
+	v := autoView{Enabled: in.Admin}
+	switch {
+	case a.Broken != "":
+		v.Sub = "Off: the setting cannot be read (" + a.Broken + "). Turn it on or off to repair it."
+		v.Toggle = "Turn on"
+	case a.Enabled:
+		v.Sub = "On. Once a day a new release of this desktop is downloaded and installed in the background. It starts at the next restart; nothing restarts by itself."
+		v.Toggle = "Turn off"
+	default:
+		v.Sub = "Off. New releases are announced, and you install them."
+		v.Toggle = "Turn on"
+	}
+	if a.LastTime != 0 {
+		v.Last = "Last run " + since(in.Now, time.Unix(a.LastTime, 0)) + ": " + autoResult(a)
+	}
+	if !in.Admin {
+		v.Hint = "Only an administrator can turn automatic updates on or off."
+	}
+	return v
+}
+
+// autoResult says the last automatic run in one phrase.
+func autoResult(a AutoStatus) string {
+	switch a.LastResult {
+	case "installed":
+		return "installed Isotope " + a.LastVersion + "."
+	case "up-to-date":
+		return "up to date."
+	case "skipped":
+		return a.LastDetail
+	case "failed":
+		return "failed. " + a.LastDetail
+	}
+	return a.LastResult + ". " + a.LastDetail
 }

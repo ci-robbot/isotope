@@ -50,7 +50,10 @@ type trayApp struct {
 	// notify and launch are seams: a desktop notification, and a terminal
 	// running `isotope <args>`.
 	notify func(summary, body string) error
-	launch func(args ...string) error
+	// notifyAction is a notification with one action button: the
+	// "Restart to finish" of an automatic update.
+	notifyAction func(summary, body, label string, invoked func()) error
+	launch       func(args ...string) error
 	// openMenu opens an entry of isotope-menu, the same one Super+Escape
 	// shows: "Extensions" is one list on every variant.
 	openMenu func(entry string) error
@@ -72,10 +75,11 @@ type trayApp struct {
 func newTrayApp(rel Release, ui trayUI, dial func() (daemonClient, error), logOut io.Writer) *trayApp {
 	a := &trayApp{
 		rel: rel, ui: ui, dial: dial,
-		log:        log.New(logOut, "isotope: ", 0),
-		clicks:     make(chan string, 8),
-		notify:     Notify,
-		firstCheck: notifyDelay, interval: notifyInterval, retry: trayRetry,
+		log:          log.New(logOut, "isotope: ", 0),
+		clicks:       make(chan string, 8),
+		notify:       Notify,
+		notifyAction: NotifyAction,
+		firstCheck:   notifyDelay, interval: notifyInterval, retry: trayRetry,
 	}
 	a.launch = func(args ...string) error { return openTerminal(args, logOut) }
 	a.openMenu = openIsotopeMenu
@@ -235,6 +239,39 @@ func (a *trayApp) setStatus(st Status) {
 	}
 	a.st = st
 	a.render()
+	a.announceStaged(st)
+}
+
+// announceStaged says once per version that an automatic update is
+// installed and waits for a restart, with a Restart button that does what
+// the menu's "Restart now" does. An install the user started gets no
+// notification: they asked for it and were told. A failed automatic run
+// notifies nothing; the Updates page shows it, so a daily retry is not a
+// daily notification.
+func (a *trayApp) announceStaged(st Status) {
+	if st.State != StateRebootPending || st.Pending != pendingInstalled || st.Staged == "" || !st.StagedAuto {
+		return
+	}
+	if stagedNotified(st.Staged) {
+		return
+	}
+	body := "Isotope " + st.Staged + " was installed in the background. It starts at the next restart."
+	if a.noIcon {
+		body += " Run `isotope reboot` to restart now."
+	}
+	err := a.notifyAction("Restart to finish the update", body, "Restart", func() {
+		select {
+		case a.clicks <- "restart":
+		default:
+		}
+	})
+	if err != nil {
+		a.log.Printf("showing a notification: %v", err)
+		return
+	}
+	if err := markStagedNotified(st.Staged); err != nil {
+		a.log.Printf("recording that %s was announced: %v", st.Staged, err)
+	}
 }
 
 func (a *trayApp) render() {

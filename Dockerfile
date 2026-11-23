@@ -6039,6 +6039,9 @@ COPY rootfs/common/usr/lib/systemd/system-preset/80-isotope-smartd.preset /usr/l
 # Backups: the daily timer of `isotope backup --scheduled`, and the one-shot
 # after a whole restore.
 COPY rootfs/common/usr/lib/systemd/system/isotope-backup.service rootfs/common/usr/lib/systemd/system/isotope-backup.timer rootfs/common/usr/lib/systemd/system/isotope-restore-finish.service /usr/lib/systemd/system/
+# Automatic updates: the daily timer of `isotope update --auto` (it does
+# nothing until `isotope update auto on`).
+COPY rootfs/common/usr/lib/systemd/system/isotope-autoupdate.service rootfs/common/usr/lib/systemd/system/isotope-autoupdate.timer /usr/lib/systemd/system/
 # Docker: its units, and the boot stage that persists /var/lib/docker and
 # starts the daemon on the installed system only.
 COPY rootfs/common/usr/lib/systemd/system/docker.service rootfs/common/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
@@ -6638,6 +6641,10 @@ COPY --from=restic /restic/ /
 RUN systemctl enable isotope-backup.timer isotope-restore-finish.service && \
     test -L /etc/systemd/system/timers.target.wants/isotope-backup.timer && \
     test -L /etc/systemd/system/multi-user.target.wants/isotope-restore-finish.service
+# Automatic updates: the daily timer of `isotope update --auto`, which does
+# nothing until `isotope update auto on` turns them on.
+RUN systemctl enable isotope-autoupdate.timer && \
+    test -L /etc/systemd/system/timers.target.wants/isotope-autoupdate.timer
 
 
 # The server edition's image. Keep the binaries at the end in step with
@@ -6700,6 +6707,10 @@ COPY --from=restic /restic/ /
 RUN systemctl enable isotope-backup.timer isotope-restore-finish.service && \
     test -L /etc/systemd/system/timers.target.wants/isotope-backup.timer && \
     test -L /etc/systemd/system/multi-user.target.wants/isotope-restore-finish.service
+# Automatic updates: the daily timer of `isotope update --auto`, which does
+# nothing until `isotope update auto on` turns them on.
+RUN systemctl enable isotope-autoupdate.timer && \
+    test -L /etc/systemd/system/timers.target.wants/isotope-autoupdate.timer
 
 # The image the kairos stage turns bootable: the desktop for sway, i3, cosmic
 # and niri, the server edition for server.
