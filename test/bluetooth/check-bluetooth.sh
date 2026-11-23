@@ -53,7 +53,7 @@ check "libical 3 is installed with its licence" \
 # niri also ships libical 4 whole (headers too) for Noctalia's calendar, so
 # only libical 3's development files must be absent.
 check "no libical 3 headers, pkg-config or CMake files" \
-    '! grep -rqsE "^Version: 3\.|PACKAGE_VERSION \"3\.|ICAL_VERSION \"3\." /usr/lib/pkgconfig /usr/lib/cmake/LibIcal /usr/include/libical'
+    '! grep -qsE "^Version: 3\." /usr/lib/pkgconfig/libical*.pc && ! grep -rqsE "PACKAGE_VERSION \"3\.|ICAL_VERSION \"3\." /usr/lib/cmake/LibIcal /usr/include/libical'
 # LE Audio: BlueZ 5.79 keeps these behind Experimental, and the ISO sockets
 # behind the kernel's ISO feature; main.conf turns on both.
 check "main.conf turns on LE Audio (Experimental and the ISO socket feature)" \

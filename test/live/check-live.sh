@@ -62,19 +62,17 @@ if [ "$mode" = repo ]; then
 else
     cid=$(docker create --entrypoint sh "$IMAGE")
     mkdir -p "$work/image"
-    for p in etc system usr/bin usr/libexec usr/lib/systemd/system usr/share/wayland-sessions \
-        usr/share/xsessions usr/share/applications; do
-        mkdir -p "$work/image/$(dirname "$p")"
-        # A path the image lacks is fine (the checks then say what is
-        # missing); a copy that fails for another reason is reported, so a
-        # half-copied tree is not read as missing files.
-        if ! err=$(docker cp "$cid:/$p" "$work/image/$p" 2>&1 >/dev/null); then
-            case "$err" in
-                *"No such container:path"*|*"Could not find the file"*) ;;
-                *) echo "WARN: docker cp /$p: $err" >&2 ;;
-            esac
-        fi
+    # docker export, not docker cp: docker cp stops at the first symlink that
+    # points out of the copied directory (dracut's units in
+    # /usr/lib/systemd/system do), and leaves half a tree.
+    paths=(etc system usr/bin usr/libexec usr/lib/systemd/system usr/share/wayland-sessions
+        usr/share/xsessions usr/share/applications)
+    present=()
+    for p in "${paths[@]}"; do
+        docker run --rm --entrypoint sh "$IMAGE" -c 'test -e "$1"' _ "/$p" >/dev/null 2>&1 && present+=("$p")
     done
+    docker export "$cid" | tar -x -C "$work/image" "${present[@]}" ||
+        { echo "FAIL: could not extract ${present[*]} from $IMAGE"; exit 1; }
     v=$(sed -n 's/^SESSION=//p' "$work/image/etc/isotope/session" 2>/dev/null | head -n 1)
     [ -n "$v" ] || { echo "FAIL: $IMAGE has no SESSION= in /etc/isotope/session"; exit 1; }
     roots+=("$v:$work/image")

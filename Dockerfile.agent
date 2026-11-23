@@ -301,7 +301,9 @@ RUN for b in mkfs.exfat fsck.exfat tune.exfat exfatlabel dump.exfat exfat2img; d
 # obexd would take files with nobody to accept them. NetworkManager-
 # openconnect (the plugin, its service, D-Bus policy, user and licence) and
 # obexd (its binary, user unit and D-Bus activation) go; the openconnect CLI
-# and WireGuard stay.
+# and WireGuard stay. NetworkManager's own D-Bus policy names the plugin's
+# service too, so the check looks for a policy that owns the name (own or own_prefix) or a .name
+# file that declares it, not for the name anywhere.
 RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
       /usr/libexec/nm-openconnect-service /usr/libexec/nm-openconnect-service-openconnect-helper \
       /usr/lib/NetworkManager/libnm-vpn-plugin-openconnect*.so \
@@ -315,8 +317,8 @@ RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
     fail() { echo "agent: $*" >&2; exit 1; } && \
     ! ls /usr/libexec/nm-openconnect* /usr/lib/NetworkManager/VPN/nm-openconnect* \
       /usr/lib/NetworkManager/libnm-vpn-plugin-openconnect* >/dev/null 2>&1 || fail "nm-openconnect service files left"; \
-    left=$(grep -rls 'org.freedesktop.NetworkManager.openconnect' /usr/share/dbus-1 /etc/dbus-1 \
-      /usr/lib/NetworkManager/VPN /etc/NetworkManager/VPN || true); \
+    left=$(grep -rlsE 'own(_prefix)?="org\.freedesktop\.NetworkManager\.openconnect"|^service=org\.freedesktop\.NetworkManager\.openconnect' \
+      /usr/share/dbus-1 /etc/dbus-1 /usr/lib/NetworkManager/VPN /etc/NetworkManager/VPN || true); \
     [ -z "$left" ] || fail "openconnect files left: $left"; \
     ! grep -q '^nm-openconnect:' /etc/passwd || fail "the nm-openconnect user is left"; \
     ! test -e /usr/libexec/bluetooth/obexd || fail "obexd is left"; \
