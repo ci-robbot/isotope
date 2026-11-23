@@ -6315,6 +6315,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY pkg/installer/testdata/oem-locale-de_DE.golden pkg/installer/testdata/locale.conf-de_DE.golden pkg/installer/testdata/
+# TestFirewallDefaultsMatchTheImage holds pkg/firewall's defaults to the shipped file.
+COPY rootfs/common/usr/share/isotope/firewall-default.nft rootfs/common/usr/share/isotope/
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/

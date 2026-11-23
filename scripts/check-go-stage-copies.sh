@@ -71,6 +71,36 @@ for entry in "${stages[@]}"; do
 		done
 		$covered || missing="$missing $dir"
 	done
+	# Repository files the tests of those packages read through a relative
+	# path ("../../rootfs/..."), which the stage must copy too. A test that
+	# skips when its file is missing is listed but not required: it says so
+	# with t.Skip next to the read.
+	for dir in $need; do
+		for lit in $(grep -hoE '"(\.\./)+[^"]+"' "$dir"/*_test.go 2>/dev/null | tr -d '"' | sort -u); do
+			tfile="$(realpath -m --relative-to="$PWD" "$dir/$lit")"
+			[ -f "$tfile" ] || continue
+			case "$tfile" in ../*) continue ;; esac
+			# The read may go through a constant: `name = "../../x"`.
+			refs="\"$lit\""
+			# shellcheck disable=SC2013 # identifiers have no spaces
+			for name in $(grep -hoE "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:?=[[:space:]]*\"$lit\"" "$dir"/*_test.go |
+				sed -E 's/[[:space:]]*:?=.*//'); do
+				refs="$refs $name"
+			done
+			skipped=false
+			for r in $refs; do
+				if grep -h -A4 -F "$r" "$dir"/*_test.go | grep -q 't.Skip'; then
+					skipped=true
+				fi
+			done
+			$skipped && continue
+			covered=false
+			for c in $have; do
+				case "$tfile" in "$c" | "$c"/*) covered=true; break ;; esac
+			done
+			$covered || missing="$missing $tfile"
+		done
+	done
 	if [ -n "$missing" ]; then
 		echo "FAIL: $file stage $stage ($prog) does not copy:$missing"
 		fail=1
