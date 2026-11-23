@@ -26,7 +26,7 @@ from html.parser import HTMLParser
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "kairos-community/isotope")
 DOWNLOAD = re.compile(
-    rf"^https://github\.com/{re.escape(REPO)}/(releases/latest|releases/download/v[^/]+/isotope-[a-z0-9]+(-vm)?-v[^/]+-amd64\.iso(\.sha256)?)$"
+    rf"^https://github\.com/{re.escape(REPO)}/(releases/latest|releases/download/v[^/]+/isotope-[a-z0-9]+(-vm|-uki)?-v[^/]+-amd64\.iso(\.sha256)?)$"
 )
 
 

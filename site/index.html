@@ -294,12 +294,14 @@
 {{downloads}}
     </div>
 
+{{trusted}}
+
     <ol class="steps">
       <li><b>Check the download.</b> <code>sha256sum --check isotope-*.iso.sha256</code></li>
       <li><b>Write it to a USB stick</b>, for example with Fedora Media Writer, or with <code>dd</code>.</li>
       <li><b>Boot it.</b> The desktop ISOs start the live desktop first; choose "Install Isotope" when you are ready. In a VM, give it UEFI firmware, 4 GB of RAM and a disk of 20 GB or more.</li>
     </ol>
-    <p class="fine">Every ISO comes with an SPDX SBOM and a build manifest that names every source it was built from. The Trusted Boot ISOs and the agent appliance are on the <a href="{{latest_url}}">release page</a>.</p>
+    <p class="fine">Every ISO comes with an SPDX SBOM and a build manifest that names every source it was built from. The agent appliance is on the <a href="{{latest_url}}">release page</a>.</p>
   </div>
 </section>
 

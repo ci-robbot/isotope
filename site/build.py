@@ -54,8 +54,11 @@ LINES = [
     ("vm", "virtual machines"),
 ]
 ISO_NAME = re.compile(
-    r"^isotope-(?P<flavor>sway|i3|niri|cosmic|server)(?P<vm>-vm)?-(?P<tag>v[^/]+)-amd64\.iso$"
+    r"^isotope-(?P<flavor>sway|i3|niri|cosmic|server)(?P<vm>-vm)?(?P<uki>-uki)?-(?P<tag>v[^/]+)-amd64\.iso$"
 )
+# The Trusted Boot edition (docs/TRUSTED_BOOT_KEYS.md): one ISO per desktop on
+# the full line and one for the server, published when the release has them.
+TRUSTED = DESKTOPS + [("server", "Server")]
 
 # Screenshots the page shows: (source in the tree, published name).
 SCREENSHOTS = [
@@ -203,7 +206,7 @@ def release_isos(release, offline):
 
     def add(flavor, gpu, name, sha):
         asset = assets.get(name)
-        if not asset or (flavor == "server" and gpu != "full"):
+        if not asset or (flavor == "server" and gpu not in ("full", "uki")):
             return
         sums = assets.get(name + ".sha256")
         isos[(flavor, gpu)] = {
@@ -225,18 +228,21 @@ def release_isos(release, offline):
                 log(f"could not read {name} ({e}); parsing the asset names")
         if not m:
             continue
-        if m.get("trusted_boot") or m.get("desktop_flavor") not in {"sway", "i3", "niri", "cosmic", "server"}:
+        if m.get("desktop_flavor") not in {"sway", "i3", "niri", "cosmic", "server"}:
             continue
         if m.get("release_tag") != tag:
             continue
-        add(m["desktop_flavor"], m.get("gpu"), m.get("iso", ""), m.get("iso_sha256", ""))
+        line = "uki" if m.get("trusted_boot") else m.get("gpu")
+        add(m["desktop_flavor"], line, m.get("iso", ""), m.get("iso_sha256", ""))
 
     # Any ISO the manifests did not cover: its name says what it is.
     for name in assets:
         n = ISO_NAME.match(name)
         if not n or n.group("tag") != tag:
             continue
-        key = (n.group("flavor"), "vm" if n.group("vm") else "full")
+        if n.group("vm") and n.group("uki"):
+            continue
+        key = (n.group("flavor"), "uki" if n.group("uki") else "vm" if n.group("vm") else "full")
         if key not in isos:
             add(key[0], key[1], name, "")
     return isos
@@ -297,6 +303,32 @@ def render_downloads(isos):
     return "\n".join(rows)
 
 
+def render_trusted(isos):
+    """The Trusted Boot downloads, or nothing when the release has none."""
+    items = [(flavor, title, isos.get((flavor, "uki"))) for flavor, title in TRUSTED]
+    if not any(iso for _, _, iso in items):
+        return ""
+    cells = "".join(
+        download_item(flavor, "uki", f"Isotope {title}, Trusted Boot" if flavor != "server"
+                      else "Isotope Server, Trusted Boot", iso)
+        for flavor, title, iso in items if iso)
+    return (
+        '<div class="trusted" id="trusted-boot">'
+        '<h3 class="trusted-title">Trusted Boot edition</h3>'
+        '<p class="trusted-lede">For PCs with UEFI Secure Boot and a TPM 2.0 chip. The computer '
+        'starts only Isotope images signed by the project, and the disk is encrypted with a key '
+        'kept in the TPM, so it cannot be read in another computer.</p>'
+        '<ul class="trusted-notes">'
+        '<li>Start the ISO with Secure Boot in setup mode. On the first boot it enrolls the '
+        "project's keys and restarts. Most laptops need the keys cleared in the firmware setup "
+        'first.</li>'
+        '<li>Secure Boot must stay on afterwards. It needs 4 GB of RAM, 8 GB for COSMIC.</li>'
+        '<li>Upgrades stay in the Trusted Boot edition. To leave it, reinstall from a normal ISO.</li>'
+        '</ul>'
+        f'<div class="dl-cells trusted-cells">{cells}</div>'
+        '</div>')
+
+
 def render(release, isos, fonts_preload):
     with open(os.path.join(SITE, "index.html")) as f:
         page = f.read()
@@ -319,6 +351,7 @@ def render(release, isos, fonts_preload):
         "latest_url": LATEST_URL,
         "version_line": version,
         "downloads": render_downloads(isos),
+        "trusted": render_trusted(isos),
         "downloads_state": state,
         "font_preload": preload,
         "year": str(datetime.date.today().year),
