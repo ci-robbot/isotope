@@ -62,6 +62,12 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
+      - name: Check out the retry helper
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/retry.sh
+          sparse-checkout-cone-mode: false
+
       - name: Put a published release back to draft
         id: hold
         shell: bash
@@ -74,7 +80,7 @@ jobs:
             none) echo "no release for $RELEASE_TAG yet; the release job creates it" ;;
             true) echo "$RELEASE_TAG is already a draft" ;;
             false)
-              gh release edit "$RELEASE_TAG" --draft=true --repo "$GITHUB_REPOSITORY"
+              scripts/retry.sh 5 10 gh release edit "$RELEASE_TAG" --draft=true --repo "$GITHUB_REPOSITORY"
               echo "held=true" >> "$GITHUB_OUTPUT"
               echo "$RELEASE_TAG is a draft until its assets are uploaded"
               ;;
@@ -154,7 +160,7 @@ jobs:
         run: |
           set -euo pipefail
           make llvm-image
-          docker push "$LLVM_OUT"
+          scripts/retry.sh 5 15 docker push "$LLVM_OUT"
 
   # COSMIC compiles for about five hours, which with its dependencies ran past
   # the 330-minute budget of one job. Its two halves (the cosmic-shell and
@@ -250,7 +256,7 @@ jobs:
         run: |
           set -euo pipefail
           make DESKTOP=cosmic GPU="$GPU" stage-image
-          docker push "$STAGE_OUT"
+          scripts/retry.sh 5 15 docker push "$STAGE_OUT"
 
   # Every flavor in two lines. full (GPU=full FIRMWARE=true) is the standard
   # one: Mesa's Intel (iris, crocus, i915), AMD (radeonsi, r600, r300) and
@@ -356,7 +362,7 @@ jobs:
           set -euo pipefail
           base_ref="$(make -s print-base-image)"
           [ -n "$base_ref" ] || { echo "could not read BASE_IMAGE from the Makefile" >&2; exit 1; }
-          docker pull "$base_ref"
+          scripts/retry.sh 5 15 docker pull "$base_ref"
 
       # The halves the cosmic job pushed. One that is missing (its job failed)
       # is compiled here instead, which may not fit in this job's budget.
@@ -509,20 +515,10 @@ jobs:
           set -euo pipefail
           target="${IMAGE_REPO}:${LINE}-${RELEASE_TAG}"
           docker tag "${DESKTOP}-desktop:dev" "$target"
-          docker push "$target"
-          # Sign the digest the registry holds, never the tag: a tag can move
-          # after signing, a digest cannot.
-          # GHCR can answer 404 for a tag for a few seconds after the push
-          # returns, so ask again before giving up.
-          digest=""
-          for attempt in 1 2 3 4 5 6; do
-            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
-            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
-            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
-            sleep 10
-          done
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
-          cosign sign --yes "${IMAGE_REPO}@${digest}"
+          # Push (retried) and sign the digest the registry accepted, never the
+          # tag: a tag can move after signing, a digest cannot.
+          digest="$(scripts/push-image.sh "$target")"
+          scripts/retry.sh 5 15 cosign sign --yes "${IMAGE_REPO}@${digest}"
 
       - name: Upload ${{ matrix.desktop }} (${{ matrix.gpu }}) workflow artifact
         uses: actions/upload-artifact@v7
@@ -633,7 +629,7 @@ jobs:
       # needs the base in the local image store.
       - name: Pull the Hadron base
         shell: bash
-        run: docker pull "$(make -s print-base-image)"
+        run: scripts/retry.sh 5 15 docker pull "$(make -s print-base-image)"
 
       # On the runner's RAM disk, readable by the runner user only, and gone
       # with the runner. Never in the workspace, which artifacts upload from.
@@ -747,18 +743,10 @@ jobs:
         run: |
           set -euo pipefail
           target="${IMAGE_REPO}:${LINE}-${RELEASE_TAG}"
-          docker push "$target"
-          # GHCR can answer 404 for a tag for a few seconds after the push
-          # returns, so ask again before giving up.
-          digest=""
-          for attempt in 1 2 3 4 5 6; do
-            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
-            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
-            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
-            sleep 10
-          done
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
-          cosign sign --yes "${IMAGE_REPO}@${digest}"
+          # Push (retried) and sign the digest the registry accepted, never the
+          # tag: a tag can move after signing, a digest cannot.
+          digest="$(scripts/push-image.sh "$target")"
+          scripts/retry.sh 5 15 cosign sign --yes "${IMAGE_REPO}@${digest}"
 
       - name: Upload the ${{ matrix.desktop }} Trusted Boot workflow artifact
         uses: actions/upload-artifact@v7
@@ -925,7 +913,7 @@ jobs:
           set -euo pipefail
           base_ref="$(make -s print-base-image)"
           [ -n "$base_ref" ] || { echo "could not read BASE_IMAGE from the Makefile" >&2; exit 1; }
-          docker pull "$base_ref"
+          scripts/retry.sh 5 15 docker pull "$base_ref"
 
       - name: Build agent ISO
         shell: bash
@@ -1068,20 +1056,10 @@ jobs:
           set -euo pipefail
           target="${IMAGE_REPO}:agent-${RELEASE_TAG}"
           docker tag "$AGENT_IMAGE" "$target"
-          docker push "$target"
-          # Sign the digest the registry holds, never the tag: a tag can move
-          # after signing, a digest cannot.
-          # GHCR can answer 404 for a tag for a few seconds after the push
-          # returns, so ask again before giving up.
-          digest=""
-          for attempt in 1 2 3 4 5 6; do
-            digest="$(docker buildx imagetools inspect "$target" --format '{{json .Manifest}}' 2>/dev/null | jq -r .digest)" || digest=""
-            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] && break
-            echo "the registry does not list $target yet (attempt $attempt), retrying in 10s" >&2
-            sleep 10
-          done
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "could not resolve the pushed digest of $target" >&2; exit 1; }
-          cosign sign --yes "${IMAGE_REPO}@${digest}"
+          # Push (retried) and sign the digest the registry accepted, never the
+          # tag: a tag can move after signing, a digest cannot.
+          digest="$(scripts/push-image.sh "$target")"
+          scripts/retry.sh 5 15 cosign sign --yes "${IMAGE_REPO}@${digest}"
 
       - name: Upload agent workflow artifact
         uses: actions/upload-artifact@v7
@@ -1114,6 +1092,12 @@ jobs:
       TRUSTED_BOOT_RELEASE: ${{ vars.TRUSTED_BOOT_RELEASE == 'true' }}
 
     steps:
+      - name: Check out the retry helper
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/retry.sh
+          sparse-checkout-cone-mode: false
+
       - name: Download all release artifacts
         uses: actions/download-artifact@v8
         with:
@@ -1224,7 +1208,7 @@ jobs:
           set -euo pipefail
           repo="$IMAGE_REPO"
           name="${repo#ghcr.io/}"
-          token="$(curl -fsS "https://ghcr.io/token?scope=repository:${name}:pull" | jq -r '.token // empty')" || true
+          token="$(curl -fsS --retry 5 --retry-delay 10 --retry-all-errors "https://ghcr.io/token?scope=repository:${name}:pull" | jq -r '.token // empty')" || true
           if [[ -z "$token" ]]; then
             echo "${repo} needs a login to pull. Make the package public:" >&2
             echo "https://github.com/orgs/${GITHUB_REPOSITORY_OWNER}/packages/container/${name#*/}/settings" >&2
@@ -1234,10 +1218,18 @@ jobs:
           [[ "$TRUSTED_BOOT_RELEASE" == true ]] && lines+=(sway-uki i3-uki cosmic-uki niri-uki server-uki)
           for line in "${lines[@]}"; do
             ref="${repo}:${line}-${RELEASE_TAG}"
-            code="$(curl -sS -o /dev/null -w '%{http_code}' --head \
-              -H "Authorization: Bearer $token" \
-              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
-              "https://ghcr.io/v2/${name}/manifests/${line}-${RELEASE_TAG}")"
+            # A 5xx, a dropped connection or a 404 for a tag pushed minutes
+            # ago can be the registry catching up, so ask again before failing.
+            code=000
+            for attempt in 1 2 3 4 5; do
+              code="$(curl -sS -o /dev/null -w '%{http_code}' --head \
+                -H "Authorization: Bearer $token" \
+                -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+                "https://ghcr.io/v2/${name}/manifests/${line}-${RELEASE_TAG}")" || code=000
+              [[ "$code" == 200 || "$code" == 401 || "$code" == 403 ]] && break
+              echo "$ref: HTTP $code (attempt $attempt of 5), asking again in 20s" >&2
+              sleep 20
+            done
             [[ "$code" == 200 ]] || { echo "$ref is not pullable without a login (HTTP $code)" >&2; exit 1; }
             echo "$ref: public"
           done
@@ -1257,18 +1249,32 @@ jobs:
             release/*.build.json
           )
 
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" "${assets[@]}" \
-              --clobber \
-              --repo "$GITHUB_REPOSITORY"
-            # Publish again only what hold-release put back to draft: a
-            # release someone keeps as a draft on purpose stays one.
-            if [[ "$HELD" == true ]]; then
-              gh release edit "$RELEASE_TAG" --draft=false --repo "$GITHUB_REPOSITORY"
-            fi
-          else
-            gh release create "$RELEASE_TAG" "${assets[@]}" \
-              --verify-tag \
-              --generate-notes \
-              --repo "$GITHUB_REPOSITORY"
+          # Every call is retried, and each one can run again safely: a new
+          # release is created as a draft with no assets (a retry after a
+          # create that did go through finds it and stops), the assets are
+          # uploaded with --clobber, and only then is the release published.
+          # A rerun after a create that went through but a publish that did
+          # not finds a draft the workflow made (author github-actions[bot])
+          # and publishes it too; a draft a person made stays a draft.
+          publish=false
+          state="$(scripts/retry.sh 3 10 gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,author --jq '"\(.isDraft) \(.author.login)"' 2>/dev/null || echo none)"
+          if [[ "$state" == "true github-actions[bot]" ]]; then
+            publish=true
+          fi
+          if [[ "$state" == none ]]; then
+            # shellcheck disable=SC2016 # $1 and $2 expand in the inner bash
+            scripts/retry.sh 5 10 bash -c \
+              'gh release view "$1" --repo "$2" >/dev/null 2>&1 ||
+               gh release create "$1" --draft --verify-tag --generate-notes --repo "$2"' \
+              _ "$RELEASE_TAG" "$GITHUB_REPOSITORY"
+            publish=true
+          fi
+          scripts/retry.sh 5 15 gh release upload "$RELEASE_TAG" "${assets[@]}" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
+          # Publish what the workflow created, or what hold-release put back
+          # to draft.
+          if [[ "$publish" == true || "$HELD" == true ]]; then
+            scripts/retry.sh 5 10 gh release edit "$RELEASE_TAG" --draft=false --repo "$GITHUB_REPOSITORY"
           fi
