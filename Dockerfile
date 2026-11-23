@@ -18,7 +18,7 @@
 # value. scripts/bump-hadron.sh rewrites it here, in Dockerfile.agent and in the
 # Makefile; .github/workflows/follow-hadron.yml runs that when Hadron tags a
 # new release.
-ARG HADRON_VERSION=v0.6.6
+ARG HADRON_VERSION=v0.6.7
 ARG BASE_IMAGE=ghcr.io/kairos-io/hadron:${HADRON_VERSION}
 # smartmontools comes from its hadron-layers layer (statically linked, no shared
 # library a base or image already has), copied into every desktop image and the
