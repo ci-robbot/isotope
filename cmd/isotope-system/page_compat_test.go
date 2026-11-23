@@ -64,7 +64,23 @@ func (f *fakeGlibc) job(name string, line func(string)) error {
 }
 
 func (f *fakeGlibc) Create(line func(string)) error { return f.job("create", line) }
-func (f *fakeGlibc) Reset(line func(string)) error  { return f.job("reset", line) }
+func (f *fakeGlibc) Pull(line func(string)) error {
+	f.mu.Lock()
+	f.calls = append(f.calls, "pull")
+	lines, err := f.lines, f.jobErr
+	f.mu.Unlock()
+	for _, l := range lines {
+		line(l)
+	}
+	if err != nil {
+		return err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.st.ImagePresent, f.st.ImageSizeBytes = true, 78_000_000
+	return nil
+}
+func (f *fakeGlibc) Reset(line func(string)) error { return f.job("reset", line) }
 
 func (f *fakeGlibc) called() []string {
 	f.mu.Lock()
@@ -88,7 +104,7 @@ func compatUI(t *testing.T, g *fakeGlibc, live bool) (*UI, *compatPage) {
 func newFakeGlibc(exists bool) *fakeGlibc {
 	st := GlibcStatus{Image: "docker.io/library/ubuntu:26.04", Auto: true}
 	if exists {
-		st.Exists, st.SizeBytes = true, 1_234_000_000
+		st.Exists, st.SizeBytes, st.ImagePresent = true, 1_234_000_000, true
 	}
 	return &fakeGlibc{st: st}
 }
@@ -139,7 +155,8 @@ func TestCompatSwitchWritesTheSetting(t *testing.T) {
 	eventually(t, "auto off", func() bool { return !p.state().st.Auto && !p.state().autoBusy })
 	p.toggleAuto()
 	eventually(t, "auto on", func() bool { return p.state().st.Auto && !p.state().autoBusy })
-	if got := strings.Join(g.called(), ","); got != "auto off,auto on" {
+	eventually(t, "the setup", func() bool { s := p.state(); return s.working == "" && s.st.Exists })
+	if got := strings.Join(g.called(), ","); got != "auto off,auto on,create" {
 		t.Fatalf("calls %s", got)
 	}
 	// A failure is said on the page and the switch stays.
@@ -150,6 +167,64 @@ func TestCompatSwitchWritesTheSetting(t *testing.T) {
 	eventually(t, "the failure", func() bool { return p.state().fail != "" })
 	if s := p.state(); !s.st.Auto || !strings.Contains(s.fail, "permission denied") {
 		t.Fatalf("state %+v", s)
+	}
+}
+
+func TestCompatEnableSetsUpTheBoxWhenMissing(t *testing.T) {
+	g := newFakeGlibc(false)
+	g.st.Auto = false
+	g.gate = make(chan struct{})
+	g.lines = []string{"Pulling docker.io/library/ubuntu:26.04"}
+	_, p := compatUI(t, g, false)
+	p.toggleAuto()
+	eventually(t, "the progress", func() bool { s := p.state(); return s.working == jobSetup && len(s.lines) == 1 })
+	close(g.gate)
+	eventually(t, "ready", func() bool { s := p.state(); return s.working == "" && s.st.Exists })
+	if got := strings.Join(g.called(), ","); got != "auto on,create" {
+		t.Fatalf("calls %s", got)
+	}
+	if s := p.state(); !s.st.Auto || s.fail != "" {
+		t.Fatalf("state %+v", s)
+	}
+}
+
+func TestCompatEnableWithABoxOnlyWritesTheSetting(t *testing.T) {
+	g := newFakeGlibc(true)
+	g.st.Auto = false
+	_, p := compatUI(t, g, false)
+	p.toggleAuto()
+	eventually(t, "auto on", func() bool { return p.state().st.Auto && !p.state().autoBusy })
+	time.Sleep(50 * time.Millisecond)
+	if got := strings.Join(g.called(), ","); got != "auto on" {
+		t.Fatalf("calls %s", got)
+	}
+}
+
+func TestCompatDisableNeverCreatesOrResets(t *testing.T) {
+	for _, exists := range []bool{false, true} {
+		g := newFakeGlibc(exists)
+		_, p := compatUI(t, g, false)
+		p.toggleAuto()
+		eventually(t, "auto off", func() bool { return !p.state().st.Auto && !p.state().autoBusy })
+		time.Sleep(50 * time.Millisecond)
+		if got := strings.Join(g.called(), ","); got != "auto off" {
+			t.Fatalf("exists=%v calls %s", exists, got)
+		}
+	}
+}
+
+func TestCompatEnableSetupFailureKeepsTheSetting(t *testing.T) {
+	g := newFakeGlibc(false)
+	g.st.Auto = false
+	g.jobErr = errors.New("The glibc container could not be created: no network.")
+	_, p := compatUI(t, g, false)
+	p.toggleAuto()
+	eventually(t, "the failure", func() bool { return p.state().fail != "" })
+	if s := p.state(); s.working != "" || !s.st.Auto || !strings.Contains(s.fail, "no network") {
+		t.Fatalf("state %+v", s)
+	}
+	if got := strings.Join(g.called(), ","); got != "auto on,create" {
+		t.Fatalf("calls %s", got)
 	}
 }
 
@@ -191,6 +266,65 @@ func TestCompatSetUpNow(t *testing.T) {
 	eventually(t, "the failure", func() bool { return p.state().fail != "" })
 	if s := p.state(); s.working != "" || !strings.Contains(s.fail, "no network") {
 		t.Fatalf("state %+v", s)
+	}
+}
+
+func TestCompatImageMissingOffersDownload(t *testing.T) {
+	ub := "docker.io/library/ubuntu:26.04"
+	cases := []struct {
+		name string
+		st   GlibcStatus
+		pull bool
+		set  bool
+		rst  bool
+	}{
+		{"no box, no image", GlibcStatus{Image: ub}, false, true, false},
+		{"no box, image", GlibcStatus{Image: ub, ImagePresent: true}, false, true, false},
+		{"box, image", GlibcStatus{Exists: true, Image: ub, ImagePresent: true}, false, false, true},
+		{"box, image pruned", GlibcStatus{Exists: true, Image: ub}, true, false, true},
+	}
+	for _, c := range cases {
+		v := compatViewOf(c.st)
+		if v.Pull != c.pull || v.Setup != c.set || v.Reset != c.rst {
+			t.Errorf("%s: %+v", c.name, v)
+		}
+		if c.pull && v.Note == "" || !c.pull && v.Note != "" {
+			t.Errorf("%s: note %q", c.name, v.Note)
+		}
+	}
+	if v := compatViewOf(cases[3].st); !strings.HasPrefix(v.Note, "The Ubuntu image is not on this computer") {
+		t.Errorf("note %q", v.Note)
+	}
+
+	// The button runs pull, with progress, and not create or reset.
+	g := newFakeGlibc(true)
+	g.st.ImagePresent = false
+	g.gate = nil
+	g.lines = []string{"26.04: Pulling from library/ubuntu"}
+	_, p := compatUI(t, g, false)
+	p.pullNow()
+	eventually(t, "downloaded", func() bool { s := p.state(); return s.working == "" && s.st.ImagePresent })
+	if got := strings.Join(g.called(), ","); got != "pull" {
+		t.Fatalf("calls %s", got)
+	}
+	// A failure is shown.
+	g = newFakeGlibc(true)
+	g.st.ImagePresent = false
+	g.jobErr = errors.New("The glibc image could not be downloaded: no network.")
+	_, p = compatUI(t, g, false)
+	p.pullNow()
+	eventually(t, "the failure", func() bool { return p.state().fail != "" })
+	if s := p.state(); s.working != "" || s.st.ImagePresent || !strings.Contains(s.fail, "no network") {
+		t.Fatalf("state %+v", s)
+	}
+	// Enabling with no box and no image runs create only: it pulls.
+	g = newFakeGlibc(false)
+	g.st.Auto = false
+	_, p = compatUI(t, g, false)
+	p.toggleAuto()
+	eventually(t, "ready", func() bool { s := p.state(); return s.working == "" && s.st.Exists })
+	if got := strings.Join(g.called(), ","); got != "auto on,create" {
+		t.Fatalf("calls %s", got)
 	}
 }
 
@@ -279,6 +413,13 @@ func TestCompatScreenshots(t *testing.T) {
 		u, _ := compatUI(t, newFakeGlibc(true), false)
 		still(u)
 		compare(t, "compat-ready", render(t, u, sz))
+	})
+	t.Run("compat-image-missing", func(t *testing.T) {
+		g := newFakeGlibc(true)
+		g.st.ImagePresent = false
+		u, _ := compatUI(t, g, false)
+		still(u)
+		compare(t, "compat-image-missing", render(t, u, sz))
 	})
 	t.Run("compat-setting-up", func(t *testing.T) {
 		g := newFakeGlibc(false)

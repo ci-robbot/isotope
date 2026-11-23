@@ -10,6 +10,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,10 +68,13 @@ Commands:
   create                    create the container now
       --progress               print the progress on stderr, as on a
                                terminal, and send no notification
+  pull                      download the image the container is made from, without
+                            creating the container
+      --progress               as for create
   enter                     open a shell in the container
   status                    whether the container exists, its image and size
       --json                   the same as JSON: exists, image, size_bytes,
-                               auto, error, busy
+                               image_present, image_size_bytes, auto, error, busy
   reset                     remove the container and create it again, and
                             the unpacked AppImages
       --yes                    do not ask for confirmation
@@ -196,6 +200,15 @@ func cmdGlibc(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		lock.release()
 		fmt.Fprintf(stdout, "The glibc container %s is ready.\n", glibcBox)
 		return exitOK
+	case "pull":
+		for _, a := range rest {
+			if a != "--progress" {
+				fmt.Fprintf(stderr, "isotope glibc pull: unknown argument %q\n\n%s", a, glibcUsage)
+				return exitUsage
+			}
+			glibcSetProgress()
+		}
+		return glibcPull()
 	case "enter":
 		lock, code := glibcPrepare()
 		if code != exitOK {
@@ -861,12 +874,83 @@ func glibcStatus() int {
 	return exitOK
 }
 
+// glibcImageTimeout bounds `docker image inspect` in status --json.
+const glibcImageTimeout = 10 * time.Second
+
+// glibcImageSize asks Docker whether image is on this computer, and its
+// size.
+func glibcImageSize(image string) (present bool, size int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), glibcImageTimeout)
+	defer cancel()
+	c := exec.CommandContext(ctx, "docker", "image", "inspect", "--format", "{{.Size}}", image)
+	c.WaitDelay = time.Second
+	out, err := c.Output()
+	if err != nil {
+		return false, 0
+	}
+	size, _ = strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
+	return true, size
+}
+
+// glibcPull is `isotope glibc pull`: the image, without the container. It
+// holds the box lock shared, so it waits for a setup or reset in progress.
+func glibcPull() int {
+	if why, todo := glibcRefusal(false); why != "" {
+		glibcFail(refusalText("", why, todo), "The glibc environment cannot be used")
+		return exitError
+	}
+	lock, err := glibcOpenLock()
+	if err == nil {
+		if err = lock.take(unix.LOCK_SH, true); err != nil {
+			lock.release()
+		}
+	}
+	if err != nil {
+		glibcFail(err.Error(), "The glibc image could not be downloaded")
+		return exitError
+	}
+	defer lock.release()
+	image := glibcImage()
+	term := glibcTalks()
+	if term {
+		fmt.Fprintf(glibc.stderr, "Downloading %s. This can take a few minutes.\n", image)
+	}
+	var tail bytes.Buffer
+	c := exec.Command("docker", "pull", image)
+	if term {
+		c.Stdout = io.MultiWriter(glibc.stderr, &tail)
+		c.Stderr = c.Stdout
+	} else {
+		c.Stdout, c.Stderr = &tail, &tail
+	}
+	if err := c.Run(); err != nil {
+		e := glibcCreateError(image, tail.String(), err)
+		msg := strings.Replace(e.Error(), "container could not be created", "image could not be downloaded", 1)
+		if !strings.Contains(msg, "image could not") {
+			msg = fmt.Sprintf("The glibc image could not be downloaded: %s.", lastLines(tail.String(), 3))
+		}
+		glibcFail(msg, "The glibc image could not be downloaded")
+		return exitError
+	}
+	if term {
+		fmt.Fprintln(glibc.stderr, "The glibc image is downloaded.")
+	}
+	if !term || glibcReaderGone() {
+		_ = glibc.notify("The glibc image is downloaded", image)
+	}
+	fmt.Fprintf(glibc.stdout, "The image %s is on this computer.\n", image)
+	return exitOK
+}
+
 // glibcStatusJSON is `isotope glibc status --json`, which Isotope System's
 // Compatibility page reads. Keep the names: the page depends on them.
 //   - exists: the container is there;
 //   - image: its image, or the one a new container is made from;
 //   - size_bytes: the disk space it uses, its image included (Docker's
 //     SizeRootFs), 0 without a container;
+//   - image_present: the image a new container is made from (`image`
+//     when there is no container) is in Docker, from `docker image inspect`;
+//   - image_size_bytes: its size, 0 when it is not there;
 //   - auto: the saved setting of `isotope glibc auto` (a missing file is
 //     on; ISOTOPE_GLIBC_AUTO, which is for one command, is left out);
 //   - error: why Docker could not say, as a sentence, or "";
@@ -879,6 +963,9 @@ type glibcStatusJSON struct {
 	Auto      bool   `json:"auto"`
 	Error     string `json:"error"`
 	Busy      bool   `json:"busy"`
+
+	ImagePresent   bool  `json:"image_present"`
+	ImageSizeBytes int64 `json:"image_size_bytes"`
 }
 
 func glibcStatusAsJSON() int {
@@ -902,6 +989,9 @@ func glibcStatusAsJSON() int {
 			st.Image = f[0]
 			st.SizeBytes, _ = strconv.ParseInt(f[1], 10, 64)
 		}
+	}
+	if st.Error == "" {
+		st.ImagePresent, st.ImageSizeBytes = glibcImageSize(st.Image)
 	}
 	b, _ := json.Marshal(st)
 	fmt.Fprintln(glibc.stdout, string(b))

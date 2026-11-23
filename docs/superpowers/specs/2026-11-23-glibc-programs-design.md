@@ -210,6 +210,8 @@ user, so the setting file, the box and the cache keep one implementation:
   `isotope glibc auto on|off`;
 - "Glibc environment": Not set up yet, or Ready with its image and the disk
   space it uses, from `isotope glibc status --json`;
+- Turning the switch on while the box does not exist also runs that setup, with the same progress, so the first program does not wait for the pull; turning it off removes nothing, and a failed setup leaves it on;
+- When the box exists but its image is gone (pruned), `status --json` says `image_present: false` and the page offers "Download now", which runs `isotope glibc pull --progress` (the image alone);
 - "Set up now" (`create --progress`) and "Reset…" after a confirmation
   (`reset --yes --progress`), with a spinner and the CLI's lines. The CLI's
   "in use, close those programs" refusal (exit 75) is a message on the

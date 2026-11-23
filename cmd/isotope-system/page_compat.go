@@ -18,6 +18,7 @@ func init() {
 const (
 	jobSetup = "setup"
 	jobReset = "reset"
+	jobPull  = "pull"
 )
 
 // compatPage: running programs made for other Linux systems. Its first
@@ -28,7 +29,7 @@ type compatPage struct {
 	u    *UI
 	list widget.List
 
-	auto, setup, reset widget.Clickable
+	auto, setup, reset, pull widget.Clickable
 
 	// Under u.mu.
 	s compatState
@@ -90,7 +91,10 @@ func (p *compatPage) load() {
 }
 
 // toggleAuto flips the switch through `isotope glibc auto`, then reads the
-// setting back.
+// setting back. Turned on with no environment yet, it starts the setup
+// "Set up now" runs, so the image is pulled with progress and not at the
+// first program's start. Turned off, it removes nothing; Reset… does. A
+// failed setup leaves the setting on: the next program tries again.
 func (p *compatPage) toggleAuto() {
 	u, g := p.u, p.u.hooks.Glibc
 	u.mu.Lock()
@@ -105,7 +109,6 @@ func (p *compatPage) toggleAuto() {
 		err := g.SetAuto(on)
 		st, serr := g.Status()
 		u.mu.Lock()
-		defer u.mu.Unlock()
 		p.s.autoBusy = false
 		if err != nil {
 			p.s.fail = "Could not change the setting: " + err.Error()
@@ -113,11 +116,19 @@ func (p *compatPage) toggleAuto() {
 		if serr == nil {
 			p.s.st = st
 		}
+		u.mu.Unlock()
+		if on && err == nil && serr == nil && !st.Exists && !st.Busy && st.Error == "" {
+			p.setupNow()
+		}
 	})
 }
 
 func (p *compatPage) setupNow() {
 	p.run(jobSetup, func(g Glibc, line func(string)) error { return g.Create(line) })
+}
+
+func (p *compatPage) pullNow() {
+	p.run(jobPull, func(g Glibc, line func(string)) error { return g.Pull(line) })
 }
 
 // askReset confirms, then resets.
@@ -180,6 +191,9 @@ func (p *compatPage) Update(gtx layout.Context) {
 	if p.setup.Clicked(gtx) {
 		p.setupNow()
 	}
+	if p.pull.Clicked(gtx) {
+		p.pullNow()
+	}
 	if p.reset.Clicked(gtx) {
 		p.askReset()
 	}
@@ -189,6 +203,10 @@ func (p *compatPage) Update(gtx layout.Context) {
 type compatView struct {
 	Title, Sub   string
 	Setup, Reset bool
+	// Pull offers "Download now" with Note: the container is there, its
+	// image is not (pruned).
+	Pull bool
+	Note string
 }
 
 func compatViewOf(st GlibcStatus) compatView {
@@ -206,7 +224,21 @@ func compatViewOf(st GlibcStatus) compatView {
 	if st.SizeBytes > 0 {
 		sub += " · " + humanSize(uint64(st.SizeBytes)) + " on disk"
 	}
-	return compatView{Title: "Ready", Sub: sub, Reset: true}
+	v := compatView{Title: "Ready", Sub: sub, Reset: true}
+	if !st.ImagePresent {
+		v.Pull = true
+		v.Note = "The " + imageFamily(st.Image) + " image is not on this computer. The container works without it; downloading it now means a reset does not have to."
+	}
+	return v
+}
+
+// imageFamily is "Ubuntu" for Docker Hub's ubuntu, "image X" otherwise, so
+// that "The X image" reads right.
+func imageFamily(ref string) string {
+	if strings.HasPrefix(imageName(ref), "Ubuntu ") {
+		return "Ubuntu"
+	}
+	return ref
 }
 
 // imageName names an image for people: "Ubuntu 26.04 (ref)" for Docker
@@ -252,14 +284,25 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 			case v.Setup:
 				right = u.buttons(guikit.Action{Click: &p.setup, Kind: guikit.ButtonPrimary, Label: "Set up now", Disabled: busy})
 			case v.Reset:
-				right = u.buttons(guikit.Action{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: "Reset…", Disabled: busy})
+				acts := []guikit.Action{{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: "Reset…", Disabled: busy}}
+				if v.Pull {
+					acts = append([]guikit.Action{{Click: &p.pull, Kind: guikit.ButtonPrimary, Label: "Download now", Disabled: busy}}, acts...)
+				}
+				right = u.buttons(acts...)
 			}
 			rows.add(u.row("Glibc environment", v.Title, right))
 			rows.gap(6)
 			rows.add(u.dim(v.Sub))
+			if v.Note != "" {
+				rows.gap(6)
+				rows.add(u.dim(v.Note))
+			}
 			if busy {
 				rows.gap(14)
 				txt := "Setting up the glibc environment… This can take a few minutes; it goes on if you close this window."
+				if s.working == jobPull {
+					txt = "Downloading the image… This can take a few minutes; it goes on if you close this window."
+				}
 				if s.working == jobReset {
 					txt = "Resetting the glibc environment… This can take a few minutes; it goes on if you close this window."
 				}

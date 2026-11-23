@@ -98,6 +98,16 @@ inspect)
 	fi
 	echo "Error: No such container: isotope-glibc" >&2; exit 1
 	;;
+image)
+	if [ -n "$GLIBC_FAKE_DOCKER_DOWN" ]; then exit 1; fi
+	if [ -e "$GLIBC_FAKE_STATE.image" ]; then echo 78123456; exit 0; fi
+	echo "Error: No such image: $5" >&2; exit 1
+	;;
+pull)
+	echo "26.04: Pulling from library/ubuntu"
+	if [ -n "$GLIBC_FAKE_PULL_FAIL" ]; then echo "$GLIBC_FAKE_PULL_FAIL" >&2; exit 1; fi
+	touch "$GLIBC_FAKE_STATE.image"
+	;;
 rm) rm -f "$GLIBC_FAKE_STATE" ;;
 ps) echo "1.2GB (virtual 1.3GB)" ;;
 esac
@@ -772,7 +782,7 @@ func TestGlibcStatusJSON(t *testing.T) {
 		if err := json.Unmarshal(out.Bytes(), &raw); err != nil {
 			t.Fatalf("not JSON: %q: %v", out.String(), err)
 		}
-		for _, k := range []string{"exists", "image", "size_bytes", "auto", "error", "busy"} {
+		for _, k := range []string{"exists", "image", "size_bytes", "image_present", "image_size_bytes", "auto", "error", "busy"} {
 			if _, ok := raw[k]; !ok {
 				t.Errorf("no %q in %s", k, out.String())
 			}
@@ -785,6 +795,14 @@ func TestGlibcStatusJSON(t *testing.T) {
 	if st := status(); st.Exists || st.Image != glibcDefaultImage || st.SizeBytes != 0 || !st.Auto || st.Error != "" {
 		t.Fatalf("no box: %+v", st)
 	}
+	if st := status(); st.ImagePresent || st.ImageSizeBytes != 0 {
+		t.Fatalf("no image: %+v", st)
+	}
+	write(t, f.state+".image", "")
+	if st := status(); !st.ImagePresent || st.ImageSizeBytes != 78123456 {
+		t.Fatalf("image: %+v", st)
+	}
+	os.Remove(f.state + ".image")
 	write(t, f.state, "")
 	if st := status(); !st.Exists || st.Image != "docker.io/library/ubuntu:26.04" || st.SizeBytes != 812345678 || st.Error != "" || st.Busy {
 		t.Fatalf("box: %+v", st)
@@ -824,6 +842,31 @@ func TestGlibcStatusJSON(t *testing.T) {
 	glibc.getgroups = func() ([]int, error) { return []int{10}, nil }
 	if st := status(); !strings.Contains(st.Error, "not in the docker group") {
 		t.Fatalf("not in docker: %+v", st)
+	}
+}
+
+func TestGlibcPull(t *testing.T) {
+	f := newGlibcFake(t)
+	var out bytes.Buffer
+	if code := cmdGlibc([]string{"pull", "--progress"}, strings.NewReader(""), &out, f.stderr); code != 0 {
+		t.Fatalf("pull: exit %d: %s", code, f.stderr.String())
+	}
+	if f.count(t, "docker pull "+glibcDefaultImage) != 1 || f.count(t, "distrobox") != 0 {
+		t.Fatalf("calls %q", f.calls(t))
+	}
+	if !strings.Contains(f.stderr.String(), "Pulling from library/ubuntu") || !strings.Contains(out.String(), "is on this computer") {
+		t.Fatalf("stderr %q stdout %q", f.stderr.String(), out.String())
+	}
+	if _, err := os.Stat(f.state); err == nil {
+		t.Fatal("pull made the box")
+	}
+	// A failure exits 1 with the message, a bad argument 2.
+	t.Setenv("GLIBC_FAKE_PULL_FAIL", "Error: toomanyrequests: rate limit")
+	if code := cmdGlibc([]string{"pull"}, strings.NewReader(""), &out, f.stderr); code != exitError || !strings.Contains(f.stderr.String(), "The glibc image could not be downloaded") {
+		t.Fatalf("fail: %d %q", code, f.stderr.String())
+	}
+	if code := cmdGlibc([]string{"pull", "--x"}, strings.NewReader(""), &out, f.stderr); code != exitUsage {
+		t.Fatalf("usage: %d", code)
 	}
 }
 

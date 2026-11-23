@@ -31,6 +31,8 @@ type Glibc interface {
 	// container is ready, and gives each line of progress to line, from
 	// another goroutine.
 	Create(line func(string)) error
+	// Pull is `isotope glibc pull --progress`: the image only.
+	Pull(line func(string)) error
 	// Reset is `isotope glibc reset --yes --progress`. A container in use
 	// is a glibcInUse error.
 	Reset(line func(string)) error
@@ -47,6 +49,9 @@ type GlibcStatus struct {
 	// Busy: being created or reset now, by another window or by a
 	// program's first run.
 	Busy bool `json:"busy"`
+	// ImagePresent: the image is in Docker; ImageSizeBytes is its size.
+	ImagePresent   bool  `json:"image_present"`
+	ImageSizeBytes int64 `json:"image_size_bytes"`
 }
 
 // glibcExitInUse is the exit code of `isotope glibc reset` while programs
@@ -100,6 +105,11 @@ func (c glibcCLI) SetAuto(on bool) error {
 
 func (c glibcCLI) Create(line func(string)) error {
 	_, err := c.job(line, "create", "--progress")
+	return err
+}
+
+func (c glibcCLI) Pull(line func(string)) error {
+	_, err := c.job(line, "pull", "--progress")
 	return err
 }
 
