@@ -6277,6 +6277,7 @@ FROM welcome-${DESKTOP} AS welcome
 FROM welcome-build AS system-build
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
+COPY pkg/firewall/ pkg/firewall/
 COPY cmd/isotope-system/ cmd/isotope-system/
 RUN CGO_ENABLED=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
@@ -6316,6 +6317,7 @@ RUN go mod download
 COPY pkg/installer/testdata/oem-locale-de_DE.golden pkg/installer/testdata/locale.conf-de_DE.golden pkg/installer/testdata/
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
+COPY pkg/firewall/ pkg/firewall/
 COPY cmd/isotope/ cmd/isotope/
 RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \

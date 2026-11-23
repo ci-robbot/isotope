@@ -99,6 +99,9 @@ jobs:
       - name: every Go package is covered by a job
         run: scripts/check-go-coverage.sh
 
+      - name: every Go build stage copies the packages its program imports
+        run: scripts/check-go-stage-copies.sh
+
       - name: isotope tests
         run: |
           go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/...
