@@ -89,11 +89,12 @@ jobs:
           cache: false
 
       # The backup test that runs the real restic needs it on PATH: the
-      # version the Dockerfile pins, so the test and the image agree.
+      # version the Dockerfile pins, so the test and the image agree. Retried:
+      # one dropped download from proxy.golang.org failed main's CI once.
       - name: restic for the backup test
         run: |
           v=$(sed -n 's/^ARG RESTIC_VERSION=//p' Dockerfile)
-          go install "github.com/restic/restic/cmd/restic@v$v"
+          scripts/retry.sh 4 15 go install "github.com/restic/restic/cmd/restic@v$v"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: every Go package is covered by a job
