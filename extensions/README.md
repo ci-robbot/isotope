@@ -37,7 +37,8 @@ extensions/<name>/
   `/usr/lib/systemd/system/multi-user.target.wants/` (or `sockets.target`,
   `timers.target`), with the unit file next to it in
   `/usr/lib/systemd/system`. After `isotope ext` merges an extension it
-  reloads systemd, the D-Bus configuration and the udev rules, and starts
+  reloads systemd, the D-Bus configuration, the udev rules and polkit
+  (when the extension has files in `/usr/share/polkit-1`), and starts
   the units linked there whose unit file the extension ships and the base
   does not have; before it disables or removes a merged one, it stops those
   same units. A link to a unit of the base is never acted on.

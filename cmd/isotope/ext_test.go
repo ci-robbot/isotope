@@ -119,8 +119,12 @@ func (f *fakeExt) RemoveExt(file string, progress func(string)) error {
 	return os.Remove(filepath.Join(extDir(), file))
 }
 
-func (f *fakeExt) ReloadExt(dbus, udev bool, progress func(string)) error {
-	f.rec(fmt.Sprintf("reload dbus=%v udev=%v", dbus, udev))
+func (f *fakeExt) ReloadExt(a extActivation, progress func(string)) error {
+	line := fmt.Sprintf("reload dbus=%v udev=%v", a.DBus, a.Udev)
+	if a.Polkit {
+		line += " polkit=true"
+	}
+	f.rec(line)
 	return nil
 }
 
@@ -757,6 +761,59 @@ func TestExtActivationOfOwnsOnlyItsUnits(t *testing.T) {
 	}
 }
 
+// scImage is an extension shaped as extensions/smartcards: a socket enabled
+// from /usr with its service, drop-ins, polkit actions and rules, and no
+// D-Bus or udev files.
+func scImage() ExtImage {
+	return ExtImage{Release: goodRel, Entries: []mtreeEntry{
+		{Path: ".", Type: "dir"},
+		{Path: "usr/bin/pcscd", Type: "file", Size: 2, SHA256: sha("pcscd")},
+		{Path: "usr/lib/systemd/system/pcscd.service", Type: "file", Size: 1, SHA256: sha("s")},
+		{Path: "usr/lib/systemd/system/pcscd.socket", Type: "file", Size: 1, SHA256: sha("k")},
+		{Path: "usr/lib/systemd/system/pcscd.service.d/10-isotope.conf", Type: "file", Size: 1, SHA256: sha("d")},
+		{Path: "usr/lib/systemd/system/sockets.target.wants/pcscd.socket", Type: "link", Link: "../pcscd.socket"},
+		{Path: "usr/share/polkit-1/actions", Type: "dir"},
+		{Path: "usr/share/polkit-1/actions/org.debian.pcsc-lite.policy", Type: "file", Size: 1, SHA256: sha("a")},
+		{Path: "usr/share/polkit-1/rules.d/50-isotope-pcscd.rules", Type: "file", Size: 1, SHA256: sha("r")},
+	}}
+}
+
+// An extension with polkit files gets polkitd reloaded after the merge and
+// after the unmerge: polkitd misses files that a merge mounts over the /usr
+// it watches. The socket is started, never the service it activates.
+func TestExtPolkitFilesReloadPolkit(t *testing.T) {
+	extEnv(t, &fakeExt{})
+	a := extActivationOf(scImage().Entries, hostRoot)
+	if strings.Join(a.Units, " ") != "pcscd.socket" || a.DBus || a.Udev || !a.Polkit {
+		t.Fatalf("activation %+v", a)
+	}
+	// A directory alone is no reason to reload.
+	if a := extActivationOf([]mtreeEntry{{Path: "usr/share/polkit-1/rules.d", Type: "dir"}}, hostRoot); a.Polkit || !a.empty() {
+		t.Fatalf("an empty polkit directory asks for %+v", a)
+	}
+	if mm := extActivationOf(mmImage().Entries, hostRoot); mm.Polkit {
+		t.Fatalf("modemmanager has no polkit files: %+v", mm)
+	}
+
+	fe := &fakeExt{file: "smartcards.sysext.raw", img: scImage()}
+	d := extEnv(t, fe)
+	st := runExtJob(t, d, func() error { return d.InstallExtension("smartcards", "", false) })
+	if st.ExtResult != extResultOK {
+		t.Fatalf("status %+v", st)
+	}
+	if got := strings.Join(fe.log(), "|"); !strings.HasSuffix(got, "|enable smartcards.sysext.raw|reload dbus=false udev=false polkit=true|start pcscd.socket") {
+		t.Fatalf("calls %q: polkit is reloaded and the socket started after the merge", got)
+	}
+	if r := readActivation("smartcards.sysext.raw"); !r.Polkit {
+		t.Fatalf("the record does not keep the polkit reload: %+v", r)
+	}
+	fe.calls = nil
+	st = runExtJob(t, d, func() error { return d.SetExtensionEnabled("smartcards", false, false) })
+	if got := strings.Join(fe.log(), "|"); st.ExtResult != extResultOK || got != "stop pcscd.socket|disable smartcards.sysext.raw|reload dbus=false udev=false polkit=true" {
+		t.Fatalf("disable: %+v %q", st, got)
+	}
+}
+
 func TestExtInstallStartsAndStopsOnlyTheUnitsItOwns(t *testing.T) {
 	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage()}
 	d := extEnv(t, fe)
@@ -848,7 +905,7 @@ func TestKairosBackendReloadsStartsAndStops(t *testing.T) {
 	}
 	t.Cleanup(func() { extSysRun = old })
 	var kb kairosBackend
-	if err := kb.ReloadExt(true, true, func(string) {}); err != nil {
+	if err := kb.ReloadExt(extActivation{DBus: true, Udev: true, Polkit: true}, func(string) {}); err != nil {
 		t.Fatal(err)
 	}
 	kb.StartUnit("ModemManager.service", func(string) {})
@@ -857,6 +914,7 @@ func TestKairosBackendReloadsStartsAndStops(t *testing.T) {
 		"systemctl daemon-reload",
 		"busctl call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig",
 		"udevadm control --reload",
+		"systemctl try-reload-or-restart polkit.service",
 		"systemctl start -- ModemManager.service",
 		"systemctl stop -- ModemManager.service",
 	}
@@ -864,9 +922,9 @@ func TestKairosBackendReloadsStartsAndStops(t *testing.T) {
 		t.Fatalf("calls %q", calls)
 	}
 	calls = nil
-	kb.ReloadExt(false, false, func(string) {})
+	kb.ReloadExt(extActivation{}, func(string) {})
 	if strings.Join(calls, "|") != "systemctl daemon-reload" {
-		t.Fatalf("reload without D-Bus or udev files: %q", calls)
+		t.Fatalf("reload without D-Bus, udev or polkit files: %q", calls)
 	}
 	extSysRun = func(ctx context.Context, name string, args ...string) ([]byte, error) {
 		return []byte("Job failed\n"), errors.New("exit status 1")

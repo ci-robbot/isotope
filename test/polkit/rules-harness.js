@@ -1,6 +1,6 @@
 // Runs the real polkit rule files against a table of cases.
 //
-//   node rules-harness.js 50-isotope-udisks.rules 50-isotope-update.rules 50-isotope-fwupd.rules
+//   node rules-harness.js 50-isotope-udisks.rules 50-isotope-update.rules 50-isotope-fwupd.rules 50-isotope-pcscd.rules
 //
 // Each file is loaded with its own rule list, as polkitd loads it, and each
 // case asks the rules of the file it names, in order: the first answer that
@@ -50,6 +50,7 @@ function answer(list, c) {
 const ud = "org.freedesktop.udisks2.";
 const up = "io.kairos.isotope-update.";
 const fw = "org.freedesktop.fwupd.";
+const sc = "org.debian.pcsc-lite.";
 const admin = ["users", "admin"];
 const user = ["users"];
 const here = { local: true, active: true };
@@ -133,6 +134,18 @@ const cases = [
     { file: "fwupd", action: fw + "update-internal-trusted", groups: [], user: "fwupd-refresh", local: false, active: false, want: "no", what: "the refresh service installing" },
     { file: "fwupd", action: fw + "modify-remote", groups: [], user: "fwupd-refresh", local: false, active: false, want: "no", what: "the refresh service changing a remote" },
     { file: "fwupd", action: up + "users", groups: user, ...here, want: "fallthrough", what: "another service's action" },
+    // pcscd (the smartcards extension): the person at the computer and
+    // root, nobody else.
+    { file: "pcscd", action: sc + "access_pcsc", groups: user, ...here, want: "yes", what: "non-admin, local, active" },
+    { file: "pcscd", action: sc + "access_card", groups: user, ...here, want: "yes", what: "non-admin, local, active" },
+    { file: "pcscd", action: sc + "access_card", groups: admin, ...here, want: "yes", what: "admin, local, active" },
+    { file: "pcscd", action: sc + "access_pcsc", groups: admin, local: false, active: true, want: "no", what: "admin over SSH" },
+    { file: "pcscd", action: sc + "access_card", groups: user, local: false, active: false, want: "no", what: "non-admin over SSH" },
+    { file: "pcscd", action: sc + "access_card", groups: user, local: true, active: false, want: "no", what: "non-admin, inactive" },
+    { file: "pcscd", action: sc + "access_pcsc", groups: [], user: "polkitd", local: false, active: false, want: "no", what: "a system user" },
+    { file: "pcscd", action: sc + "access_pcsc", groups: [], user: "root", local: false, active: false, want: "yes", what: "root" },
+    { file: "pcscd", action: sc + "access_card", groups: [], user: "root", local: false, active: false, want: "yes", what: "root" },
+    { file: "pcscd", action: fw + "get-remotes", groups: user, ...here, want: "fallthrough", what: "another service's action" },
 ];
 
 const files = process.argv.slice(2);
@@ -143,7 +156,7 @@ if (files.length === 0) {
 const rulesOf = {};
 for (const f of files) {
     const name = path.basename(f);
-    const key = Object.keys({ udisks: 1, update: 1, fwupd: 1 }).find((k) => name.indexOf(k) >= 0);
+    const key = Object.keys({ udisks: 1, update: 1, fwupd: 1, pcscd: 1 }).find((k) => name.indexOf(k) >= 0);
     if (!key) {
         console.error("FAIL: no cases for " + f);
         process.exit(1);

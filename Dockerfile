@@ -2556,14 +2556,21 @@ RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors \
     echo "${GNUPG_SHA256}  source.tar.bz2" | sha256sum -c - && \
     tar -xf source.tar.bz2 && rm source.tar.bz2 && mv gnupg-* src
 WORKDIR /build/src
+# Card support stays on (gpg --card-status, --card-edit and keytocard, and
+# gpg-agent's SCD command, which gpg-card uses) and scdaemon is built, then
+# left out: the `smartcards` extension (extensions/smartcards) brings it, at
+# the same version, to /usr/lib/gnupg/scdaemon, where this gpg-agent starts
+# it (--libexecdir below; Kairos merges /usr/lib, not /usr/libexec). Without
+# the extension, a card command says the card is not available. No CCID
+# driver of scdaemon's own: readers go through pcscd. This stage is not
+# reached by the COSMIC prebuilt keys.
 RUN ./configure ${COMMON_CONFIGURE_ARGS} --libexecdir=/usr/lib/gnupg \
-      --disable-gpgsm --disable-scdaemon --disable-wks-tools \
-      --disable-card-support --disable-tpm2d \
+      --disable-gpgsm --disable-wks-tools --disable-ccid-driver --disable-tpm2d \
       --disable-doc --disable-nls --disable-ldap --disable-libdns \
       --disable-bzip2
 RUN make -j"$(nproc)" && make DESTDIR=/gnupg install && \
     rm -f /gnupg/usr/bin/gpg-card /gnupg/usr/bin/gpg-wks-client \
-      /gnupg/usr/lib/gnupg/gpg-wks-client
+      /gnupg/usr/lib/gnupg/gpg-wks-client /gnupg/usr/lib/gnupg/scdaemon
 RUN test -x /gnupg/usr/bin/gpg && test -x /gnupg/usr/bin/gpgv && \
     test -x /gnupg/usr/bin/gpgconf && test -x /gnupg/usr/bin/gpg-agent && \
     test -x /gnupg/usr/bin/dirmngr && \
@@ -2572,7 +2579,8 @@ RUN test -x /gnupg/usr/bin/gpg && test -x /gnupg/usr/bin/gpgv && \
     test ! -e /gnupg/usr/bin/gpg-wks-client && \
     test ! -e /gnupg/usr/lib/gnupg/gpg-wks-client && \
     test ! -e /gnupg/usr/lib/gnupg/scdaemon && \
-    test ! -e /gnupg/usr/lib/gnupg/tpm2daemon
+    test ! -e /gnupg/usr/lib/gnupg/tpm2daemon && \
+    /gnupg/usr/bin/gpg --dump-options | grep -qx -- '--card-status'
 
 FROM toolchain AS signed-flatpak-runtime
 COPY --from=libgpg-error /libgpg-error /

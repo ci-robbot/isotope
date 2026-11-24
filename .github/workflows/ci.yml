@@ -352,6 +352,13 @@ jobs:
       - name: Apps files and wiring
         run: test/apps/check-apps.sh --repo
 
+      # Smart cards: the extension's GnuPG and build pins against the
+      # image's, the image's gnupg stage (card support, no scdaemon), the
+      # units, drop-ins, polkit rule and p11-kit module. The images are
+      # checked in desktop-images.yml and release.yml.
+      - name: Smart card extension and wiring
+        run: test/smartcards/check-smartcards.sh --repo
+
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh

@@ -572,10 +572,10 @@ type ExtBackend interface {
 	DisableExt(file string, progress func(string)) error
 	RemoveExt(file string, progress func(string)) error
 	// ReloadExt makes the running system read what a merge or an unmerge
-	// changed: systemd's units, and the D-Bus policy and udev rules when
-	// dbus or udev say the extension has some. kairos-agent leaves the bus
-	// and udevd as they were.
-	ReloadExt(dbus, udev bool, progress func(string)) error
+	// changed: systemd's units, and the D-Bus policy, udev rules and polkit
+	// actions and rules when a says the extension has some. kairos-agent
+	// leaves the bus, udevd and polkitd as they were.
+	ReloadExt(a extActivation, progress func(string)) error
 	// StartUnit starts a unit and waits for it, so a unit that fails is an
 	// error. StopUnit stops one.
 	StartUnit(unit string, progress func(string)) error
@@ -618,14 +618,19 @@ func (kairosBackend) RemoveExt(file string, progress func(string)) error {
 
 // extActivation is what a merged extension asks of the running system:
 // the units it owns and enables from /usr, and whether it brings D-Bus
-// system configuration or udev rules.
+// system configuration, udev rules or polkit actions and rules.
 type extActivation struct {
-	Units []string `json:"units,omitempty"`
-	DBus  bool     `json:"dbus,omitempty"`
-	Udev  bool     `json:"udev,omitempty"`
+	Units  []string `json:"units,omitempty"`
+	DBus   bool     `json:"dbus,omitempty"`
+	Udev   bool     `json:"udev,omitempty"`
+	Polkit bool     `json:"polkit,omitempty"`
 }
 
-func (a extActivation) empty() bool { return len(a.Units) == 0 && !a.DBus && !a.Udev }
+func (a extActivation) empty() bool { return len(a.Units) == 0 && !a.DBus && !a.Udev && !a.Polkit }
+
+// reloads says whether a merge or an unmerge of the extension needs the bus,
+// udevd or polkitd to read their files again.
+func (a extActivation) reloads() bool { return a.DBus || a.Udev || a.Polkit }
 
 // extStartTargets are the targets whose .wants links in an extension are
 // started after the merge. They are the ones a booted system has reached;
@@ -678,6 +683,9 @@ func extActivationOf(entries []mtreeEntry, root string) extActivation {
 			a.DBus = a.DBus || e.Type != "dir"
 		case strings.HasPrefix(e.Path, "usr/lib/udev/rules.d/"):
 			a.Udev = a.Udev || e.Type != "dir"
+		case strings.HasPrefix(e.Path, "usr/share/polkit-1/actions/"),
+			strings.HasPrefix(e.Path, "usr/share/polkit-1/rules.d/"):
+			a.Polkit = a.Polkit || e.Type != "dir"
 		}
 		if e.Type != "link" {
 			continue
@@ -758,19 +766,28 @@ func extSys(progress func(string), name string, args ...string) error {
 
 // ReloadExt reloads systemd (systemd-sysext does too; a second reload
 // costs nothing), the bus's policy (a service cannot own its name before;
-// ReloadConfig keeps every connection) and udev's rules (a reload triggers
-// nothing).
-func (kairosBackend) ReloadExt(dbus, udev bool, progress func(string)) error {
+// ReloadConfig keeps every connection), udev's rules (a reload triggers
+// nothing) and polkit's actions and rules. polkitd watches its directories,
+// but the merge mounts a new /usr over the one it watches, so it misses the
+// files; its reload (SIGHUP, polkit.service is Type=notify-reload) reads
+// them again and keeps the registered agents. try-reload-or-restart does
+// nothing when polkitd is not running: it reads them when it starts.
+func (kairosBackend) ReloadExt(a extActivation, progress func(string)) error {
 	if err := extSys(progress, "systemctl", "daemon-reload"); err != nil {
 		return err
 	}
-	if dbus {
+	if a.DBus {
 		if err := extSys(progress, "busctl", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ReloadConfig"); err != nil {
 			return err
 		}
 	}
-	if udev {
-		return extSys(progress, "udevadm", "control", "--reload")
+	if a.Udev {
+		if err := extSys(progress, "udevadm", "control", "--reload"); err != nil {
+			return err
+		}
+	}
+	if a.Polkit {
+		return extSys(progress, "systemctl", "try-reload-or-restart", "polkit.service")
 	}
 	return nil
 }
@@ -1026,7 +1043,7 @@ func (d *Daemon) activate(file string, a extActivation) string {
 		d.progress("isotope: could not record the extension's services: " + err.Error())
 	}
 	var out strings.Builder
-	if err := d.ext.ReloadExt(a.DBus, a.Udev, d.progress); err != nil {
+	if err := d.ext.ReloadExt(a, d.progress); err != nil {
 		out.WriteString("\nCould not reload the system's services: " + err.Error())
 	}
 	var started []string
@@ -1068,13 +1085,13 @@ func (d *Daemon) deactivate(x InstalledExt) (string, extActivation) {
 	return out.String(), a
 }
 
-// unmerged reloads the bus and udev after an unmerge, so neither keeps the
-// policy or rules of an extension that is gone.
+// unmerged reloads the bus, udev and polkit after an unmerge, so none keeps
+// the policy or rules of an extension that is gone.
 func (d *Daemon) unmerged(x InstalledExt, a extActivation) {
-	if !x.Merged || (!a.DBus && !a.Udev) {
+	if !x.Merged || !a.reloads() {
 		return
 	}
-	if err := d.ext.ReloadExt(a.DBus, a.Udev, d.progress); err != nil {
+	if err := d.ext.ReloadExt(a, d.progress); err != nil {
 		d.progress("isotope: could not reload the system's services: " + err.Error())
 	}
 }

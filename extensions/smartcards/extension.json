@@ -1,0 +1,4 @@
+{
+  "title": "Smart cards and security keys",
+  "description": "Smart card readers and USB tokens (PIV, OpenPGP cards, YubiKey): pcscd, OpenSC with its PKCS#11 module, and GnuPG's scdaemon"
+}

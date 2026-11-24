@@ -1,0 +1,28 @@
+// pcscd, the PC/SC smart card daemon of the smartcards extension. It asks
+// polkit before a program may talk to it (access_pcsc) and before it may use
+// a reader (access_card, with the reader's name). pcsc-lite's own defaults
+// already allow only the active local session; this file says so for every
+// case, so an answer does not depend on polkit's defaults:
+//
+// - root may (a system service, or a user's sudo; root can open the reader's
+//   device anyway);
+// - the user of the active local session may: the person at the computer,
+//   with any program of their session, Flatpak apps with the pcsc socket
+//   included (polkit cannot tell those apart);
+// - nobody else: an SSH login, an inactive session (another user's, after a
+//   switch), a system user.
+//
+// See docs/superpowers/specs/2026-11-24-smartcards-design.md.
+polkit.addRule(function(action, subject) {
+    if (action.id != "org.debian.pcsc-lite.access_pcsc" &&
+        action.id != "org.debian.pcsc-lite.access_card") {
+        return;
+    }
+    if (subject.user == "root") {
+        return polkit.Result.YES;
+    }
+    if (subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.NO;
+});
