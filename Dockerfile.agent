@@ -286,6 +286,12 @@ RUN rm -f /usr/bin/isotope-gpu-notice && \
 # refuses on the agent flavor.
 RUN rm -f /usr/bin/isotope-ext /etc/isotope/extensions.conf /etc/kairos/90_isotope_extensions.yaml /system/oem/93_isotope_extensions.yaml && \
     ! test -e /usr/bin/isotope-ext
+# No input methods. Their software is the fcitx5 system extension, which the
+# appliance cannot install (no isotope-ext, above), so the i3 session line
+# that starts it and the variables that point apps at it go too. i3's
+# start-desktop sources the variables only when the file exists.
+RUN rm -f /etc/i3/config.d/50-input-method.conf /etc/profile.d/isotope-input-method.sh && \
+    ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart /etc/profile.d | grep -q 'input-method'
 # No recovery key manager either: it talks to the update service, which the
 # agent does not have, and isotope-menu hides its entry without the command.
 RUN rm -f /usr/bin/isotope-recovery && ! test -e /usr/bin/isotope-recovery

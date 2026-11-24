@@ -532,6 +532,13 @@ jobs:
         shell: bash
         run: test/accessibility/check-screen-reader.sh "${DESKTOP}-desktop:dev"
 
+      # Input methods: the hooks for the fcitx5 extension and that they do
+      # nothing without it, and every library the extension takes from the
+      # image.
+      - name: Check input method hooks
+        shell: bash
+        run: test/input-method/check-input-methods.sh "${DESKTOP}-desktop:dev"
+
       # The server edition must have no desktop and must have its network
       # stack, update service and network card firmware.
       - name: Check the server image
@@ -1028,6 +1035,12 @@ jobs:
       - name: Check the screen reader switch is gone
         shell: bash
         run: test/accessibility/check-screen-reader.sh "$AGENT_IMAGE"
+
+      # No input method hooks on the appliance (Dockerfile.agent removes the
+      # i3 line and the variables; it cannot install the extension).
+      - name: Check input method hooks are gone
+        shell: bash
+        run: test/input-method/check-input-methods.sh "$AGENT_IMAGE"
 
       # The agent is an overlay on the i3 vm image, so it has the QEMU guest
       # agent too.

@@ -367,6 +367,13 @@ jobs:
       - name: Screen reader switch and wiring
         run: test/accessibility/check-screen-reader.sh --repo
 
+      # Input methods: the profile.d variables (run in Alpine), each
+      # session's start line, the CLI, the fcitx5 extension's files, the
+      # agent's removals. The images are checked in desktop-images.yml and
+      # release.yml, the extension in extensions.yml.
+      - name: Input method hooks and the fcitx5 extension
+        run: test/input-method/check-input-methods.sh --repo
+
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh

@@ -33,6 +33,12 @@ extensions/<name>/
   later) does not go into `/usr/lib`: link it statically, or ship it in a
   directory of the extension's own, such as `/usr/lib/isotope-ext/<name>`,
   found through a RUNPATH (`modemmanager/` does).
+- An extension that links many of the desktops' libraries lists the ones
+  it takes from the image in a file and checks its ELF files against it
+  (`fcitx5/image-libs.txt`); `test/input-method/check-input-methods.sh
+  IMAGE` then holds every desktop image to that list. A library only some
+  desktops have, or have in another build (Cairo with or without XCB), is
+  the extension's own.
 - A service is enabled from `/usr`: a link in
   `/usr/lib/systemd/system/multi-user.target.wants/` (or `sockets.target`,
   `timers.target`), with the unit file next to it in

@@ -15,6 +15,8 @@
 [ -f /etc/profile.d/isotope-keyboard.sh ] && . /etc/profile.d/isotope-keyboard.sh
 # The system language (Welcome page), as LANG, for the same reason.
 [ -f /etc/profile.d/isotope-locale.sh ] && . /etc/profile.d/isotope-locale.sh
+# The input method variables, only while the fcitx5 extension is merged.
+[ -f /etc/profile.d/isotope-input-method.sh ] && . /etc/profile.d/isotope-input-method.sh
 # Software rendering when Mesa has no working driver for the GPU: without it
 # sway exits ("Could not initialize renderer") and ly shows the login again.
 [ -r /usr/libexec/isotope-gpu-env ] && . /usr/libexec/isotope-gpu-env

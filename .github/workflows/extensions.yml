@@ -62,9 +62,10 @@ jobs:
     if: needs.discover.outputs.names != '[]'
     runs-on: ubuntu-24.04
     # screen-reader builds CPython, gettext, GLib, gobject-introspection,
-    # PyGObject, eSpeak NG and speech-dispatcher with no cache: longer than
-    # the others.
-    timeout-minutes: 90
+    # PyGObject, eSpeak NG and speech-dispatcher with no cache, and fcitx5
+    # its own Cairo, Pango, librsvg (Rust), X11 libraries, Boost.Iostreams
+    # and libime's language model: over an hour.
+    timeout-minutes: 150
     permissions:
       contents: read
       packages: write

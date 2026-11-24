@@ -7,4 +7,7 @@
 # `systemctl --user import-environment` into niri.service. See
 # /usr/libexec/isotope-gpu-env.
 [ -r /usr/libexec/isotope-gpu-env ] && . /usr/libexec/isotope-gpu-env
+# The input method variables, only while the fcitx5 extension is merged, for
+# the same reason (zsh users).
+[ -r /etc/profile.d/isotope-input-method.sh ] && . /etc/profile.d/isotope-input-method.sh
 exec niri-session "$@"

@@ -39,3 +39,22 @@ Under **INSTALLED**:
 The page reads the catalogs in `/etc/isotope/extensions.conf`: first the catalog of Isotope, then the one of Hadron. The page needs a network to read them.
 
 An example is `modemmanager`, which adds support for mobile broadband modems. See [Mobile broadband](network.md#mobile-broadband).
+
+## Type Chinese, Japanese and Korean
+
+The `fcitx5` extension adds input methods: Pinyin for Chinese, Anthy for Japanese and Hangul for Korean. It works on every desktop and in Flatpak apps.
+
+1. Install the extension **Input methods**, or type `isotope ext install fcitx5` in a terminal.
+2. Log out and log in again.
+3. Press [[Ctrl+Space]] to turn the input method on or off.
+
+The fcitx5 icon in the panel shows the input method. Click it to change to another input method.
+
+At the first login, Isotope adds the input method of your language. If your language is not Chinese, Japanese or Korean, it adds all three.
+
+To choose the input methods, use the terminal:
+
+| Command | What it does |
+|---|---|
+| `isotope input-method` | Show the input methods and if fcitx5 runs. |
+| `isotope input-method set pinyin hangul` | Use only Pinyin and Hangul, after your keyboard layout. |

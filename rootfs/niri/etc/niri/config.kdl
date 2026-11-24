@@ -308,6 +308,10 @@ spawn-at-startup "isotope-screen-reader" "restore"
 // the GPU; /usr/libexec/isotope-gpu-env, sourced by isotope-niri-session,
 // niri's session entry).
 spawn-at-startup "isotope-gpu-notice"
+// Chinese, Japanese and Korean input: starts fcitx5 when the fcitx5 system
+// extension is installed, and does nothing otherwise
+// (`isotope input-method help`).
+spawn-at-startup "isotope" "input-method" "start"
 
 // Apps that read these only from the environment.
 environment {

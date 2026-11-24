@@ -187,6 +187,18 @@
       ]
     },
     {
+      "description": "fcitx5 and its engines (extensions/fcitx5): fcitx5-chinese-addons and libime name the fcitx5 release they need, so they move together",
+      "groupName": "fcitx5",
+      "matchDepNames": [
+        "fcitx/fcitx5",
+        "fcitx/libime",
+        "fcitx/fcitx5-chinese-addons",
+        "fcitx/fcitx5-anthy",
+        "fcitx/fcitx5-hangul",
+        "fcitx/xcb-imdkit"
+      ]
+    },
+    {
       "description": "Each sway and cage release needs one wlroots series",
       "groupName": "sway and wlroots",
       "matchDepNames": [

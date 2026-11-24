@@ -7,6 +7,8 @@
 # The system language (Welcome page), as LANG. ly sources /etc/profile only for
 # sh and bash users, so read it here too.
 [ -f /etc/profile.d/isotope-locale.sh ] && . /etc/profile.d/isotope-locale.sh
+# The input method variables, only while the fcitx5 extension is merged.
+[ -f /etc/profile.d/isotope-input-method.sh ] && . /etc/profile.d/isotope-input-method.sh
 # Software rendering when Mesa has no working driver for the GPU. XLibre's
 # modesetting driver already runs without glamor then; this gives GL clients
 # (GLX through llvmpipe) and Wayland tools LIBGL_ALWAYS_SOFTWARE=1.

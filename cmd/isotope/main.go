@@ -74,7 +74,11 @@ Commands:
                     your user; see "isotope glibc help"
   apps [command]    your apps from Flathub: automatic updates, update now;
                     see "isotope apps help"
-  welcome [PAGE]    Isotope Welcome, the first-login setup, again; or one
+  input-method [command]
+                    typing Chinese, Japanese and Korean (the fcitx5
+                    extension): status, set NAME...; see
+                    "isotope input-method help"
+  welcome [PAGE]   Isotope Welcome, the first-login setup, again; or one
                     of its pages: apps, language, network, appearance,
                     accessibility, shortcuts
   system [PAGE]     Isotope System, the window for all of the above;
@@ -172,6 +176,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdGlibc(args, stdin, stdout, stderr)
 	case "apps":
 		return cmdApps(args, stdout, stderr)
+	case "input-method":
+		return cmdInputMethod(args, stdout, stderr)
 	case "welcome":
 		return cmdWelcome(args, stderr)
 	case "wallpaper-follow":
