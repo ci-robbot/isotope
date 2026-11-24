@@ -302,7 +302,7 @@ RUN set -eu; \
       { echo "a module Orca needs is gone" >&2; exit 1; }; \
     find $O -name __pycache__ -type d -prune -exec rm -rf {} +; \
     PYTHONHASHSEED=0 $P/bin/python3 -m compileall -q -j0 --invalidation-mode unchecked-hash \
-      -d $P/lib/python3.12 -s $S -o 0 $S >/dev/null; \
+      -s /output -p / -o 0 $S >/dev/null; \
     find $O -name '*.opt-*.pyc' -delete; \
     echo "size of the extension:"; du -sh /output/usr; du -sh $O/lib/python3.12 $O/share/espeak-ng-data $O/lib/girepository-1.0
 
