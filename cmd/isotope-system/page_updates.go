@@ -19,7 +19,8 @@ func init() {
 
 // updatesPage: the installed release, Check now, install the latest or
 // another release, the progress of a running install, restart, rollback,
-// and in advanced mode any image.
+// in advanced mode any image, and the firmware of the machine and its
+// devices (fwupd).
 type updatesPage struct {
 	u    *UI
 	list widget.List
@@ -39,6 +40,9 @@ type updatesPage struct {
 	check, install, cancel, restart, rollback, advanced widget.Clickable
 	others                                              []widget.Clickable
 	image                                               *guikit.Field
+
+	// firm is the FIRMWARE section (firmware.go), under u.mu.
+	firm firmwareState
 }
 
 func (p *updatesPage) Shown() {
@@ -48,6 +52,7 @@ func (p *updatesPage) Shown() {
 	p.refresh(false)
 	p.loadHistory()
 	p.loadAuto()
+	p.loadFirmware()
 }
 
 // loadAuto reads the automatic update setting and its last run. Anyone
@@ -185,13 +190,22 @@ func (p *updatesPage) Update(gtx layout.Context) {
 	if p.restart.Clicked(gtx) {
 		u.reboot()
 	}
+	p.updateFirmwareClicks(gtx)
 	if p.rollback.Clicked(gtx) {
-		u.ask("Restart into the previous system?",
-			"The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again.",
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-			choice{Label: "Restart", Kind: guikit.ButtonPrimary, Do: func() {
-				p.call("Cannot restart into the previous system", func(d Daemon) error { return d.RebootPrevious() })
-			}})
+		if u.writingFirmware() {
+			u.tell("Cannot restart", firmwareWritingText)
+		} else {
+			u.ask("Restart into the previous system?",
+				"The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again.",
+				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
+				choice{Label: "Restart", Kind: guikit.ButtonPrimary, Do: func() {
+					if u.writingFirmware() {
+						u.tell("Cannot restart", firmwareWritingText)
+						return
+					}
+					p.call("Cannot restart into the previous system", func(d Daemon) error { return d.RebootPrevious() })
+				}})
+		}
 	}
 	submitted := p.image != nil && p.image.Submitted(gtx)
 	if (p.advanced.Clicked(gtx) || submitted) && o.Advanced && o.CanInstall {
@@ -239,7 +253,8 @@ func (p *updatesPage) Footer() (leading, trailing []guikit.Action) {
 			Label: "Install " + o.Latest, Disabled: !o.CanInstall || !p.u.sys.Admin})
 	}
 	if o.Restart {
-		trailing = append(trailing, guikit.Action{Click: &p.restart, Kind: guikit.ButtonPrimary, Label: "Restart now"})
+		trailing = append(trailing, guikit.Action{Click: &p.restart, Kind: guikit.ButtonPrimary, Label: "Restart now",
+			Disabled: p.u.writingFirmware()})
 	}
 	return nil, trailing
 }
@@ -303,6 +318,10 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		c.gap(28)
 		c.add(p.autoSection())
+		if u.hooks.Firmware != nil {
+			c.gap(28)
+			c.add(p.firmwareSection())
+		}
 		if len(o.Others) > 0 {
 			if len(p.others) < len(o.Others) {
 				p.others = make([]widget.Clickable, len(o.Others))
@@ -361,7 +380,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.caps("PREVIOUS SYSTEM"))
 			c.gap(10)
 			c.add(u.row("Restart into the previous system", "For the next boot only: the system you had before the last update.",
-				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: "Restart…", Disabled: !u.sys.Admin})))
+				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: "Restart…", Disabled: !u.sys.Admin || u.writingFirmware()})))
 		}
 		return c.layout(gtx)
 	})

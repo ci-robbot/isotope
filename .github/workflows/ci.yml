@@ -113,8 +113,8 @@ jobs:
         env:
           ISOTOPE_REQUIRE_MKSQUASHFS: "1"
         run: |
-          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/...
-          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/...
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/...
 
       - name: install-ui tests
         run: |
@@ -337,6 +337,13 @@ jobs:
       # desktop-images.yml and release.yml.
       - name: Network shares and NTFS files
         run: test/shares/check-shares.sh --repo
+
+      # Firmware updates: fwupd's stages, the daily refresh on installed
+      # systems only, /var/lib/fwupd kept, the admin-only polkit rule, the
+      # capsule plugin off on the server and Trusted Boot, the agent's
+      # removals. The images are checked in desktop-images.yml and release.yml.
+      - name: Firmware update files
+        run: test/firmware/check-firmware.sh --repo
 
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle

@@ -325,6 +325,32 @@ RUN rm -rf /usr/bin/udisksctl /usr/sbin/umount.udisks2 /usr/lib/udisks2 \
     ! test -e /usr/bin/udisksctl && ! test -e /usr/lib/udisks2 && \
     ! test -e /etc/udisks2/mount_options.conf && \
     ! grep -rqs 'io.kairos.isotope-update.shares' /usr/share/polkit-1
+# No firmware updater: the appliance is a VM (no system firmware to update)
+# with no tray and no Isotope System to offer one, and fwupd's daemon, LVFS
+# downloads and polkit rule are surface it does not need. fwupd's binaries,
+# private libraries, units (and the timer link and Isotope's drop-ins),
+# D-Bus policy and activation, polkit actions and rules, LVFS remotes and
+# keys, sysusers file and its fwupd-refresh user go. libsqlite3 and libxmlb
+# stay: they are plain libraries, and Flatpak links libxmlb. libusb is on the
+# printing list and goes with printing, below.
+RUN rm -rf /usr/bin/fwupdmgr /usr/bin/fwupdtool /usr/bin/dbxtool /usr/lib/fwupd /usr/lib/fwupd-[0-9]* \
+      /usr/lib/libfwupd.so* /usr/share/fwupd /etc/fwupd /etc/pki/fwupd /etc/pki/fwupd-metadata \
+      /usr/lib/systemd/system/fwupd.service /usr/lib/systemd/system/fwupd-refresh.service \
+      /usr/lib/systemd/system/fwupd-refresh.timer /usr/lib/systemd/system/fwupd-refresh.timer.d \
+      /usr/lib/systemd/system/fwupd-refresh.service.d \
+      /etc/systemd/system/timers.target.wants/fwupd-refresh.timer \
+      /usr/share/dbus-1/system.d/org.freedesktop.fwupd.conf \
+      /usr/share/dbus-1/system-services/org.freedesktop.fwupd.service \
+      /usr/share/dbus-1/interfaces/org.freedesktop.fwupd.xml \
+      /usr/share/polkit-1/actions/org.freedesktop.fwupd.policy \
+      /usr/share/polkit-1/rules.d/org.freedesktop.fwupd.rules \
+      /usr/share/polkit-1/rules.d/50-isotope-fwupd.rules \
+      /usr/lib/sysusers.d/fwupd.conf /usr/lib/modules-load.d/fwupd-i2c.conf \
+      /usr/lib/modules-load.d/fwupd-msr.conf && \
+    { ! grep -q '^fwupd-refresh:' /etc/passwd || userdel fwupd-refresh; } && \
+    ! test -e /usr/bin/fwupdmgr && ! ls /usr/lib/systemd/system/fwupd* >/dev/null 2>&1 && \
+    ! grep -rqs 'org.freedesktop.fwupd' /usr/share/polkit-1 /usr/share/dbus-1 && \
+    ! grep -q '^fwupd-refresh:' /etc/passwd
 # exfatprogs is there only for udisks2's Format (the Disks page). The desktop
 # image copies it to /usr/bin; remove it from /usr/sbin too in case a base
 # image puts it there.

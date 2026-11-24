@@ -1,0 +1,48 @@
+// fwupd, the firmware updater. Its own defaults let any active local user
+// install a signed LVFS update without a password (update-internal-trusted,
+// update-hotplug-trusted). On Isotope only an administrator changes the
+// machine. This file sorts before fwupd's own org.freedesktop.fwupd.rules,
+// so its answer is the one that counts. Every org.freedesktop.fwupd.*
+// action is answered here:
+//
+// - the fwupd-refresh user (fwupd-refresh.service, the daily metadata
+//   refresh) may list and refresh the remotes;
+// - a member of admin, in any session (fwupdmgr over SSH), may do a plain
+//   update without a password: install a signed upgrade, activate it,
+//   refresh the metadata, list, verify, read the BIOS settings. Isotope
+//   System's FIRMWARE section only installs signed upgrades, so it works on
+//   sway, i3 and niri, which run no polkit agent;
+// - everything else asks an administrator for their password
+//   (auth_admin_keep): a downgrade, unsigned firmware, BIOS settings,
+//   fwupd's config, enabling or changing a remote, emulation, self-signing,
+//   approved firmware, host security fixes, device changes, and any action
+//   a newer fwupd adds. fwupdmgr starts pkttyagent in a terminal, so the
+//   prompt shows there and over SSH; COSMIC's cosmic-osd shows it on
+//   COSMIC; a graphical program on sway, i3 or niri gets "not authorized";
+// - nobody else may do anything.
+//
+// polkit cannot tell a Flatpak app from the rest of the user's session (it
+// sees only the system unit, which is user@UID.service for both), so this
+// file cannot refuse a Flatpak caller the way isotope-updated does. An
+// admin's Flatpak app allowed to talk to fwupd can only install the signed
+// upgrades the LVFS offers; everything that could weaken the machine needs
+// the password. See docs/superpowers/specs/2026-11-24-firmware-updates-design.md.
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.freedesktop.fwupd.") != 0) {
+        return;
+    }
+    var name = action.id.substring("org.freedesktop.fwupd.".length);
+    if ((name == "get-remotes" || name == "refresh-remote") && subject.user == "fwupd-refresh") {
+        return polkit.Result.YES;
+    }
+    if (!subject.isInGroup("admin")) {
+        return polkit.Result.NO;
+    }
+    var plain = ["update-internal-trusted", "update-hotplug-trusted", "device-activate",
+                 "get-remotes", "refresh-remote", "verify", "verify-update",
+                 "clear-results", "get-bios-settings", "quit"];
+    if (plain.indexOf(name) >= 0) {
+        return polkit.Result.YES;
+    }
+    return polkit.Result.AUTH_ADMIN_KEEP;
+});

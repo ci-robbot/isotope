@@ -254,7 +254,7 @@ func (l logindInhibitor) Inhibit() (func(), error) {
 	var fd dbus.UnixFD
 	err := l.conn.Object("org.freedesktop.login1", "/org/freedesktop/login1").
 		CallWithContext(ctx, "org.freedesktop.login1.Manager.Inhibit", 0,
-			"shutdown:sleep", "Isotope update", "An update is being written to disk", "block").
+			"shutdown:sleep", ownInhibitorWho, "An update is being written to disk", "block").
 		Store(&fd)
 	if err != nil {
 		return nil, fmt.Errorf("logind: %w", err)
@@ -301,8 +301,9 @@ func busError(err error) *dbus.Error {
 		errors.Is(err, errMachineInUse), errors.Is(err, errExportNeedsPassword),
 		errors.Is(err, ErrKeyUnchanged), errors.Is(err, errFirewallNotThisBoot),
 		errors.Is(err, errFirewallBroken), errors.Is(err, errFirewallNotBroken),
-		errors.Is(err, errShareRefused),
-		errors.Is(err, errPrinterInput):
+		errors.Is(err, errShareRefused), errors.Is(err, errFirmwareWriting),
+		errors.Is(err, errPrinterInput),
+		errors.As(err, new(blockedError)):
 		name = "Refused"
 	default:
 		name = "Failed"
@@ -971,6 +972,7 @@ func cmdDaemon(args []string, stderr io.Writer) int {
 	sweepBackupWork(defaultBackupPaths(), stderr)
 	d := NewDaemon(kairosBackend{})
 	d.inhibitor = logindInhibitor{conn: conn}
+	d.blockers = logindBlockers(conn)
 	d.autoEnv = busAutoEnv{conn: conn}
 	if err := serveCtx(ctx, conn, d, polkitAuthorizer{conn: conn}); err != nil {
 		fmt.Fprintln(stderr, "isotope daemon:", err)

@@ -93,6 +93,9 @@ func main() {
 	if st, err := newFileShares(); err == nil {
 		hooks.Shares = st
 	}
+	if f, err := dialFirmware(); err == nil {
+		hooks.Firmware = f
+	}
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate

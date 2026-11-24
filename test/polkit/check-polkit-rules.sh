@@ -1,11 +1,12 @@
 #!/bin/sh
 # Runs Isotope's polkit rule files against the case table in
-# rules-harness.js: who may format a disk, mount one, manage users, restore.
+# rules-harness.js: who may format a disk, mount one, manage users, restore,
+# install firmware.
 # Uses node when it is on PATH, else the node:22-alpine container.
 set -eu
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 rules=rootfs/common/usr/share/polkit-1/rules.d
-set -- test/polkit/rules-harness.js "$rules/50-isotope-udisks.rules" "$rules/50-isotope-update.rules"
+set -- test/polkit/rules-harness.js "$rules/50-isotope-udisks.rules" "$rules/50-isotope-update.rules" "$rules/50-isotope-fwupd.rules"
 if command -v node >/dev/null 2>&1; then
     cd "$repo"
     exec node "$@"

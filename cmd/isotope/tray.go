@@ -41,6 +41,11 @@ func runTray(noIcon bool, stderr io.Writer) int {
 	if !noIcon {
 		go mountSavedShares(app.log)
 	}
+	// Firmware updates from fwupd: one notification per device and version,
+	// which opens Isotope System's Updates page, so only where it is.
+	if !noIcon && systemAppInstalled() {
+		go watchFirmware(app.log, openSystem)
+	}
 	if noIcon {
 		app.noIcon = true
 		app.run(context.Background())

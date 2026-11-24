@@ -123,11 +123,26 @@ func (u *UI) reboot() {
 	if d == nil {
 		return
 	}
+	if u.writingFirmware() {
+		u.tell("Cannot restart", firmwareWritingText)
+		return
+	}
 	u.async(func() {
 		if err := d.Reboot(); err != nil {
 			u.tell("Cannot restart", Describe(err))
 		}
 	})
+}
+
+// firmwareWritingText is why a restart waits for a firmware write; the
+// daemon gives the same sentence when another program's write blocks it.
+const firmwareWritingText = "A firmware update is being written. Restarting now could damage the device. Try again when it is done."
+
+// writingFirmware says whether this window has fwupd write firmware now.
+func (u *UI) writingFirmware() bool {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.firmwareWriting
 }
 
 // installing is what the install flow is doing now, "" when nothing.

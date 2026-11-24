@@ -68,6 +68,10 @@ func markNotified(tag string) error {
 	return os.WriteFile(filepath.Join(stateDir(), "notified"), []byte(tag+"\n"), 0o644)
 }
 
+// notifyActionKey is the one action's key: what the button does is the
+// caller's invoked func (a restart, opening Isotope System).
+const notifyActionKey = "action"
+
 // notifyActionWait is how long a notification's action stays answerable.
 var notifyActionWait = 24 * time.Hour
 
@@ -98,7 +102,7 @@ func NotifyAction(summary, body, label string, invoked func()) error {
 		"Isotope", uint32(0), "system-software-update", summary, body,
 		// No "default" action: a click on the notification, often how it
 		// is dismissed, must not restart the machine.
-		[]string{"restart", label}, map[string]dbus.Variant{}, int32(-1)).Store(&id)
+		[]string{notifyActionKey, label}, map[string]dbus.Variant{}, int32(-1)).Store(&id)
 	if err != nil {
 		conn.Close()
 		return err
@@ -142,7 +146,7 @@ func notificationAnswer(s *dbus.Signal, owner string, id uint32) (done, pick boo
 			return false, false
 		}
 		key, _ := s.Body[1].(string)
-		return true, key == "restart"
+		return true, key == notifyActionKey
 	case "org.freedesktop.Notifications.NotificationClosed":
 		return true, false
 	}

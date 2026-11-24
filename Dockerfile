@@ -5181,6 +5181,126 @@ RUN make -j"$(nproc)" && make install DESTDIR=/udisks2 && \
     ! LD_LIBRARY_PATH=/udisks2/usr/lib ldd /udisks2/usr/lib/udisks2/udisksd /udisks2/usr/bin/udisksctl | grep 'not found' && \
     LD_LIBRARY_PATH=/udisks2/usr/lib /udisks2/usr/bin/udisksctl --version 2>&1 | grep -q 'udisks daemon'
 
+# Firmware updates: fwupd with the LVFS, on the desktops and the server (see
+# docs/superpowers/specs/2026-11-24-firmware-updates-design.md). New stages
+# only: the ones they copy from (glib2, pcre2, libxmlb, polkit, gettext-tools,
+# hwdata, sqlite-gnupg) are reached by cosmic-build and stay unchanged, so the
+# COSMIC prebuilt keys do not move. The images take fwupd-runtime only.
+#
+# libusb: the printing stage `libusb` above (1.0.30, with udev); fwupd needs
+# libusb_init_context, 1.0.27 or newer.
+#
+# gnu-efi: the EFI headers, crt0 and linker script fwupd-efi builds against.
+# Build time only. ARCH=x86_64: the toolchain sets ARCH=x86-64, which gnu-efi
+# does not know. Its makefiles pass LDFLAGS to ld directly, so the
+# toolchain's -Wl, and -flto flags are not given to it.
+FROM toolchain AS gnu-efi
+# renovate: datasource=github-tags depName=ncroxon/gnu-efi extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG GNU_EFI_VERSION=4.0.4
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://github.com/ncroxon/gnu-efi/archive/refs/tags/${GNU_EFI_VERSION}.tar.gz -o g.tar.gz && tar -xzf g.tar.gz && rm g.tar.gz && mv gnu-efi-* src
+WORKDIR /build/src
+RUN env -u LDFLAGS -u CFLAGS make -j1 ARCH=x86_64 PREFIX=/usr && \
+    env -u LDFLAGS -u CFLAGS make ARCH=x86_64 PREFIX=/usr INSTALLROOT=/gnu-efi install && \
+    test -f /gnu-efi/usr/lib/pkgconfig/gnu-efi.pc && test -d /gnu-efi/usr/include/efi
+
+# fwupd-efi: fwupdx64.efi, the EFI program that hands a UEFI capsule to the
+# firmware at the restart after an update. In /usr/lib/fwupd/efi (libexecdir
+# lib: /usr/libexec is a persistent path on Kairos, see flatpak), where the
+# fwupd stage looks for it. Unsigned: the standard edition boots with Secure
+# Boot off; Trusted Boot images turn the capsule plugin off (kairos stage).
+FROM toolchain AS fwupd-efi
+COPY --from=gnu-efi /gnu-efi /
+# renovate: datasource=github-tags depName=fwupd/fwupd-efi extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG FWUPD_EFI_VERSION=1.9
+RUN mkdir -p /fwupd-efi
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://github.com/fwupd/fwupd-efi/archive/refs/tags/${FWUPD_EFI_VERSION}.tar.gz -o e.tar.gz && tar -xzf e.tar.gz && rm e.tar.gz && mv fwupd-efi-* src
+WORKDIR /build/src
+RUN pip3 install meson ninja pefile
+RUN env -u LDFLAGS -u CFLAGS meson setup buildDir --prefix=/usr --libdir=lib --libexecdir=lib --buildtype=release \
+      -Defi_sbat_distro_id=isotope -Defi_sbat_distro_summary=Isotope \
+      -Defi_sbat_distro_pkgname=fwupd-efi -Defi_sbat_distro_version=${FWUPD_EFI_VERSION} \
+      -Defi_sbat_distro_url=https://github.com/kairos-community/isotope
+RUN DESTDIR=/fwupd-efi ninja -C buildDir install && \
+    test -f /fwupd-efi/usr/lib/fwupd/efi/fwupdx64.efi && \
+    rm -rf /fwupd-efi/usr/lib/debug && \
+    install -Dm644 COPYING /fwupd-efi/usr/share/licenses/fwupd-efi/COPYING
+
+# fwupd: the daemon (D-Bus activated, org.freedesktop.fwupd), fwupdmgr and
+# fwupdtool, the LVFS remote, its units (fwupd-refresh.timer refreshes the
+# metadata), its D-Bus policy, polkit actions and rule, and its sysusers file
+# (the fwupd-refresh user). fwupd 2.1 has libjcat built in and checks the
+# LVFS signatures with OpenSSL (Hadron's), and finds the ESP through udisks2.
+# libcurl, OpenSSL, liblzma, zlib, libsystemd and libblkid come from the
+# toolchain and are in the Hadron base. Off: docs, man pages, introspection,
+# tests, the capsule splash (it needs Python's PIL to build), ModemManager,
+# passim, libdrm, libmnl, the completions and the firmware packager.
+FROM toolchain AS fwupd
+COPY --from=libucontext /libucontext /
+COPY --from=glib2 /glib2 /
+COPY --from=pcre2 /pcre2 /
+COPY --from=duktape /duktape /
+COPY --from=polkit /polkit /
+COPY --from=gettext-tools /gettext-tools /
+COPY --from=hwdata /hwdata /
+COPY --from=libxmlb /libxmlb /
+COPY --from=sqlite-gnupg /sqlite-gnupg /
+COPY --from=libusb /libusb /
+# renovate: datasource=github-releases depName=fwupd/fwupd extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG FWUPD_VERSION=2.1.10
+RUN mkdir -p /fwupd
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://github.com/fwupd/fwupd/releases/download/${FWUPD_VERSION}/fwupd-${FWUPD_VERSION}.tar.xz -o f.tar.xz && tar -xf f.tar.xz && rm f.tar.xz && mv fwupd-* src
+WORKDIR /build/src
+RUN pip3 install meson ninja jinja2
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} --libexecdir=lib \
+      -Dbuild=all -Ddocs=disabled -Dman=false -Dintrospection=disabled -Dtests=false \
+      -Dumockdev_tests=disabled -Dvalgrind=disabled -Dmetainfo=false \
+      -Dbash_completion=false -Dfish_completion=false -Dfirmware-packager=false \
+      -Dgnutls=disabled -Dopenssl=enabled -Dpolkit=enabled -Dsystemd=enabled -Dlogind=enabled \
+      -Dlibdrm=disabled -Dlibmnl=disabled -Dpassim=disabled -Dplugin_modem_manager=disabled \
+      -Dplugin_uefi_capsule_splash=false -Defi_binary=false -Defi_os_dir=isotope \
+      -Dlvfs=true -Dsupported_build=enabled -Dvendor_ids_dir=/usr/share/hwdata \
+      -Dpython=/usr/bin/python3
+RUN DESTDIR=/fwupd ninja -C buildDir install && \
+    test -x /fwupd/usr/lib/fwupd/fwupd && test -x /fwupd/usr/bin/fwupdmgr && \
+    test -f /fwupd/usr/lib/systemd/system/fwupd.service && \
+    test -f /fwupd/usr/lib/systemd/system/fwupd-refresh.timer && \
+    test -f /fwupd/usr/lib/systemd/system/fwupd-refresh.service && \
+    test -f /fwupd/usr/lib/sysusers.d/fwupd.conf && \
+    test -f /fwupd/usr/share/dbus-1/system.d/org.freedesktop.fwupd.conf && \
+    test -f /fwupd/usr/share/dbus-1/system-services/org.freedesktop.fwupd.service && \
+    test -f /fwupd/usr/share/polkit-1/actions/org.freedesktop.fwupd.policy && \
+    test -f /fwupd/etc/fwupd/remotes.d/lvfs.conf && \
+    grep -qx 'Enabled=true' /fwupd/etc/fwupd/remotes.d/lvfs.conf && \
+    install -Dm644 COPYING /fwupd/usr/share/licenses/fwupd/COPYING
+
+# fwupd's runtime files (its private libraries are in
+# /usr/lib/fwupd-<version>, through RUNPATH), and the libraries it needs that
+# the images may not have: libusb, libsqlite3 and libxmlb, as the fwupd stage
+# copied them from their stages (the desktops copy the same libxmlb for
+# Flatpak; the server has none). fwupdx64.efi from fwupd-efi. No headers,
+# pkg-config, static libraries or installed tests; the licences of fwupd,
+# fwupd-efi and libusb (LGPL-2.1+) in /usr/share/licenses. Fails when a library the
+# daemon or fwupdmgr needs is not in the base, the toolchain's runtime copies
+# or here.
+FROM fwupd AS fwupd-runtime
+COPY --from=fwupd-efi /fwupd-efi /fwupd
+RUN rm -rf /fwupd/usr/include /fwupd/usr/lib/pkgconfig /fwupd/usr/share/installed-tests \
+      /fwupd/usr/lib/installed-tests /fwupd/usr/share/fwupd/host-emulate.d \
+      /fwupd/etc/fwupd/remotes.d/fwupd-tests.conf /fwupd/usr/share/doc /fwupd/etc/grub.d && \
+    find /fwupd -name '*.a' -delete && \
+    mkdir -p /fwupd-runtime && cp -a /fwupd/. /fwupd-runtime/ && \
+    cp -a /usr/lib/libusb-1.0.so.* /usr/lib/libsqlite3.so.* /usr/lib/libxmlb.so.* /fwupd-runtime/usr/lib/ && \
+    mkdir -p /fwupd-runtime/usr/share/licenses && cp -a /usr/share/licenses/libusb /fwupd-runtime/usr/share/licenses/ && \
+    for l in fwupd fwupd-efi libusb; do test -s /fwupd-runtime/usr/share/licenses/$l/COPYING || exit 1; done && \
+    test -f /fwupd-runtime/usr/lib/fwupd/efi/fwupdx64.efi && \
+    ! find /fwupd-runtime \( -name '*.h' -o -name '*.pc' -o -name '*.a' \) | grep -q . && \
+    priv=$(echo /fwupd-runtime/usr/lib/fwupd-[0-9]*) && test -f "$priv/libfwupdengine.so" && \
+    ! LD_LIBRARY_PATH="/fwupd-runtime/usr/lib:$priv" \
+      ldd /fwupd-runtime/usr/lib/fwupd/fwupd /fwupd-runtime/usr/bin/fwupdmgr /fwupd-runtime/usr/bin/fwupdtool 2>&1 | grep -E 'not found|Error'
+
 FROM toolchain AS libqalculate
 COPY --from=gmp /gmp /
 COPY --from=mpfr /mpfr /
@@ -6489,6 +6609,10 @@ COPY rootfs/common/usr/lib/systemd/system/isotope-backup.service rootfs/common/u
 # Automatic updates: the daily timer of `isotope update --auto` (it does
 # nothing until `isotope update auto on`).
 COPY rootfs/common/usr/lib/systemd/system/isotope-autoupdate.service rootfs/common/usr/lib/systemd/system/isotope-autoupdate.timer /usr/lib/systemd/system/
+# Firmware: the LVFS metadata refresh only on an installed system, daily.
+# The polkit rule (50-isotope-fwupd.rules) comes with the polkit-1 copy above.
+COPY rootfs/common/usr/lib/systemd/system/fwupd-refresh.timer.d/ /usr/lib/systemd/system/fwupd-refresh.timer.d/
+COPY rootfs/common/usr/lib/systemd/system/fwupd-refresh.service.d/ /usr/lib/systemd/system/fwupd-refresh.service.d/
 # Docker: its units, and the boot stage that persists /var/lib/docker and
 # starts the daemon on the installed system only.
 COPY rootfs/common/usr/lib/systemd/system/docker.service rootfs/common/usr/lib/systemd/system/docker.socket /usr/lib/systemd/system/
@@ -6752,13 +6876,15 @@ FROM welcome-${DESKTOP} AS welcome
 # Isotope System (cmd/isotope-system), the window for the system's jobs (updates,
 # desktop, extensions, backup, the disk's keys, network), built like Isotope
 # Welcome: the same two builds, system-${DESKTOP} picks one. It imports
-# pkg/isorelease and pkg/recoverykey, shared with the isotope CLI.
+# pkg/isorelease, pkg/recoverykey, pkg/firewall, pkg/shares and pkg/fwupd,
+# shared with the isotope CLI.
 FROM welcome-build AS system-build
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
+COPY pkg/fwupd/ pkg/fwupd/
 COPY cmd/isotope-system/ cmd/isotope-system/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
@@ -6807,8 +6933,9 @@ COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
+COPY pkg/fwupd/ pkg/fwupd/
 COPY cmd/isotope/ cmd/isotope/
-RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... \
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 
@@ -6884,6 +7011,9 @@ COPY --from=libblockdev /libblockdev /
 COPY --from=udisks2 /udisks2 /
 # exFAT for the Disks page's Format (libblockdev runs mkfs.exfat).
 COPY --from=exfatprogs /exfatprogs/usr/sbin/ /usr/bin/
+# Firmware updates (fwupd, fwupdmgr, the LVFS remote, fwupdx64.efi). fwupd
+# finds the ESP through udisks2, above, for UEFI capsules.
+COPY --from=fwupd-runtime /fwupd-runtime /
 # XDG MIME database — required for GLib content-type detection, which appstream/
 # libxmlb rely on to decompress the gzipped Flathub catalog (fixes flatpak search).
 COPY --from=shared-mime-info /shared-mime-info /
@@ -7200,6 +7330,11 @@ RUN set -e; \
     done; \
     grep -qx 'ServerRoot /var/lib/cups' /etc/cups/cups-files.conf; \
     cupsd -t -c /etc/cups/cupsd.conf -s /etc/cups/cups-files.conf
+# Firmware: the LVFS metadata refresh, daily on an installed system
+# (fwupd-refresh.timer.d/10-isotope.conf). fwupd itself is D-Bus activated.
+RUN systemctl enable fwupd-refresh.timer && \
+    test -L /etc/systemd/system/timers.target.wants/fwupd-refresh.timer && \
+    test -f /usr/lib/systemd/system/fwupd-refresh.timer.d/10-isotope.conf
 
 
 # The server edition's image. Keep the binaries at the end in step with
@@ -7267,6 +7402,15 @@ RUN systemctl enable isotope-backup.timer isotope-restore-finish.service && \
 # nothing until `isotope update auto on` turns them on.
 RUN systemctl enable isotope-autoupdate.timer && \
     test -L /etc/systemd/system/timers.target.wants/isotope-autoupdate.timer
+# Firmware: fwupd and fwupdmgr, the daily LVFS metadata refresh. No
+# udisks2 here, so no ESP for UEFI capsules: the capsule plugin is off and
+# the other plugins (disks, USB, Thunderbolt, a BMC through Redfish) work.
+COPY --from=fwupd-runtime /fwupd-runtime /
+RUN systemctl enable fwupd-refresh.timer && \
+    test -L /etc/systemd/system/timers.target.wants/fwupd-refresh.timer && \
+    test -f /usr/lib/systemd/system/fwupd-refresh.timer.d/10-isotope.conf && \
+    sed -i '/^\[fwupd\]$/a DisabledPlugins=uefi_capsule' /etc/fwupd/fwupd.conf && \
+    [ "$(grep -c '^DisabledPlugins=uefi_capsule$' /etc/fwupd/fwupd.conf)" = 1 ]
 
 # The image the kairos stage turns bootable: the desktop for sway, i3, cosmic
 # and niri, the server edition for server.
@@ -7339,6 +7483,20 @@ RUN systemd-sysusers tpm2-tss.conf && \
 # openconnect as (the desktops only; the server has no OpenConnect).
 RUN [ ! -f /usr/lib/sysusers.d/nm-openconnect.conf ] || \
     { systemd-sysusers nm-openconnect.conf && grep -q '^nm-openconnect:' /etc/passwd; }
+# The fwupd-refresh user, which fwupd-refresh.service (the daily LVFS
+# metadata refresh) runs as. The agent has no fwupd.
+RUN [ ! -f /usr/lib/sysusers.d/fwupd.conf ] || \
+    { systemd-sysusers fwupd.conf && grep -q '^fwupd-refresh:' /etc/passwd; }
+# UEFI capsules need fwupdx64.efi to start at the next boot, and on a Trusted
+# Boot image Secure Boot is always on and the helper is not signed with
+# Isotope's db key; the ESP is also mounted read-only at /efi. So the capsule
+# plugin is off there, and every other device still updates. The server
+# turns it off already (no udisks2); the line is added once. See
+# docs/superpowers/specs/2026-11-24-firmware-updates-design.md.
+RUN [ "${TRUSTED_BOOT}" = false ] || [ ! -f /etc/fwupd/fwupd.conf ] || \
+    { grep -qx 'DisabledPlugins=uefi_capsule' /etc/fwupd/fwupd.conf || \
+        sed -i '/^\[fwupd\]$/a DisabledPlugins=uefi_capsule' /etc/fwupd/fwupd.conf; \
+      [ "$(grep -c '^DisabledPlugins=uefi_capsule$' /etc/fwupd/fwupd.conf)" = 1 ]; }
 # System extensions from the catalogs are unsigned; the normal install merges
 # them anyway (rootfs/common/etc/kairos/90_isotope_extensions.yaml and
 # rootfs/common/system/oem/93_isotope_extensions.yaml). A Trusted Boot image keeps

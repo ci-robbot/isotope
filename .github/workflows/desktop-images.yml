@@ -66,6 +66,7 @@ on:
       - "pkg/isorelease/**"
       - "pkg/recoverykey/**"
       - "pkg/shares/**"
+      - "pkg/fwupd/**"
       - "cmd/isotope-install-ui/**"
       - "cmd/isotope-install-gui/**"
       - "scripts/ci-containerd-store.sh"
@@ -146,7 +147,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|test/glibc/*|tools/isotope-glibc-loader.c|tools/isotope-appimage.c|docs/glibc-programs.md|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|test/shares/*|test/printing/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -450,3 +451,10 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/shares/check-shares.sh "${DESKTOP}-desktop:dev"
+
+      # Firmware updates: fwupd, its libraries, the EFI helper, the LVFS
+      # remote, the daily refresh timer; the capsule plugin off on the server.
+      - name: Check firmware updates
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/firmware/check-firmware.sh "${DESKTOP}-desktop:dev"

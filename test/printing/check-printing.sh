@@ -41,7 +41,7 @@ repo_mode() {
     check "cups-files.conf moves CUPS's ServerRoot to /var/lib/cups" grep -qx 'ServerRoot /var/lib/cups' "$E/cups-files.conf"
     check "94_isotope_state.yaml keeps /var/lib/cups on the persistent partition" \
         sh -c "awk '/for p in/,/; do/' '$state' | grep -q /var/lib/cups"
-    check "test-persist-state.sh expects /var/lib/cups" grep -q '/var/lib/cups"' test/state/test-persist-state.sh
+    check "test-persist-state.sh expects /var/lib/cups" grep -qE '/var/lib/cups[ "]' test/state/test-persist-state.sh
     check "the image's admin group is GID 900, as kairos-init makes it" \
         sh -c "[ \"\$(grep -c 'groupadd -f -g 900 admin' Dockerfile)\" = 2 ] && ! grep -qE 'groupadd -f admin|for g in admin ' Dockerfile"
     check "the server's config does not take /etc/cups" sh -c "! awk '/^FROM .* AS server-config\$/,/^FROM .* AS desktop-rootfs/' Dockerfile | grep -q etc/cups"

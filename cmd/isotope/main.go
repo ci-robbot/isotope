@@ -92,6 +92,8 @@ Started by the desktop session and by systemd, not by hand:
                      does nothing while automatic updates are off
   efi-boot-entry    at the end of an install: a UEFI boot entry for the
                      installed disk, first in the boot order
+  unmetered         exit 0 on a connection that is not metered, 1 otherwise
+                     (fwupd-refresh.service's ExecCondition)
 
 isotope-update, isotope-ext and isotope-recovery are the same command:
 "isotope-ext X" is "isotope ext X", "isotope-recovery X" is
@@ -176,6 +178,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdDaemon(args, stderr)
 	case "efi-boot-entry":
 		return cmdEFIBootEntry(args, stdout, stderr)
+	case "unmetered":
+		return cmdUnmetered(stderr)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return exitOK

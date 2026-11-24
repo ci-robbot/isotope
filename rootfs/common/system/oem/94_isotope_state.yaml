@@ -22,6 +22,11 @@
 #                                           set in cups-files.conf, so the
 #                                           settings in /etc/cups still come
 #                                           from the image)
+#   /var/lib/fwupd                          fwupd's LVFS metadata, its
+#                                           history and the pending
+#                                           firmware updates (a UEFI
+#                                           capsule's result is read after
+#                                           the restart that applies it)
 #
 # Without this, a Wi-Fi network joined in Isotope Welcome, the panel or nmtui
 # was forgotten at the next boot, and so was every paired headset and every
@@ -37,7 +42,7 @@
 name: "Isotope machine state"
 stages:
   rootfs:
-    - name: "persist the saved networks, Bluetooth pairings, printers and device settings"
+    - name: "persist the saved networks, Bluetooth pairings, printers, device settings and firmware history"
       commands:
         - |
           layout=/run/cos/cos-layout.env
@@ -49,7 +54,7 @@ stages:
                    /var/lib/bluetooth /var/lib/AccountsService \
                    /var/lib/power-profiles-daemon \
                    /var/lib/systemd/backlight /var/lib/systemd/rfkill \
-                   /var/lib/cups; do
+                   /var/lib/cups /var/lib/fwupd; do
             case " $merged " in
               *" $p "*) ;;
               *) merged="$merged $p" ;;

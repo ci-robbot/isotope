@@ -212,6 +212,10 @@ type Daemon struct {
 	// inhibitor, when set, is held while kairos-agent runs. Set before the
 	// first job; nil means none.
 	inhibitor Inhibitor
+	// blockers lists logind's inhibitors, so a restart waits while
+	// another program (fwupd writing firmware) blocks shutdown; nil checks
+	// nothing (shutdown_block.go).
+	blockers func() ([]shutdownBlocker, error)
 
 	// ext runs the extension commands; nil refuses every extension job.
 	ext                  ExtBackend
@@ -811,7 +815,9 @@ func (d *Daemon) Cancel() error {
 
 // Reboot restarts the system. It refuses while an install job runs: during
 // inspecting the job could still start kairos-agent under a shutting-down
-// system, and an extension job runs it. Once it is asked, no install starts
+// system, and an extension job runs it. It also refuses while another
+// program blocks shutdown through logind, above all fwupd writing firmware
+// (restartBlocked). Once it is asked, no install starts
 // until the reboot fails.
 func (d *Daemon) Reboot() error {
 	d.mu.Lock()
@@ -819,6 +825,11 @@ func (d *Daemon) Reboot() error {
 		d.mu.Unlock()
 		return ErrBusy
 	}
+	d.mu.Unlock()
+	if err := d.restartBlocked(); err != nil {
+		return err
+	}
+	d.mu.Lock()
 	d.rebooting = true
 	d.mu.Unlock()
 
@@ -855,6 +866,15 @@ func (d *Daemon) RebootPrevious() error {
 	case d.state == StateRebootPending:
 		d.mu.Unlock()
 		return errUnfinishedPending
+	}
+	d.mu.Unlock()
+	if err := d.restartBlocked(); err != nil {
+		return err
+	}
+	d.mu.Lock()
+	if d.rebooting {
+		d.mu.Unlock()
+		return ErrRebooting
 	}
 	d.rebooting = true
 	d.mu.Unlock()

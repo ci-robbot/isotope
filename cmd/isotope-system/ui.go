@@ -46,6 +46,9 @@ type Hooks struct {
 	// Shares is the user's saved network shares and their keyring; nil
 	// keeps no list (the Disks page still connects).
 	Shares ShareStore
+	// Firmware is fwupd; nil leaves the Updates page without its FIRMWARE
+	// section (no system bus).
+	Firmware Firmware
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the
@@ -79,6 +82,9 @@ type UI struct {
 	// mu guards everything below: the goroutines that call the services
 	// write it, the frame reads it.
 	mu sync.Mutex
+	// firmwareWriting is set while this window has fwupd write firmware
+	// (firmware.go): every restart waits for it.
+	firmwareWriting bool
 	// st is the daemon's last status; stErr why it could not be read.
 	st    Status
 	stOK  bool
