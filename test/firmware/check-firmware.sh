@@ -121,7 +121,10 @@ image_mode() {
     fi
     in_image "fwupd and fwupdmgr are in the image" "test -x /usr/lib/fwupd/fwupd && test -x /usr/bin/fwupdmgr"
     in_image "fwupd finds every library" "! ldd /usr/lib/fwupd/fwupd /usr/bin/fwupdmgr 2>&1 | grep -E 'not found|Error'"
-    in_image "fwupdmgr runs" "fwupdmgr --version"
+    # --help, not --version: --version also asks the daemon for its version
+    # over the system bus, which a container has not ("Failed to connect to
+    # daemon"). --help loads the same binary and libraries and exits 0.
+    in_image "fwupdmgr runs" "fwupdmgr --help"
     in_image "the EFI helper is where fwupd looks" "test -f /usr/lib/fwupd/efi/fwupdx64.efi"
     in_image "the LVFS remote is on" "grep -qx 'Enabled=true' /etc/fwupd/remotes.d/lvfs.conf"
     in_image "the LVFS keys are there" "test -f /etc/pki/fwupd-metadata/LVFS-CA.pem"

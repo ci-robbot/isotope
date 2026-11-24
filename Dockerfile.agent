@@ -399,7 +399,9 @@ RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
 # No printing. An agent prints nothing, and CUPS, cups-browsed, Avahi and
 # ipp-usb are services that listen, browse the network and take documents
 # from anyone on the machine. Every file of the i3 image's printing stage
-# goes (its list, /usr/share/isotope/printing.files), then the unit links,
+# goes (its list, /usr/share/isotope/printing.files), then the unit links
+# (also the ones systemctl enable made from the units' [Install] sections:
+# printer.target.wants/cups.service, multi-user.target.wants/cups.path),
 # the D-Bus activation alias, /etc/cups, /etc/avahi and GTK's CUPS print
 # backend (the GTK built above has print_backends=file only, so it would not
 # load it, but it links libcups, which is gone).
@@ -413,6 +415,7 @@ RUN while IFS= read -r f; do rm -f "$f"; done < /usr/share/isotope/printing.file
       /etc/systemd/system/sockets.target.wants/avahi-daemon.socket \
       /etc/systemd/system/dbus-org.freedesktop.Avahi.service \
       /usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so && \
+    find /etc/systemd \( -name 'cups*' -o -name 'avahi*' -o -name '*ipp-usb*' \) -exec rm -rf {} + && \
     fail() { echo "agent: $*" >&2; exit 1; } && \
     for b in /usr/sbin/cupsd /usr/sbin/cups-browsed /usr/sbin/avahi-daemon /usr/sbin/ipp-usb /usr/bin/gs /usr/sbin/lpadmin; do \
       ! test -e "$b" || fail "$b is left"; \

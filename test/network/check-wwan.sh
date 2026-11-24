@@ -24,8 +24,13 @@ PLUGDIR='$(ls -d /usr/lib/NetworkManager/[0-9]*/ | head -n 1)'
 check "the WWAN device plugin and libnm-wwan are installed" \
     "d=$PLUGDIR; test -f \"\$d/libnm-device-plugin-wwan.so\" && test -f \"\$d/libnm-wwan.so\""
 check "libmm-glib is installed" "test -e /usr/lib/libmm-glib.so.0"
+# Every library the plugins name is there. Their nm_* symbols come from the
+# NetworkManager binary that loads them, so musl's ldd also prints "Error
+# relocating ...: symbol not found" for those and exits 1: those lines are
+# left out here (the readelf check below holds the symbols to the binary),
+# and a missing library still fails.
 check "the plugins resolve their libraries" \
-    "d=$PLUGDIR; for f in \"\$d\"/libnm-wwan.so \"\$d\"/libnm-device-plugin-wwan.so; do ldd \"\$f\" >/tmp/ldd 2>&1 || exit 1; ! grep -q 'not found' /tmp/ldd || exit 1; done"
+    "d=$PLUGDIR; for f in \"\$d\"/libnm-wwan.so \"\$d\"/libnm-device-plugin-wwan.so; do ldd \"\$f\" 2>&1 | grep -v '^Error relocating .*: symbol not found\$' >/tmp/ldd; ! grep -qE 'not found|Error loading' /tmp/ldd || exit 1; done"
 check "the provider database path is compiled in" \
     "d=$PLUGDIR; grep -q /usr/share/mobile-broadband-provider-info/serviceproviders.xml \"\$d/libnm-wwan.so\""
 check "the ModemManager licence ships with libmm-glib" "test -s /usr/share/licenses/ModemManager/COPYING.LIB"
