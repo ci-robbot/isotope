@@ -1036,8 +1036,12 @@ RUN curl --retry-all-errors -fL --retry 5 https://github.com/avahi/avahi/archive
     tar -xzf a.tar.gz && mv avahi-${AVAHI_VERSION} src
 WORKDIR /build/src
 RUN autoreconf -vif
+# --disable-stack-protector: Avahi's -fstack-protector links libssp.so.0, a
+# toolchain library the images do not have (musl's libc has the stack
+# protector itself), and cupsd then fails to load libavahi-common.
 RUN ./configure ${COMMON_CONFIGURE_ARGS} --sysconfdir=/etc --localstatedir=/var --runstatedir=/run \
       --with-distro=none --disable-nls --enable-glib --disable-gobject --disable-libevent \
+      --disable-stack-protector \
       --disable-qt3 --disable-qt4 --disable-qt5 --disable-gtk --disable-gtk3 \
       --disable-python --disable-pygobject --disable-python-dbus --disable-mono --disable-monodoc \
       --disable-doxygen-doc --disable-manpages --disable-xmltoman --disable-gdbm --disable-dbm \
@@ -1049,6 +1053,7 @@ RUN make -j"$(nproc)" && make DESTDIR=/avahi install && \
     L=/avahi/usr/share/licenses/avahi && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
     test -x /avahi/usr/sbin/avahi-daemon && \
     test -e /avahi/usr/lib/libavahi-client.so.3 && test -e /avahi/usr/lib/libavahi-glib.so.1 && \
+    ! readelf -d /avahi/usr/lib/libavahi-*.so.* /avahi/usr/sbin/avahi-daemon | grep -q 'NEEDED.*libssp' && \
     test -f /avahi/usr/lib/systemd/system/avahi-daemon.service && \
     test -f /avahi/usr/lib/systemd/system/avahi-daemon.socket && \
     test -f /avahi/usr/share/dbus-1/system.d/avahi-dbus.conf && \
