@@ -1,6 +1,10 @@
 package main
 
-import "os"
+import (
+	"os"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
+)
 
 // MenuItem is one entry of the tray menu, independent of any tray library, so
 // the menu can be tested as data. A disabled item is shown greyed out.
@@ -28,41 +32,41 @@ func installsAllowed(s State) bool {
 func statusLine(st Status) string {
 	switch st.State {
 	case StateUnmanaged:
-		return "Unmanaged image"
+		return i18n.T("Unmanaged image")
 	case StateChecking:
-		return "Checking for updates…"
+		return i18n.T("Checking for updates…")
 	case StateUpToDate:
 		if st.Pin != "" {
-			return "Isotope " + st.Installed + " (pinned)"
+			return i18n.Tf("Isotope %s (pinned)", st.Installed)
 		}
-		return "Isotope " + st.Installed + " is up to date"
+		return i18n.Tf("Isotope %s is up to date", st.Installed)
 	case StateUpdateAvailable:
-		return "Isotope " + st.Latest + " is available"
+		return i18n.Tf("Isotope %s is available", st.Latest)
 	case StateInspecting:
-		return "Checking the image…"
+		return i18n.T("Checking the image…")
 	case StateApplying:
-		return "Installing the update…"
+		return i18n.T("Installing the update…")
 	case StateExtension:
-		return "Changing system extensions…"
+		return i18n.T("Changing system extensions…")
 	case StateBackup:
-		return "Backing up this machine…"
+		return i18n.T("Backing up this machine…")
 	case StateRestore:
-		return "Restoring a backup…"
+		return i18n.T("Restoring a backup…")
 	case StateRebootPending:
 		// After a failed or interrupted install the slots may already be
 		// swapped: no retry before a restart.
 		switch st.Pending {
 		case pendingFailed:
-			return "Update failed; restart before trying again"
+			return i18n.T("Update failed; restart before trying again")
 		case pendingStarted:
-			return "Update interrupted; restart before trying again"
+			return i18n.T("Update interrupted; restart before trying again")
 		}
 		if st.Staged != "" {
-			return "Isotope " + st.Staged + " is installed: restart to finish"
+			return i18n.Tf("Isotope %s is installed: restart to finish", st.Staged)
 		}
-		return "Update installed; restart to use it"
+		return i18n.T("Update installed; restart to use it")
 	case StateError:
-		return "Error: " + shorten(st.Detail, 80)
+		return i18n.Tf("Error: %s", shorten(st.Detail, 80))
 	}
 	return "Isotope " + st.Installed
 }
@@ -91,9 +95,9 @@ func BuildMenu(st Status, releases []Latest, flavor, line string) []MenuItem {
 	// A pinned system reports up-to-date, but "latest" is still worth a click:
 	// it is how a user leaves the pin.
 	if st.Latest != "" && (st.Pin != "" || Newer(st.Latest, st.Installed)) {
-		label := "Install " + st.Latest
+		label := i18n.Tf("Install %s", st.Latest)
 		if st.Pin != "" {
-			label = "Install latest (" + st.Latest + ")"
+			label = i18n.Tf("Install latest (%s)", st.Latest)
 		}
 		menu = append(menu, MenuItem{ID: "install-latest", Label: label, Enabled: can})
 	}
@@ -107,7 +111,7 @@ func BuildMenu(st Status, releases []Latest, flavor, line string) []MenuItem {
 		rel = append(rel, MenuItem{ID: "releases/" + r.Tag, Label: r.Tag, Enabled: can})
 	}
 	if len(rel) > 0 {
-		menu = append(menu, MenuItem{ID: "releases", Label: "Other releases", Enabled: can, Children: rel})
+		menu = append(menu, MenuItem{ID: "releases", Label: i18n.T("Other releases"), Enabled: can, Children: rel})
 	}
 
 	// The server edition has no tray, but its menu must not offer a desktop
@@ -124,16 +128,16 @@ func BuildMenu(st Status, releases []Latest, flavor, line string) []MenuItem {
 		}
 		sw = append(sw, MenuItem{ID: "switch/" + f, Label: flavorLabels[f], Enabled: can})
 	}
-	menu = append(menu, MenuItem{ID: "switch", Label: "Switch desktop", Enabled: can, Children: sw})
+	menu = append(menu, MenuItem{ID: "switch", Label: i18n.T("Switch desktop"), Enabled: can, Children: sw})
 	// The other image line, the way the switch above offers the other
 	// desktops: a terminal shows what changes and asks. Trusted Boot has
 	// one line, the signed UKI, so nothing to switch to.
 	switch line {
 	case lineUKI:
 	case gpuVM:
-		menu = append(menu, MenuItem{ID: "gpu/" + gpuFull, Label: "Switch to the hardware image", Enabled: can})
+		menu = append(menu, MenuItem{ID: "gpu/" + gpuFull, Label: i18n.T("Switch to the hardware image"), Enabled: can})
 	default:
-		menu = append(menu, MenuItem{ID: "gpu/" + gpuVM, Label: "Switch to the virtual machine image", Enabled: can})
+		menu = append(menu, MenuItem{ID: "gpu/" + gpuVM, Label: i18n.T("Switch to the virtual machine image"), Enabled: can})
 	}
 
 	return finishMenu(menu, st, can, line)
@@ -144,28 +148,28 @@ func BuildMenu(st Status, releases []Latest, flavor, line string) []MenuItem {
 // image…" even in advanced mode.
 func finishMenu(menu []MenuItem, st Status, can bool, line string) []MenuItem {
 	if st.Advanced && line != lineUKI {
-		menu = append(menu, MenuItem{ID: "advanced", Label: "Install an image…", Enabled: can})
+		menu = append(menu, MenuItem{ID: "advanced", Label: i18n.T("Install an image…"), Enabled: can})
 	}
 	// Cancel only before kairos-agent starts writing: an interrupted write can
 	// leave the passive slot unbootable.
 	if st.State == StateInspecting {
-		menu = append(menu, MenuItem{ID: "cancel", Label: "Cancel the update", Enabled: true})
+		menu = append(menu, MenuItem{ID: "cancel", Label: i18n.T("Cancel the update"), Enabled: true})
 	}
 	if st.State == StateRebootPending {
-		menu = append(menu, MenuItem{ID: "restart", Label: "Restart now", Enabled: true})
+		menu = append(menu, MenuItem{ID: "restart", Label: i18n.T("Restart now"), Enabled: true})
 	}
 	// The Isotope menu's Extensions list. Always clickable: it only reads,
 	// and the service refuses a change while a job runs.
-	menu = append(menu, MenuItem{ID: "extensions", Label: "Extensions…", Enabled: true})
+	menu = append(menu, MenuItem{ID: "extensions", Label: i18n.T("Extensions…"), Enabled: true})
 	// The disk recovery key, on a system whose disk is encrypted.
 	if diskEncrypted() {
-		menu = append(menu, MenuItem{ID: "recovery", Label: "Recovery key…", Enabled: true})
+		menu = append(menu, MenuItem{ID: "recovery", Label: i18n.T("Recovery key…"), Enabled: true})
 	}
 	// Hidden, not greyed, when it cannot be used: while a job runs, and while
 	// an install waits for its reboot, when the passive slot holds the system
 	// the user runs now and "previous" would mean the wrong one.
 	if can {
-		menu = append(menu, MenuItem{ID: "rollback", Label: "Restart into the previous system", Enabled: true})
+		menu = append(menu, MenuItem{ID: "rollback", Label: i18n.T("Restart into the previous system"), Enabled: true})
 	}
 	return menu
 }

@@ -1,6 +1,10 @@
 package main
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
+)
 
 // PageID names one page of the welcome flow.
 type PageID string
@@ -50,37 +54,37 @@ func RestorePages() []PageID {
 func PageTitle(p PageID) string {
 	switch p {
 	case PWelcome:
-		return "Welcome"
+		return i18n.T("Welcome")
 	case PLanguage:
-		return "Language"
+		return i18n.T("Language")
 	case PNetwork:
-		return "Network"
+		return i18n.T("Network")
 	case PAppearance:
-		return "Appearance"
+		return i18n.T("Appearance")
 	case PLayout:
-		return "Layout"
+		return i18n.X("page", "Layout")
 	case PWorkflow:
-		return "Workflow"
+		return i18n.X("page", "Workflow")
 	case PLauncher:
-		return "Launcher"
+		return i18n.X("page", "Launcher")
 	case PAccessibility:
-		return "Accessibility"
+		return i18n.T("Accessibility")
 	case PApps:
-		return "Apps"
+		return i18n.T("Apps")
 	case PShortcuts:
-		return "Shortcuts"
+		return i18n.T("Shortcuts")
 	case PReady:
-		return "Ready"
+		return i18n.X("page", "Ready")
 	case PRestoreWhere:
-		return "Where"
+		return i18n.X("page", "Where")
 	case PRestorePassword:
-		return "Password"
+		return i18n.X("page", "Password")
 	case PRestoreBackup:
-		return "Backup"
+		return i18n.X("page", "Backup")
 	case PRestoreRun:
-		return "Restore"
+		return i18n.X("page", "Restore")
 	case PageLive:
-		return "Welcome"
+		return i18n.T("Welcome")
 	}
 	return string(p)
 }

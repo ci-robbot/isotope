@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -49,7 +50,7 @@ func writeInstalledMarker(path string) error {
 }
 
 // windowTitle is the window's title, and the title bar's on COSMIC.
-const windowTitle = "Install Isotope"
+var windowTitle = i18n.Mark("Install Isotope")
 
 // options are the command line's.
 type options struct {
@@ -104,6 +105,22 @@ func readLiveChoices(path string) liveChoices {
 		return liveChoices{}
 	}
 	return c
+}
+
+// liveLanguage makes the window speak the live session's language, when
+// the choices name one that core accepts (it_IT.UTF-8 gives it); otherwise
+// the language stays as i18n.Init found it.
+func liveLanguage(c liveChoices) {
+	if !installer.ValidLocale(c.Lang) {
+		return
+	}
+	lang := c.Lang
+	i18n.SetLanguage(i18n.Candidates(func(k string) string {
+		if k == "LANG" {
+			return lang
+		}
+		return ""
+	})...)
 }
 
 // windowWizard makes w the window mode's wizard: the console keymap is left
@@ -193,6 +210,6 @@ func (u *UI) stepNames() []string {
 		return stepNames
 	}
 	names := append([]string(nil), stepNames...)
-	names[1] = "Time zone"
+	names[1] = i18n.Mark("Time zone")
 	return names
 }

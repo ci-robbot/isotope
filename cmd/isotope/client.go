@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // InspectInfo is what the daemon's Inspect answers: which image a reference
@@ -316,12 +318,12 @@ func statusFromDict(m map[string]dbus.Variant) Status {
 func describeDaemonError(err error) string {
 	switch daemonErrName(err) {
 	case "NotAuthorized":
-		return "Only members of the admin group can change this system."
+		return i18n.T("Only members of the admin group can change this system.")
 	case "RebootPending":
 		// Installed, failed or interrupted: a restart comes first in all three.
-		return "The last update waits for a restart; restart first."
+		return i18n.T("The last update waits for a restart; restart first.")
 	case "Busy":
-		return "Another update is running."
+		return i18n.T("Another update is running.")
 	}
 	return fmt.Sprint(err)
 }
@@ -334,11 +336,11 @@ func describeRollbackError(err error, pending string) string {
 	switch daemonErrName(err) {
 	case "RebootPending":
 		if pending == pendingFailed || pending == pendingStarted {
-			return "The last update did not finish; restart before choosing a system."
+			return i18n.T("The last update did not finish; restart before choosing a system.")
 		}
-		return "An update is installed and waits for a reboot; restart into it first. The system you run now is then the previous one."
+		return i18n.T("An update is installed and waits for a reboot; restart into it first. The system you run now is then the previous one.")
 	case "Rebooting":
-		return "The system is already restarting."
+		return i18n.T("The system is already restarting.")
 	}
 	return describeDaemonError(err)
 }

@@ -517,6 +517,12 @@ jobs:
         shell: bash
         run: test/apps/check-apps.sh "${DESKTOP}-desktop:dev"
 
+      # Translations: each program carries the Italian and Spanish
+      # catalogs; the profile script exports LANG.
+      - name: Check translations
+        shell: bash
+        run: test/i18n/check-i18n.sh "${DESKTOP}-desktop:dev"
+
       # Smart cards and security keys: no file of the smartcards extension
       # in the image, the libraries it links, the udev rules that give FIDO
       # keys to the session's user; card support in gpg and gpg-agent (the
@@ -1036,6 +1042,11 @@ jobs:
       - name: Check automatic app updates are gone
         shell: bash
         run: test/apps/check-apps.sh "$AGENT_IMAGE"
+
+      # Translations: the tray (isotope) keeps its catalogs.
+      - name: Check translations
+        shell: bash
+        run: test/i18n/check-i18n.sh "$AGENT_IMAGE"
 
       # The appliance takes no extensions, but keeps the image's part: gpg's
       # card support and the FIDO udev rules, and none of the extension's

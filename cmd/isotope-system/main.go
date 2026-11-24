@@ -16,6 +16,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // appID is the window's Wayland app_id and X11 class: the window rules of
@@ -55,6 +56,7 @@ func handOff(conn *dbus.Conn, page Page, tab string) bool {
 }
 
 func main() {
+	i18n.Init()
 	if len(os.Args) > 1 && os.Args[1] == "ask" {
 		os.Exit(runAsk(os.Args[2:]))
 	}

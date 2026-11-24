@@ -19,6 +19,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Glibc is `isotope glibc`, for the Compatibility page.
@@ -84,7 +86,7 @@ func (c glibcCLI) Status() (GlibcStatus, error) {
 	}
 	var st GlibcStatus
 	if err := json.Unmarshal(out.Bytes(), &st); err != nil {
-		return GlibcStatus{}, fmt.Errorf("isotope glibc status gave no status (%v); is isotope up to date?", err)
+		return GlibcStatus{}, fmt.Errorf(i18n.T("isotope glibc status gave no status (%v); is isotope up to date?"), err)
 	}
 	return st, nil
 }
@@ -227,7 +229,7 @@ func cliError(what, out string, err error) error {
 		return errors.New(last)
 	}
 	if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%s: the isotope command is not installed", what)
+		return fmt.Errorf(i18n.T("%s: the isotope command is not installed"), what)
 	}
 	return fmt.Errorf("%s: %v", what, err)
 }

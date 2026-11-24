@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // liveMarker exists only on a live desktop session (see the live-desktop
@@ -24,7 +25,7 @@ const liveInstaller = "isotope-live-install"
 
 // liveText is what the pages that need an installed system say on the live
 // system.
-const liveText = "Not available on the live system. Install Isotope first."
+var liveText = i18n.Mark("Not available on the live system. Install Isotope first.")
 
 // liveOnly are the pages that cannot work on the live system: they change
 // the installed image, its disk or its users, and the live system is in
@@ -65,7 +66,7 @@ func (p *livePage) Update(gtx layout.Context) {
 // so only a failure to start it is told here.
 func (p *livePage) startInstaller() {
 	if err := p.u.hooks.Start(liveInstaller); err != nil {
-		p.u.tell("Cannot start the installer", err.Error())
+		p.u.tell(i18n.T("Cannot start the installer"), err.Error())
 	}
 }
 
@@ -75,9 +76,9 @@ func (p *livePage) Body(gtx layout.Context) layout.Dimensions {
 		var c col
 		c.add(u.Heading(p.page.Title(), ""))
 		c.gap(20)
-		c.add(u.notice(liveText))
+		c.add(u.notice(i18n.T(liveText)))
 		c.gap(14)
-		c.add(u.buttons(guikit.Action{Click: &p.install, Kind: guikit.ButtonPrimary, Label: "Install Isotope"}))
+		c.add(u.buttons(guikit.Action{Click: &p.install, Kind: guikit.ButtonPrimary, Label: i18n.T("Install Isotope")}))
 		return c.layout(gtx)
 	})
 }

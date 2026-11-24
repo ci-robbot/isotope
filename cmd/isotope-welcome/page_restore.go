@@ -22,6 +22,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -163,7 +164,7 @@ func (r *restoreState) waitJob() { r.jobWG.Wait() }
 // errText is the daemon's error as the user reads it: its own words.
 func errText(err error) string {
 	if errors.Is(err, ErrNotAuthorized) {
-		return "Only members of the admin group can do this."
+		return i18n.T("Only members of the admin group can do this.")
 	}
 	return err.Error()
 }
@@ -226,7 +227,7 @@ func (r *restoreState) loadDisks() {
 		r.loadingDisks = false
 		r.disks, r.disksErr = disks, ""
 		if err != nil {
-			r.disksErr = "USB disks cannot be listed: " + err.Error()
+			r.disksErr = i18n.Tf("USB disks cannot be listed: %v", err)
 		}
 		r.mu.Unlock()
 		r.invalidate()
@@ -257,7 +258,7 @@ func diskName(d USBDisk) string {
 	if d.Label != "" {
 		return d.Label
 	}
-	return "USB disk " + d.UUID
+	return i18n.Tf("USB disk %s", d.UUID)
 }
 
 func (r *restoreState) chooseWhere(w string) {
@@ -279,13 +280,13 @@ func (r *restoreState) formTarget() (setupTarget, string) {
 	if r.where == whereUSB {
 		d, ok := pickDisk(r.disksNow(), r.disk)
 		if !ok {
-			return setupTarget{}, "Plug in the USB disk with the backup, and choose it."
+			return setupTarget{}, i18n.T("Plug in the USB disk with the backup, and choose it.")
 		}
 		t, err := usbTarget(d, r.folder.Editor.Text())
 		if err != nil {
 			return setupTarget{}, err.Error()
 		}
-		return setupTarget{target: t, name: diskName(d) + " (USB disk)"}, ""
+		return setupTarget{target: t, name: i18n.Tf("%s (USB disk)", diskName(d))}, ""
 	}
 	var t setupTarget
 	var err error
@@ -304,12 +305,12 @@ func (r *restoreState) formTarget() (setupTarget, string) {
 			fp, of := r.hostKey, r.hostKeyOf
 			r.mu.Unlock()
 			if fp == "" || of != hostPort(host, port) {
-				return setupTarget{}, "Connect to the server and confirm its key."
+				return setupTarget{}, i18n.T("Connect to the server and confirm its key.")
 			}
 			t.opt = TargetOptions{HostKey: fp, Port: port}
 		}
 	default:
-		err = errors.New("Choose the kind of server.")
+		err = errors.New(i18n.T("Choose the kind of server."))
 	}
 	if err != nil {
 		return setupTarget{}, err.Error()
@@ -340,7 +341,7 @@ func (r *restoreState) loadSSHKey() {
 		r.loadingKey = false
 		r.sshKey, r.sshKeyErr = key, ""
 		if err != nil {
-			r.sshKeyErr = "Could not read the backup's SSH key: " + errText(err)
+			r.sshKeyErr = i18n.Tf("Could not read the backup's SSH key: %s", errText(err))
 		}
 		r.mu.Unlock()
 		r.invalidate()
@@ -384,9 +385,9 @@ func (r *restoreState) connect() {
 		r.connecting = false
 		switch {
 		case err != nil:
-			r.connectErr = "Could not reach " + host + ": " + errText(err)
+			r.connectErr = i18n.Tf("Could not reach %[1]s: %[2]s", host, errText(err))
 		case len(keys) == 0:
-			r.connectErr = "Could not reach " + host + ": the server sent no key"
+			r.connectErr = i18n.Tf("Could not reach %[1]s: %[2]s", host, i18n.T("the server sent no key"))
 		default:
 			r.scanned, r.scannedChosen, r.scannedOf = keys, 0, hostPort(host, port)
 			r.scannedClicks = make([]widget.Clickable, len(keys))
@@ -455,7 +456,7 @@ func (r *restoreState) list() {
 		case err != nil:
 			r.listErr = errText(err)
 		case len(snaps) == 0:
-			r.listErr = t.name + " holds no backup."
+			r.listErr = i18n.Tf("%s holds no backup.", t.name)
 		default:
 			r.snaps, r.chosen = byHost(snaps), 0
 			r.snapClicks = make([]widget.Clickable, len(snaps))
@@ -520,13 +521,16 @@ func (r *restoreState) chosenSnapshot() Snapshot {
 
 // restoreBody is the confirmation: what comes back, and the restart.
 func restoreBody(s Snapshot, when string) string {
-	from := "The backup of " + when
 	if s.Host != "" {
-		from += " from " + s.Host
+		// TRANSLATORS: %[1]s is a date ("today at 14:05"), %[2]s a computer's name.
+		return i18n.Tf("The backup of %[1]s from %[2]s brings this whole machine back as it was: the users and their passwords, the hostname, "+
+			"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"+
+			"What is on this machine now is replaced. The machine restarts at the end.", when, s.Host)
 	}
-	return from + " brings this whole machine back as it was: the users and their passwords, the hostname, " +
-		"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n" +
-		"What is on this machine now is replaced. The machine restarts at the end."
+	// TRANSLATORS: %s is a date ("today at 14:05").
+	return i18n.Tf("The backup of %s brings this whole machine back as it was: the users and their passwords, the hostname, "+
+		"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"+
+		"What is on this machine now is replaced. The machine restarts at the end.", when)
 }
 
 // askConfirm is the last question. Cancel has the focus.
@@ -540,11 +544,11 @@ func (r *restoreState) askConfirm() {
 	}
 	s := r.chosenSnapshot()
 	u.ask(&question{
-		title: "Restore this machine?",
+		title: i18n.T("Restore this machine?"),
 		body:  restoreBody(s, ago(u.now(), time.Unix(s.Time, 0))),
 		actions: []guikit.Action{
-			{Click: &r.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel"},
-			{Click: &r.yes, Kind: guikit.ButtonDanger, Label: "Restore and restart"},
+			{Click: &r.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")},
+			{Click: &r.yes, Kind: guikit.ButtonDanger, Label: i18n.T("Restore and restart")},
 		},
 		update: func(gtx layout.Context) {
 			if r.cancel.Clicked(gtx) {
@@ -617,7 +621,7 @@ func (r *restoreState) watch(b Backup, every time.Duration) {
 		case err == nil && js.Result == "failed":
 			r.run, r.runMsg = runFailed, js.Detail
 			if r.runMsg == "" {
-				r.runMsg = "The restore failed."
+				r.runMsg = i18n.T("The restore failed.")
 			}
 		default:
 			r.run = runRestarting
@@ -714,7 +718,7 @@ type restoreWherePage struct {
 
 func (p *restoreWherePage) Footer(n nav) (leading, trailing []guikit.Action) {
 	_, problem := p.r.formTarget()
-	return p.footer(n, "Continue", problem != "")
+	return p.footer(n, i18n.T("Continue"), problem != "")
 }
 
 func (p *restoreWherePage) Continue() {
@@ -799,11 +803,11 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &r.usbClick, r.where == whereUSB, "A USB disk", "Plugged in to this computer")
+					return u.ChoiceCard(gtx, &r.usbClick, r.where == whereUSB, i18n.T("A USB disk"), i18n.T("Plugged in to this computer"))
 				}),
 				layout.Rigid(layout.Spacer{Width: 10}.Layout),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &r.remoteClick, r.where == whereRemote, "A remote server", "A REST server, S3 or SFTP")
+					return u.ChoiceCard(gtx, &r.remoteClick, r.where == whereRemote, i18n.T("A remote server"), i18n.T("A REST server, S3 or SFTP"))
 				}))
 		}),
 		guikit.VGap(16),
@@ -812,13 +816,13 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 		on, _ := pickDisk(disks, r.disk)
 		switch {
 		case r.u.hooks.USBDisks == nil:
-			kids = append(kids, r.dim("USB disks cannot be listed: udisks2 is not running."))
+			kids = append(kids, r.dim(i18n.T("USB disks cannot be listed: udisks2 is not running.")))
 		case disksErr != "":
 			kids = append(kids, r.warning(disksErr))
 		case loadingDisks && len(disks) == 0:
-			kids = append(kids, r.dim("Looking for USB disks…"))
+			kids = append(kids, r.dim(i18n.T("Looking for USB disks…")))
 		case len(disks) == 0:
-			kids = append(kids, r.text("Plug in the USB disk with the backup, then click Look again."))
+			kids = append(kids, r.text(i18n.T("Plug in the USB disk with the backup, then click Look again.")))
 		}
 		for i, d := range disks {
 			k, have := r.diskClicks[d.UUID]
@@ -833,8 +837,8 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 				return u.ChoiceCard(gtx, k, on.UUID == d.UUID, diskName(d), d.FSType+" · "+humanSize(d.Size))
 			}))
 		}
-		kids = append(kids, guikit.VGap(10), r.button(&r.rescan, "Look again", !loadingDisks), guikit.VGap(14),
-			r.field("Folder", r.folder, "The folder on the disk where the backup is."))
+		kids = append(kids, guikit.VGap(10), r.button(&r.rescan, i18n.T("Look again"), !loadingDisks), guikit.VGap(14),
+			r.field(i18n.T("Folder"), r.folder, i18n.T("The folder on the disk where the backup is.")))
 	} else {
 		kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			var cs []layout.FlexChild
@@ -843,7 +847,8 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 					cs = append(cs, layout.Rigid(layout.Spacer{Width: 10}.Layout))
 				}
 				cs = append(cs, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &r.remoteClicks[i], r.remote == k.ID, k.Name, k.Sub)
+					// Marked in remoteKinds; "S3" and "SFTP" stay as they are.
+					return u.ChoiceCard(gtx, &r.remoteClicks[i], r.remote == k.ID, i18n.T(k.Name), i18n.T(k.Sub))
 				}))
 			}
 			return layout.Flex{}.Layout(gtx, cs...)
@@ -851,29 +856,29 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 		switch r.remote {
 		case remoteREST:
 			kids = append(kids,
-				r.field("Address", r.restURL, "Such as https://backup.example.com:8000/anna/"),
-				r.field("User", r.restUser, ""),
-				r.field("Password", r.restPw, ""))
+				r.field(i18n.T("Address"), r.restURL, i18n.T("Such as https://backup.example.com:8000/anna/")),
+				r.field(i18n.T("User"), r.restUser, ""),
+				r.field(i18n.T("Password"), r.restPw, ""))
 		case remoteS3:
 			kids = append(kids,
-				r.field("Endpoint", r.s3Endpoint, "Such as https://s3.amazonaws.com"),
-				r.field("Bucket", r.s3Bucket, ""),
-				r.field("Path", r.s3Path, "In the bucket. Optional."),
-				r.field("Access key ID", r.s3Key, ""),
-				r.field("Secret access key", r.s3Secret, ""),
-				r.field("Region", r.s3Region, "Optional."))
+				r.field(i18n.T("Endpoint"), r.s3Endpoint, i18n.T("Such as https://s3.amazonaws.com")),
+				r.field(i18n.T("Bucket"), r.s3Bucket, ""),
+				r.field(i18n.T("Path"), r.s3Path, i18n.T("In the bucket. Optional.")),
+				r.field(i18n.T("Access key ID"), r.s3Key, ""),
+				r.field(i18n.T("Secret access key"), r.s3Secret, ""),
+				r.field(i18n.T("Region"), r.s3Region, i18n.T("Optional.")))
 		case remoteSFTP:
 			kids = append(kids,
-				r.field("User and server", r.sftpUserHost, "Such as anna@nas.local"),
-				r.field("Port", r.sftpPort, ""),
-				r.field("Folder on the server", r.sftpPath, "Such as /srv/backup"))
+				r.field(i18n.T("User and server"), r.sftpUserHost, i18n.T("Such as anna@nas.local")),
+				r.field(i18n.T("Port"), r.sftpPort, ""),
+				r.field(i18n.T("Folder on the server"), r.sftpPath, i18n.T("Such as /srv/backup")))
 			switch {
 			case sshErr != "":
 				kids = append(kids, r.warning(sshErr))
 			case sshKey == "" || loadingKey:
-				kids = append(kids, r.dim("Reading the backup's SSH key…"))
+				kids = append(kids, r.dim(i18n.T("Reading the backup's SSH key…")))
 			default:
-				kids = append(kids, r.text("Add this key to the server's authorized_keys, then Connect."), guikit.VGap(8),
+				kids = append(kids, r.text(i18n.T("Add this key to the server's authorized_keys, then Connect.")), guikit.VGap(8),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return guikit.Panel(gtx, 10, layout.UniformInset(12), func(gtx layout.Context) layout.Dimensions {
 							return u.LabelLines(gtx, guikit.StMono12, guikit.ColText, 1.3, sshKey)
@@ -882,26 +887,27 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Button(gtx, &r.copyClick, guikit.ButtonSecondary, "Copy", true)
+								return u.Button(gtx, &r.copyClick, guikit.ButtonSecondary, i18n.T("Copy"), true)
 							}),
 							layout.Rigid(layout.Spacer{Width: 10}.Layout),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Button(gtx, &r.connectClick, guikit.ButtonSecondary, "Connect", !connecting)
+								return u.Button(gtx, &r.connectClick, guikit.ButtonSecondary, i18n.T("Connect"), !connecting)
 							}))
 					}))
 				if copied {
-					kids = append(kids, guikit.VGap(6), r.dim("Copied."))
+					kids = append(kids, guikit.VGap(6), r.dim(i18n.T("Copied.")))
 				}
 			}
 			if connecting {
-				kids = append(kids, guikit.VGap(8), r.dim("Fetching the server's keys…"))
+				kids = append(kids, guikit.VGap(8), r.dim(i18n.T("Fetching the server's keys…")))
 			}
 			if connectErr != "" {
 				kids = append(kids, guikit.VGap(8), r.warning(connectErr))
 			}
 			if len(scanned) > 0 {
 				kids = append(kids, guikit.VGap(14),
-					r.text(scannedOf+" sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and confirm it only when it is the same."),
+					// TRANSLATORS: %s is the server and its port ("nas.local:22").
+					r.text(i18n.Tf("%s sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and confirm it only when it is the same.", scannedOf)),
 					guikit.VGap(8))
 				for i, k := range scanned {
 					if i >= len(scannedClicks) {
@@ -914,17 +920,17 @@ func (p *restoreWherePage) Body(gtx layout.Context) layout.Dimensions {
 						return u.ChoiceCard(gtx, &scannedClicks[i], i == scannedChosen, k.typ, k.fingerprint)
 					}))
 				}
-				kids = append(kids, guikit.VGap(10), r.button(&r.acceptClick, "This is the server's key", true))
+				kids = append(kids, guikit.VGap(10), r.button(&r.acceptClick, i18n.T("This is the server's key"), true))
 			}
 			if confirmed != "" {
-				kids = append(kids, guikit.VGap(8), r.dim("Key of "+confirmedOf+" confirmed: "+confirmed))
+				kids = append(kids, guikit.VGap(8), r.dim(i18n.Tf("Key of %[1]s confirmed: %[2]s", confirmedOf, confirmed)))
 			}
 		}
 	}
 	if problem != "" {
 		kids = append(kids, guikit.VGap(8), r.dim(problem))
 	}
-	return r.step(gtx, &p.list, "Where is the backup?", "A USB disk, or the server this machine backed up to.", kids...)
+	return r.step(gtx, &p.list, i18n.T("Where is the backup?"), i18n.T("A USB disk, or the server this machine backed up to."), kids...)
 }
 
 // restorePasswordPage is step 2: the backup's password.
@@ -940,7 +946,7 @@ func (p *restorePasswordPage) holding() bool {
 }
 
 func (p *restorePasswordPage) Footer(n nav) (leading, trailing []guikit.Action) {
-	return p.footer(n, "Find the backups", p.holding() || !pwOK(p.r.pw.Editor.Text()))
+	return p.footer(n, i18n.T("Find the backups"), p.holding() || !pwOK(p.r.pw.Editor.Text()))
 }
 
 func (p *restorePasswordPage) Continue() { p.r.list() }
@@ -976,15 +982,15 @@ func (p *restorePasswordPage) Body(gtx layout.Context) layout.Dimensions {
 		gtx.Execute(key.FocusCmd{Tag: &r.pw.Editor})
 	}
 	kids := []layout.FlexChild{
-		r.field("Password", r.pw, "The password shown when the backup was set up. For a key shown by Isotope, spaces and capitals do not matter."),
+		r.field(i18n.T("Password"), r.pw, i18n.T("The password shown when the backup was set up. For a key shown by Isotope, spaces and capitals do not matter.")),
 	}
 	switch {
 	case listing:
-		kids = append(kids, r.dim("Reading the backups in "+name+"…"))
+		kids = append(kids, r.dim(i18n.Tf("Reading the backups in %s…", name)))
 	case listErr != "":
 		kids = append(kids, r.warning(listErr))
 	}
-	return r.step(gtx, &p.list, "The backup's password", "Type the password of the backup in "+name+".", kids...)
+	return r.step(gtx, &p.list, i18n.T("The backup's password"), i18n.Tf("Type the password of the backup in %s.", name), kids...)
 }
 
 // restoreBackupPage is step 3: which backup. Continue asks to confirm.
@@ -994,7 +1000,7 @@ type restoreBackupPage struct {
 }
 
 func (p *restoreBackupPage) Footer(n nav) (leading, trailing []guikit.Action) {
-	return p.footer(n, "Restore…", false)
+	return p.footer(n, i18n.T("Restore…"), false)
 }
 
 func (p *restoreBackupPage) Continue() { p.r.askConfirm() }
@@ -1035,7 +1041,7 @@ func (p *restoreBackupPage) Body(gtx layout.Context) layout.Dimensions {
 		if i > 0 {
 			kids = append(kids, guikit.VGap(8))
 		}
-		sub := "Backup " + s.ID[:min(8, len(s.ID))]
+		sub := i18n.Tf("Backup %s", s.ID[:min(8, len(s.ID))])
 		if s.Size > 0 {
 			sub = humanSize(s.Size) + " · " + sub
 		}
@@ -1043,7 +1049,7 @@ func (p *restoreBackupPage) Body(gtx layout.Context) layout.Dimensions {
 			return u.ChoiceCard(gtx, &clicks[i], i == chosen, snapshotTitle(s, now), sub)
 		}))
 	}
-	return r.step(gtx, &p.list, "Which backup?", "The backups there, by computer, the newest first.", kids...)
+	return r.step(gtx, &p.list, i18n.T("Which backup?"), i18n.T("The backups there, by computer, the newest first."), kids...)
 }
 
 // restoreRunPage is the last step: the restore, then the restart.
@@ -1085,15 +1091,15 @@ func (p *restoreRunPage) Update(layout.Context) {}
 func runTexts(v runView) (title, sub string) {
 	switch v {
 	case runRefused:
-		return "The restore did not start", "Nothing on this machine changed."
+		return i18n.T("The restore did not start"), i18n.T("Nothing on this machine changed.")
 	case runFailed:
-		return "The restore failed", "Parts of the backup may already be on this machine, and it may restart. If it does not, restart it and check your files; to try again, use isotope restore in a terminal."
+		return i18n.T("The restore failed"), i18n.T("Parts of the backup may already be on this machine, and it may restart. If it does not, restart it and check your files; to try again, use isotope restore in a terminal.")
 	case runRestarting:
-		return "Restarting", "The backup is back. The machine restarts now; after the restart it installs the apps and extensions again."
+		return i18n.T("Restarting"), i18n.T("The backup is back. The machine restarts now; after the restart it installs the apps and extensions again.")
 	case runRunning:
-		return "Restoring the backup", "This can take a long time. Leave the computer on: it restarts when the restore is done."
+		return i18n.T("Restoring the backup"), i18n.T("This can take a long time. Leave the computer on: it restarts when the restore is done.")
 	}
-	return "Starting the restore", "Asking the update service…"
+	return i18n.T("Starting the restore"), i18n.T("Asking the update service…")
 }
 
 func (p *restoreRunPage) Body(gtx layout.Context) layout.Dimensions {

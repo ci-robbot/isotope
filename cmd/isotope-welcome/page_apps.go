@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() { pageMakers[PApps] = func(u *UI) page { return &appsPage{basePage: basePage{u}} } }
@@ -193,7 +193,7 @@ func (p *appsPage) Footer(n nav) (leading, trailing []guikit.Action) {
 		leading = append(leading, *n.Back)
 	}
 	if p.unavailable() {
-		return leading, []guikit.Action{*n.Skip, {Click: &p.retry, Kind: guikit.ButtonPrimary, Label: "Try again"}}
+		return leading, []guikit.Action{*n.Skip, {Click: &p.retry, Kind: guikit.ButtonPrimary, Label: i18n.T("Try again")}}
 	}
 	return leading, []guikit.Action{*n.Skip, *n.Continue}
 }
@@ -328,14 +328,14 @@ func (p *appsPage) Body(gtx layout.Context) layout.Dimensions {
 		case u.installing():
 			return p.progress(gtx)
 		case p.status == appsOffline:
-			return p.problem(gtx, "No network connection.",
-				"Connect to a network and try again. If you skip, Isotope reminds you at your next login.")
+			return p.problem(gtx, i18n.T("No network connection."),
+				i18n.T("Connect to a network and try again. If you skip, Isotope reminds you at your next login."))
 		case p.status == appsNoFlathub:
-			return p.problem(gtx, "Flathub is not ready.",
-				"The Flathub remote is missing or disabled for your user. Try again later. If you skip, Isotope reminds you at your next login.")
+			return p.problem(gtx, i18n.T("Flathub is not ready."),
+				i18n.T("The Flathub remote is missing or disabled for your user. Try again later. If you skip, Isotope reminds you at your next login."))
 		case p.status == appsChecking:
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Install apps", "Checking the network and Flathub…")))
+				layout.Rigid(u.Heading(i18n.T("Install apps"), i18n.T("Checking the network and Flathub…"))))
 		}
 		return p.choices(gtx)
 	})
@@ -344,7 +344,7 @@ func (p *appsPage) Body(gtx layout.Context) layout.Dimensions {
 func (p *appsPage) problem(gtx layout.Context, what, how string) layout.Dimensions {
 	u := p.u
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Install apps", "Isotope includes no browser. Its apps come from Flathub.")),
+		layout.Rigid(u.Heading(i18n.T("Install apps"), i18n.T("Isotope includes no browser. Its apps come from Flathub."))),
 		guikit.VGap(22),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, what+" "+how) }),
 	)
@@ -355,7 +355,7 @@ func (p *appsPage) progress(gtx layout.Context) layout.Dimensions {
 	u := p.u
 	gtx.Execute(op.InvalidateCmd{At: u.now().Add(40 * time.Millisecond)})
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Installing apps", "The apps install in the background. You can go on; Isotope tells you when they are done.")),
+		layout.Rigid(u.Heading(i18n.T("Installing apps"), i18n.T("The apps install in the background. You can go on; Isotope tells you when they are done."))),
 		guikit.VGap(26),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.installProgress(gtx) }),
 	)
@@ -370,9 +370,11 @@ func (u *UI) installProgress(gtx layout.Context) layout.Dimensions {
 		f = float32(done) / float32(total)
 	}
 	name := u.installer.Label(cur)
-	line := fmt.Sprintf("Installing %s (%d of %d)", name, min(done+1, total), total)
+	// TRANSLATORS: %[1]s is an app's name; then its place in the batch and the number of apps.
+	line := i18n.Tf("Installing %[1]s (%[2]d of %[3]d)", name, min(done+1, total), total)
 	if cur == "" {
-		line = fmt.Sprintf("%d of %d installed", done, total)
+		// TRANSLATORS: apps installed of the batch's apps.
+		line = i18n.Tf("%[1]d of %[2]d installed", done, total)
 	}
 	phase := float32(u.now().UnixMilli()%1200) / 1200
 	gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 520))
@@ -394,13 +396,13 @@ func (u *UI) installProgress(gtx layout.Context) layout.Dimensions {
 func (p *appsPage) choices(gtx layout.Context) layout.Dimensions {
 	u := p.u
 	kids := []layout.FlexChild{
-		layout.Rigid(u.Heading("Install apps", "Isotope includes no browser. These apps come from Flathub and install for your user only.")),
+		layout.Rigid(u.Heading(i18n.T("Install apps"), i18n.T("Isotope includes no browser. These apps come from Flathub and install for your user only."))),
 		guikit.VGap(20),
 	}
 	if u.installer != nil {
 		if _, failed, fin := u.installer.Result(); fin && len(failed) > 0 {
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Warning(gtx, "Could not install "+list(u.shorts(failed))+". They are ticked: Continue tries again.")
+				return u.Warning(gtx, i18n.Tf("Could not install %s. They are ticked: Continue tries again.", list(u.shorts(failed))))
 			}), guikit.VGap(16))
 		}
 	}
@@ -418,9 +420,9 @@ func (p *appsPage) choices(gtx layout.Context) layout.Dimensions {
 // column is one group: its heading and a card per app.
 func (p *appsPage) column(gtx layout.Context, group string) layout.Dimensions {
 	u := p.u
-	title := "Essentials"
+	title := i18n.T("Essentials")
 	if group == "browser" {
-		title = "Browser (pick one)"
+		title = i18n.T("Browser (pick one)")
 	}
 	kids := []layout.FlexChild{
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -439,7 +441,7 @@ func (p *appsPage) column(gtx layout.Context, group string) layout.Dimensions {
 	}
 	if group == "browser" {
 		add(func(gtx layout.Context) layout.Dimensions {
-			return p.cardOf(gtx, &p.none, !p.browserChosen(), true, false, "No browser")
+			return p.cardOf(gtx, &p.none, !p.browserChosen(), true, false, i18n.T("No browser"))
 		})
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)
@@ -479,7 +481,8 @@ func (p *appsPage) cardOf(gtx layout.Context, c *widget.Clickable, on, radio, in
 					return layout.Dimensions{}
 				}
 				return layout.Inset{Left: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StTiny, guikit.ColDim, "Installed")
+					// TRANSLATORS: an app that is already installed.
+					return u.Label(gtx, guikit.StTiny, guikit.ColDim, i18n.X("app", "Installed"))
 				})
 			}),
 		)

@@ -18,6 +18,8 @@ import (
 	"syscall"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Block is one udisks2 block device: a whole disk, a partition, or the
@@ -260,7 +262,7 @@ func (h hostView) nameOf(majmin string) (string, error) {
 
 func (h hostView) rootDevices() ([]string, error) {
 	fail := func(err error) ([]string, error) {
-		return []string{everyDevice}, fmt.Errorf("cannot tell which disk holds the system: %w", err)
+		return []string{everyDevice}, fmt.Errorf(i18n.T("cannot tell which disk holds the system: %w"), err)
 	}
 	b, err := h.mountinfo()
 	if err != nil {
@@ -611,7 +613,8 @@ func (h hostView) mountedAbove(devs []string) (string, error) {
 	sort.Strings(names)
 	for _, n := range names {
 		if p, ok := on[n]; ok {
-			return "/dev/" + n + " at " + p, nil
+			// TRANSLATORS: %[1]s is a device, %[2]s the folder it is mounted on.
+			return i18n.Tf("%[1]s at %[2]s", "/dev/"+n, p), nil
 		}
 	}
 	return "", nil

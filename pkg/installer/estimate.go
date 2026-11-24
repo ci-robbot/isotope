@@ -1,9 +1,10 @@
 package installer
 
 import (
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // stepWeights are the expected shares of the install's time each of Steps
@@ -76,9 +77,9 @@ func RemainingText(d time.Duration) string {
 	m := int((d + 30*time.Second) / time.Minute)
 	switch {
 	case d < 45*time.Second:
-		return "Less than a minute left"
+		return i18n.T("Less than a minute left")
 	case m <= 1:
-		return "About a minute left"
+		return i18n.T("About a minute left")
 	}
-	return "About " + strconv.Itoa(m) + " minutes left"
+	return i18n.Nf("About %d minute left", "About %d minutes left", m, m)
 }

@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // trayView is everything the tray shows at one moment.
@@ -33,9 +35,7 @@ const trayRetry = 30 * time.Second
 
 // unavailableText is the tooltip and menu line while the service cannot be
 // reached.
-const unavailableText = "Update service not available"
-
-var errServiceUnavailable = errors.New("the update service is not available")
+var unavailableText = i18n.Mark("Update service not available")
 
 // trayApp is the tray without the tray library: it follows the daemon,
 // checks on a schedule, announces new releases and acts on menu clicks. All
@@ -107,7 +107,7 @@ func (a *trayApp) run(ctx context.Context) {
 				a.log.Printf("the update service is not available: %v", err)
 			}
 			a.down = true
-			a.ui.Show(trayView{Icon: "error", Tooltip: unavailableText, Menu: []MenuItem{{ID: "status", Label: unavailableText}}})
+			a.ui.Show(trayView{Icon: "error", Tooltip: i18n.T(unavailableText), Menu: []MenuItem{{ID: "status", Label: i18n.T(unavailableText)}}})
 		}
 		a.idle(ctx, a.retry)
 	}
@@ -255,11 +255,11 @@ func (a *trayApp) announceStaged(st Status) {
 	if stagedNotified(st.Staged) {
 		return
 	}
-	body := "Isotope " + st.Staged + " was installed in the background. It starts at the next restart."
+	body := i18n.Tf("Isotope %s was installed in the background. It starts at the next restart.", st.Staged)
 	if a.noIcon {
-		body += " Run `isotope reboot` to restart now."
+		body = i18n.Tf("Isotope %s was installed in the background. It starts at the next restart. Run `isotope reboot` to restart now.", st.Staged)
 	}
-	err := a.notifyAction("Restart to finish the update", body, "Restart", func() {
+	err := a.notifyAction(i18n.T("Restart to finish the update"), body, i18n.T("Restart"), func() {
 		select {
 		case a.clicks <- "restart":
 		default:
@@ -299,7 +299,7 @@ func (a *trayApp) click(c daemonClient, id string) {
 	switch {
 	case toApp && a.system != nil:
 		if err = a.system(page); err != nil {
-			err = fmt.Errorf("could not open Isotope System: %w", err)
+			err = fmt.Errorf(i18n.T("could not open Isotope System: %w"), err)
 		}
 	case id == "system":
 		// Only offered when the app is installed (BuildMenu's caller).
@@ -319,7 +319,7 @@ func (a *trayApp) click(c daemonClient, id string) {
 	case id == "recovery":
 		err = a.openMenu("Recovery key")
 	case c == nil && (id == "cancel" || id == "restart" || id == "rollback"):
-		err = errServiceUnavailable
+		err = errors.New(i18n.T("the update service is not available"))
 	case id == "cancel":
 		err = c.Cancel()
 	case id == "restart":
@@ -335,7 +335,7 @@ func (a *trayApp) click(c daemonClient, id string) {
 		if id == "rollback" {
 			msg = describeRollbackError(err, a.st.Pending)
 		}
-		if nerr := a.notify("Isotope update", msg); nerr != nil {
+		if nerr := a.notify(i18n.T("Isotope update"), msg); nerr != nil {
 			a.log.Printf("showing a notification: %v", nerr)
 		}
 	}
@@ -362,11 +362,15 @@ func announce(c daemonClient, rel Release, st Status, noIcon bool, notify func(s
 	if err != nil {
 		return fmt.Errorf("%s is out but not installable yet: %w", st.Latest, err)
 	}
-	body := fmt.Sprintf("You are on %s. Install it from the update icon's menu in the panel.", orUnknown(st.Installed))
-	if noIcon {
-		body = fmt.Sprintf("You are on %s. Run `isotope upgrade` in a terminal to install it.", orUnknown(st.Installed))
+	installed := st.Installed
+	if installed == "" {
+		installed = i18n.T("unknown")
 	}
-	if err := notify(fmt.Sprintf("Isotope %s is available", st.Latest), body); err != nil {
+	body := i18n.Tf("You are on %s. Install it from the update icon's menu in the panel.", installed)
+	if noIcon {
+		body = i18n.Tf("You are on %s. Run `isotope upgrade` in a terminal to install it.", installed)
+	}
+	if err := notify(i18n.Tf("Isotope %s is available", st.Latest), body); err != nil {
 		return err
 	}
 	if err := markNotified(st.Latest); err != nil {
@@ -410,7 +414,7 @@ func terminalArgv(self string, args []string, logOut io.Writer) ([]string, error
 			return append(append(append([]string{p}, t.pre...), self), args...), nil
 		}
 	}
-	return nil, fmt.Errorf("no terminal to open: %s sets no TERMINAL_EXEC, and neither foot nor xterm is installed", sessionFile())
+	return nil, fmt.Errorf(i18n.T("no terminal to open: %s sets no TERMINAL_EXEC, and neither foot nor xterm is installed"), sessionFile())
 }
 
 // openIsotopeMenu runs `isotope-menu ENTRY` and does not wait for it.

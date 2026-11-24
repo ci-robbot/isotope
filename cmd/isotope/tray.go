@@ -8,6 +8,8 @@ import (
 
 	"fyne.io/systray"
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // cmdTray runs the session's update icon: a StatusNotifierItem that follows
@@ -19,6 +21,9 @@ func cmdTray(args []string, stderr io.Writer) int {
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
+	// The tray speaks the session's language; the rest of the CLI stays
+	// English.
+	i18n.Init()
 	return runTray(*noIcon, stderr)
 }
 
@@ -66,7 +71,7 @@ func runTray(noIcon bool, stderr io.Writer) int {
 	// whenever a watcher takes the name, so a bar that starts after the tray
 	// still shows it.
 	systray.Run(func() {
-		systray.SetTitle("Isotope updates")
+		systray.SetTitle(i18n.T("Isotope updates"))
 		ui := newSystrayUI(app.clicks)
 		app.ui = ui
 		if conn, err := dbus.ConnectSessionBus(); err == nil {

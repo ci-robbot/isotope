@@ -11,6 +11,7 @@ import (
 
 	"github.com/kairos-community/isotope/pkg/fwupd"
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The FIRMWARE section of the Updates page: fwupd's updatable devices, the
@@ -51,7 +52,7 @@ func (f *fwupdFirmware) Updates() ([]fwupd.Update, error) { return f.c.Updates()
 var progressEvery = 500 * time.Millisecond
 
 func (f *fwupdFirmware) Install(ctx context.Context, up fwupd.Update, progress func(string)) error {
-	progress("Downloading " + up.Release.Version + "…")
+	progress(i18n.Tf("Downloading %s…", up.Release.Version))
 	cab, err := fwupd.Download(ctx, f.http, up.Release, "")
 	if err != nil {
 		return err
@@ -122,10 +123,10 @@ func firmwareViewOf(in firmwareInput) firmwareView {
 	v.Writing = in.Working != ""
 	switch {
 	case !in.Loaded:
-		v.Note = "Looking for devices…"
+		v.Note = i18n.T("Looking for devices…")
 		return v
 	case in.Missing:
-		v.Note = "Firmware updates are not available on this system."
+		v.Note = i18n.T("Firmware updates are not available on this system.")
 		return v
 	case in.Err != "":
 		v.Err = in.Err
@@ -141,7 +142,7 @@ func firmwareViewOf(in firmwareInput) firmwareView {
 			continue
 		}
 		r := firmwareRow{ID: d.ID, Title: d.Name}
-		version := "Version " + orUnknown(d.Version)
+		version := i18n.Tf("Version %s", orUnknown(d.Version))
 		if d.Vendor != "" {
 			r.Sub = d.Vendor + " · " + version
 		} else {
@@ -150,37 +151,36 @@ func firmwareViewOf(in firmwareInput) firmwareView {
 		rel, has := ups[d.ID]
 		switch {
 		case d.NeedsReboot():
-			r.Sub += ". The update is ready: restart to finish it."
+			r.Sub = i18n.Tf("%s. The update is ready: restart to finish it.", r.Sub)
 			v.Restart = true
 		case has:
 			anyUpdate = true
-			r.Sub += ". Version " + rel.Version + " is available"
 			if rel.Summary != "" {
-				r.Sub += ": " + rel.Summary
+				r.Sub = i18n.Tf("%[1]s. Version %[2]s is available: %[3]s", r.Sub, rel.Version, rel.Summary)
 			} else {
-				r.Sub += "."
+				r.Sub = i18n.Tf("%[1]s. Version %[2]s is available.", r.Sub, rel.Version)
 			}
-			r.Action = "Update"
+			r.Action = i18n.T("Update")
 			r.Enabled = in.Admin && in.Working == ""
 		default:
-			r.Sub += ", up to date."
+			r.Sub = i18n.Tf("%s, up to date.", r.Sub)
 		}
 		if d.UpdateState == fwupd.StateFailed && d.UpdateError != "" && !d.NeedsReboot() {
-			r.Sub += " The last update failed: " + d.UpdateError
+			r.Sub += " " + i18n.Tf("The last update failed: %s", d.UpdateError)
 		}
 		if in.Working == d.ID {
 			r.Progress = in.Line
 			if r.Progress == "" {
-				r.Progress = "Starting…"
+				r.Progress = i18n.T("Starting…")
 			}
 		}
 		v.Rows = append(v.Rows, r)
 	}
 	switch {
 	case len(v.Rows) == 0:
-		v.Note = "No device in this computer gets firmware updates through the LVFS."
+		v.Note = i18n.T("No device in this computer gets firmware updates through the LVFS.")
 	case anyUpdate && !in.Admin:
-		v.Note = "Only an administrator (a member of the admin group) can update firmware."
+		v.Note = i18n.T("Only an administrator (a member of the admin group) can update firmware.")
 	}
 	return v
 }
@@ -224,7 +224,7 @@ func (p *updatesPage) loadFirmware() {
 		case fwupd.Missing(err):
 			in.Missing = true
 		case err != nil:
-			in.Err = "Could not read the firmware updates: " + fwupd.Message(err)
+			in.Err = i18n.Tf("Could not read the firmware updates: %s", fwupd.Message(err))
 		default:
 			in.Devices, in.Updates = devs, ups
 		}
@@ -257,9 +257,9 @@ func (p *updatesPage) updateFirmware(id string) {
 	if up.Device.ID == "" || busy {
 		return
 	}
-	u.ask("Update "+up.Device.Name+"?", firmwareConfirmText(up),
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Update", Kind: guikit.ButtonPrimary, Do: func() { p.runFirmware(up) }})
+	u.ask(i18n.Tf("Update %s?", up.Device.Name), firmwareConfirmText(up),
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Update"), Kind: guikit.ButtonPrimary, Do: func() { p.runFirmware(up) }})
 }
 
 // firmwareAuthText is the page's answer when polkit refused fwupd. The
@@ -268,13 +268,13 @@ func (p *updatesPage) updateFirmware(id string) {
 // settings) asks for the password, and sway, i3 and niri have no polkit
 // agent to show that prompt, while fwupdmgr in a terminal has one
 // (pkttyagent).
-const firmwareAuthText = "fwupd refused this. Installing an update needs an administrator (a member of the admin group); a downgrade or a firmware setting also needs the administrator password, which this window cannot ask for. Run fwupdmgr in a terminal (for example: fwupdmgr downgrade): it asks for the password there."
+var firmwareAuthText = i18n.Mark("fwupd refused this. Installing an update needs an administrator (a member of the admin group); a downgrade or a firmware setting also needs the administrator password, which this window cannot ask for. Run fwupdmgr in a terminal (for example: fwupdmgr downgrade): it asks for the password there.")
 
 // firmwareErrorText says why fwupd failed.
 func firmwareErrorText(err error) string {
 	switch fwupd.ErrorName(err) {
 	case "org.freedesktop.fwupd.AuthFailed", "org.freedesktop.fwupd.PermissionDenied":
-		return firmwareAuthText
+		return i18n.T(firmwareAuthText)
 	}
 	return fwupd.Message(err)
 }
@@ -285,13 +285,13 @@ func firmwareErrorText(err error) string {
 // shim is not signed, so the computer then refuses to start Isotope until
 // Secure Boot is off again. Trusted Boot images have the capsule plugin
 // off, so this only shows on the standard edition.
-const secureBootWarning = "Some firmware updates turn Secure Boot back on. If the computer then does not start Isotope, turn Secure Boot off in the firmware setup."
+var secureBootWarning = i18n.Mark("Some firmware updates turn Secure Boot back on. If the computer then does not start Isotope, turn Secure Boot off in the firmware setup.")
 
 // firmwareConfirmText is the body of the update's confirmation.
 func firmwareConfirmText(up fwupd.Update) string {
-	s := "Version " + up.Release.Version + " is downloaded from the LVFS and written to the device. Keep the computer plugged in, and do not unplug the device until it is done. Some updates finish at the next restart."
+	s := i18n.Tf("Version %s is downloaded from the LVFS and written to the device. Keep the computer plugged in, and do not unplug the device until it is done. Some updates finish at the next restart.", up.Release.Version)
 	if up.Device.Plugin == "uefi_capsule" {
-		s += "\n\n" + secureBootWarning
+		s += "\n\n" + i18n.T(secureBootWarning)
 	}
 	return s
 }
@@ -319,7 +319,7 @@ func (p *updatesPage) runFirmware(up fwupd.Update) {
 		u.firmwareWriting = false
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Could not update "+up.Device.Name, firmwareErrorText(err))
+			u.tell(i18n.Tf("Could not update %s", up.Device.Name), firmwareErrorText(err))
 			p.loadFirmware()
 			return
 		}
@@ -338,14 +338,14 @@ func (p *updatesPage) runFirmware(up fwupd.Update) {
 // askFirmwareRestart offers the restart a staged update waits for. It goes
 // through the page's own restart (isotope-updated's Reboot).
 func (p *updatesPage) askFirmwareRestart(name string) {
-	title := "Restart to finish the firmware update?"
-	body := "The update is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off."
+	title := i18n.T("Restart to finish the firmware update?")
+	body := i18n.T("The update is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off.")
 	if name != "" {
-		body = "The update of " + name + " is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off."
+		body = i18n.Tf("The update of %s is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off.", name)
 	}
 	p.u.ask(title, body,
-		choice{Label: "Later", Kind: guikit.ButtonSecondary},
-		choice{Label: "Restart", Kind: guikit.ButtonPrimary, Do: p.u.reboot})
+		choice{Label: i18n.T("Later"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Restart"), Kind: guikit.ButtonPrimary, Do: p.u.reboot})
 }
 
 // updateFirmwareClicks handles the section's buttons.
@@ -389,9 +389,9 @@ func (p *updatesPage) firmwareSection() layout.Widget {
 	u.mu.Unlock()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps("FIRMWARE"))
+		c.add(u.caps(i18n.T("FIRMWARE")))
 		c.gap(4)
-		c.add(u.dim("Firmware of this computer and its devices, from the Linux Vendor Firmware Service (LVFS)."))
+		c.add(u.dim(i18n.T("Firmware of this computer and its devices, from the Linux Vendor Firmware Service (LVFS).")))
 		c.gap(10)
 		if v.Err != "" {
 			c.add(u.errorBox(v.Err))
@@ -419,8 +419,8 @@ func (p *updatesPage) firmwareSection() layout.Widget {
 			}
 			if v.Restart {
 				rows.gap(12)
-				rows.add(u.row("Restart to finish the firmware update", "The firmware is written while the computer starts.",
-					u.buttons(guikit.Action{Click: &p.firm.restart, Kind: guikit.ButtonPrimary, Label: "Restart…", Disabled: !u.sys.Admin || v.Writing})))
+				rows.add(u.row(i18n.T("Restart to finish the firmware update"), i18n.T("The firmware is written while the computer starts."),
+					u.buttons(guikit.Action{Click: &p.firm.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || v.Writing})))
 			}
 			return rows.layout(gtx)
 		}))

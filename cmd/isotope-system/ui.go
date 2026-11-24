@@ -12,6 +12,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Hooks are the UI's ways out: main wires them to the session, the tests
@@ -260,7 +261,7 @@ func (u *UI) follow() {
 	d := u.hooks.Daemon
 	if d == nil {
 		u.mu.Lock()
-		u.stErr = "The update service (isotope-updated) is not available: the system bus cannot be reached."
+		u.stErr = i18n.T("The update service (isotope-updated) is not available: the system bus cannot be reached.")
 		u.mu.Unlock()
 		return
 	}
@@ -460,7 +461,7 @@ func (u *UI) log(lines []string, n int) layout.Widget {
 			})
 		}
 		if len(lines) == 0 {
-			c.add(u.dim("Waiting for the first lines…"))
+			c.add(u.dim(i18n.T("Waiting for the first lines…")))
 		}
 		return c.layout(gtx)
 	})

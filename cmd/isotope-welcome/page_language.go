@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -20,7 +21,7 @@ func init() {
 }
 
 // askAnAdmin is the page's words for a user who may not change the language.
-const askAnAdmin = "Ask an administrator to change the language"
+var askAnAdmin = i18n.Mark("Ask an administrator to change the language")
 
 // languagePage is a searchable list of the system's UTF-8 locales. The
 // language is the system's, for every user; isotope-updated sets it, under
@@ -60,7 +61,7 @@ func (p *languagePage) load() {
 		list, err = Locales(r)
 	}
 	if err != nil {
-		p.loadErr = "Could not list the languages: " + err.Error()
+		p.loadErr = i18n.Tf("Could not list the languages: %v", err)
 		return
 	}
 	p.loadErr = ""
@@ -122,7 +123,7 @@ func (p *languagePage) readOnlyLocked() bool {
 func (p *languagePage) wait() { p.wg.Wait() }
 
 // notice is the line under a read-only page's current language.
-func (p *languagePage) notice() string { return askAnAdmin }
+func (p *languagePage) notice() string { return i18n.T(askAnAdmin) }
 
 func (p *languagePage) Update(gtx layout.Context) {
 	u := p.u
@@ -297,28 +298,28 @@ func (p *languagePage) Body(gtx layout.Context) layout.Dimensions {
 	case p.loadErr != "":
 		return u.scrolled(gtx, &p.scroll, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Language", "Isotope could not list the languages.")),
+				layout.Rigid(u.Heading(i18n.T("Language"), i18n.T("Isotope could not list the languages."))),
 				guikit.VGap(22),
 				layout.Rigid(col(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, p.loadErr) })),
 				guikit.VGap(16),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Button(gtx, &p.retry, guikit.ButtonSecondary, "Try again", true)
+					return u.Button(gtx, &p.retry, guikit.ButtonSecondary, i18n.T("Try again"), true)
 				}))
 		})
 	case p.readOnly():
 		name := LocaleName(u.hooks.SystemLocale)
 		if u.hooks.SystemLocale == "" {
-			name = "Not set"
+			name = i18n.T("Not set")
 		}
 		return u.scrolled(gtx, &p.scroll, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Language", "The system language applies to every user of this computer.")),
+				layout.Rigid(u.Heading(i18n.T("Language"), i18n.T("The system language applies to every user of this computer."))),
 				guikit.VGap(22),
 				layout.Rigid(col(func(gtx layout.Context) layout.Dimensions {
 					return guikit.Panel(gtx, 10, layout.Inset{Top: 14, Bottom: 14, Left: 16, Right: 16}, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Current language")
+								return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Current language"))
 							}),
 							guikit.VGap(4),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -334,10 +335,10 @@ func (p *languagePage) Body(gtx layout.Context) layout.Dimensions {
 	}
 	return guikit.Pad(gtx, func(gtx layout.Context) layout.Dimensions {
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Language", "The system language applies to every user of this computer. You can change it later in the Isotope menu.")),
+			layout.Rigid(u.Heading(i18n.T("Language"), i18n.T("The system language applies to every user of this computer. You can change it later in the Isotope menu."))),
 			guikit.VGap(16),
 			layout.Rigid(col(func(gtx layout.Context) layout.Dimensions {
-				return u.Labelled(gtx, "Search languages", nil, "", func(gtx layout.Context) layout.Dimensions {
+				return u.Labelled(gtx, i18n.T("Search languages"), nil, "", func(gtx layout.Context) layout.Dimensions {
 					return u.Input(gtx, p.search, guikit.StBody, 38, "", nil)
 				})
 			})),
@@ -348,7 +349,7 @@ func (p *languagePage) Body(gtx layout.Context) layout.Dimensions {
 			kids = append(kids, layout.Rigid(col(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, applyErr) })), guikit.VGap(10))
 		case busy:
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Setting the language…")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Setting the language…"))
 			}), guikit.VGap(10))
 		}
 		kids = append(kids, layout.Flexed(1, col(func(gtx layout.Context) layout.Dimensions {

@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Disks is udisks2, as far as the Disks page uses it. Every method blocks
@@ -63,7 +65,7 @@ func (u *udisks) Drives() ([]Drive, error) {
 	err := u.conn.Object(udisksName, udisksPath).
 		Call("org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&objs)
 	if err != nil {
-		return nil, fmt.Errorf("listing the disks: %w", err)
+		return nil, fmt.Errorf(i18n.T("listing the disks: %w"), err)
 	}
 	ds := drivesFrom(objs)
 	fillUsage(ds)
@@ -97,7 +99,7 @@ var mbrType = map[string]string{"exfat": "0x07", "ext4": "0x83"}
 // check), another filesystem than exFAT or ext4.
 func formatCheck(ds []Drive, drive, fsType string, roots []string, above func(devs []string) (string, error)) (whole Block, err error) {
 	if mbrType[fsType] == "" {
-		return Block{}, fmt.Errorf("cannot format as %q, only as exfat or ext4", fsType)
+		return Block{}, fmt.Errorf(i18n.T("cannot format as %q, only as exfat or ext4"), fsType)
 	}
 	for _, d := range ds {
 		if d.ID != drive {
@@ -105,32 +107,32 @@ func formatCheck(ds []Drive, drive, fsType string, roots []string, above func(de
 		}
 		switch driveReason(d, roots) {
 		case reasonIsotope:
-			return Block{}, errors.New("this is Isotope's system disk, it cannot be formatted")
+			return Block{}, errors.New(i18n.T("this is Isotope's system disk, it cannot be formatted"))
 		case reasonInternal:
-			return Block{}, errors.New("this is an internal disk, it cannot be formatted here")
+			return Block{}, errors.New(i18n.T("this is an internal disk, it cannot be formatted here"))
 		}
 		var devs []string
 		for _, b := range d.Blocks {
 			if len(b.MountPoints) > 0 {
-				return Block{}, fmt.Errorf("%s is mounted: unmount it first", b.Device)
+				return Block{}, fmt.Errorf(i18n.T("%s is mounted: unmount it first"), b.Device)
 			}
 			devs = append(devs, b.Device)
 		}
 		if above != nil {
 			what, err := above(devs)
 			if err != nil {
-				return Block{}, fmt.Errorf("cannot tell what is mounted on the disk: %w", err)
+				return Block{}, fmt.Errorf(i18n.T("cannot tell what is mounted on the disk: %w"), err)
 			}
 			if what != "" {
-				return Block{}, fmt.Errorf("%s is mounted: unmount it first", what)
+				return Block{}, fmt.Errorf(i18n.T("%s is mounted: unmount it first"), what)
 			}
 		}
 		if len(d.Blocks) == 0 || d.Blocks[0].IsPartition || d.Blocks[0].cleartext {
-			return Block{}, errors.New("the disk has no block device")
+			return Block{}, errors.New(i18n.T("the disk has no block device"))
 		}
 		return d.Blocks[0], nil
 	}
-	return Block{}, errors.New("the disk is not connected")
+	return Block{}, errors.New(i18n.T("the disk is not connected"))
 }
 
 // The partition Format makes starts at 1 MiB, the alignment every
@@ -158,7 +160,7 @@ func (u *udisks) Format(drive, fsType, label string) error {
 	defer cancel()
 	o := u.conn.Object(udisksName, dbus.ObjectPath(whole.ID))
 	if err := o.CallWithContext(ctx, udisksBlock+".Format", 0, "dos", noOptions).Err; err != nil {
-		return fmt.Errorf("making the partition table: %w", err)
+		return fmt.Errorf(i18n.T("making the partition table: %w"), err)
 	}
 	var part dbus.ObjectPath
 	err = o.CallWithContext(ctx, udisksPTable+".CreatePartitionAndFormat", 0,
@@ -170,7 +172,7 @@ func (u *udisks) Format(drive, fsType, label string) error {
 			"take-ownership": dbus.MakeVariant(true),
 		}).Store(&part)
 	if err != nil {
-		return fmt.Errorf("making the %s filesystem: %w", fsType, err)
+		return fmt.Errorf(i18n.T("making the %[1]s filesystem: %[2]w"), fsType, err)
 	}
 	return nil
 }

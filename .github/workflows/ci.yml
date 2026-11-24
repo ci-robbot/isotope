@@ -133,6 +133,13 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends \
             libwayland-dev libxkbcommon-dev libegl-dev libgles-dev libegl-mesa0 libgl1-mesa-dri
 
+      # The translation runtime (pkg/i18n: PO parser, plural rules, format
+      # verbs) and the catalog tool (tools/i18n), pure Go.
+      - name: i18n tests
+        run: |
+          test -z "$(gofmt -l pkg/i18n tools/i18n)"
+          go vet ./pkg/i18n/... ./tools/i18n/... && go test ./pkg/i18n/... ./tools/i18n/...
+
       # The shared look of the graphical tools (pkg/guikit): pure Go, no GPU.
       - name: guikit tests
         run: |
@@ -352,6 +359,14 @@ jobs:
       # release.yml.
       - name: Apps files and wiring
         run: test/apps/check-apps.sh --repo
+
+      # Translations: the catalogs are current with the source and translate
+      # every message in Italian and Spanish (go run ./tools/i18n check), each
+      # program picks the session's language, the session gets LANG, the Go
+      # stages copy pkg/i18n. The images are checked in desktop-images.yml and
+      # release.yml.
+      - name: Translation catalogs and wiring
+        run: test/i18n/check-i18n.sh --repo
 
       # Smart cards: the extension's GnuPG and build pins against the
       # image's, the image's gnupg stage (card support, no scdaemon), the

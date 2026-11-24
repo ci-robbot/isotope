@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() { pageMakers[PReady] = func(u *UI) page { return &readyPage{basePage: basePage{u}} } }
@@ -29,7 +30,7 @@ func (p *readyPage) Footer(n nav) (leading, trailing []guikit.Action) {
 		leading = append(leading, *n.Back)
 	}
 	fin := *n.Continue
-	fin.Label = "Finish"
+	fin.Label = i18n.T("Finish")
 	return leading, []guikit.Action{fin}
 }
 
@@ -59,7 +60,7 @@ func (p *readyPage) logOut() {
 	u.stamp(u.endStamp())
 	if u.hooks.Logout != nil {
 		if err := u.hooks.Logout(); err != nil {
-			p.logoutErr = "Could not log out: " + err.Error() + ". Log out from the power menu instead."
+			p.logoutErr = i18n.Tf("Could not log out: %v. Log out from the power menu instead.", err)
 			return
 		}
 	}
@@ -80,7 +81,7 @@ func (p *readyPage) Body(gtx layout.Context) layout.Dimensions {
 	o := u.flow.Outcome
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Isotope is ready", "You can open this again from the Isotope menu (Super+Esc → Welcome).")),
+			layout.Rigid(u.Heading(i18n.T("Isotope is ready"), i18n.T("You can open this again from the Isotope menu (Super+Esc → Welcome)."))),
 			guikit.VGap(22),
 		}
 		if o.LanguageChanged != "" {
@@ -96,11 +97,11 @@ func (p *readyPage) Body(gtx layout.Context) layout.Dimensions {
 		if len(o.AppsFailed) > 0 {
 			kids = append(kids, guikit.VGap(16),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Warning(gtx, "Could not install "+list(o.AppsFailed)+".")
+					return u.Warning(gtx, i18n.Tf("Could not install %s.", list(o.AppsFailed)))
 				}))
 			if slices.Contains(u.flow.Pages(), PApps) {
 				kids = append(kids, guikit.VGap(10), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Link(gtx, &p.retry, "Try again")
+					return u.Link(gtx, &p.retry, i18n.T("Try again"))
 				}))
 			}
 		}
@@ -120,20 +121,20 @@ func (p *readyPage) languageBox(gtx layout.Context) layout.Dimensions {
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Label(gtx, guikit.StCard, guikit.ColText, "Log out to use "+u.flow.Outcome.LanguageChanged)
+								return u.Label(gtx, guikit.StCard, guikit.ColText, i18n.Tf("Log out to use %s", u.flow.Outcome.LanguageChanged))
 							}),
 							guikit.VGap(4),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Label(gtx, guikit.StSmall, guikit.ColDim, "The desktop and apps change language when you sign in again.")
+								return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("The desktop and apps change language when you sign in again."))
 							}),
 						)
 					}),
 					layout.Rigid(layout.Spacer{Width: 16}.Layout),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						if p.logoutBlocked() {
-							return u.Button(gtx, &p.logout, guikit.ButtonSecondary, "Installing apps…", false)
+							return u.Button(gtx, &p.logout, guikit.ButtonSecondary, i18n.T("Installing apps…"), false)
 						}
-						return u.Button(gtx, &p.logout, guikit.ButtonSecondary, "Log out", true)
+						return u.Button(gtx, &p.logout, guikit.ButtonSecondary, i18n.T("Log out"), true)
 					}),
 				)
 			})
@@ -158,16 +159,18 @@ func (p *readyPage) summary(gtx layout.Context) layout.Dimensions {
 		if !summarised(id) {
 			continue
 		}
-		state, done := "Unchanged", false
+		state, done := i18n.T("Unchanged"), false
 		switch {
 		case slices.Contains(o.Applied, id):
-			state, done = "Set", true
+			// TRANSLATORS: the state of a setting on the last page: it was set.
+			state, done = i18n.X("state", "Set"), true
 		case slices.Contains(o.Skipped, id):
-			state = "Skipped"
+			state = i18n.T("Skipped")
 		}
 		detail := ""
 		if id == PApps && len(o.AppsInstalled) > 0 {
-			detail = "Installed " + list(o.AppsInstalled)
+			// TRANSLATORS: %s is a list of app names ("Firefox, GIMP and VLC").
+			detail = i18n.Tf("Installed %s", list(o.AppsInstalled))
 		}
 		if len(kids) > 0 {
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -230,5 +233,6 @@ func list(names []string) string {
 	if len(names) < 2 {
 		return strings.Join(names, "")
 	}
-	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+	// TRANSLATORS: the end of a list of names: "Firefox, GIMP" and "VLC".
+	return i18n.Tf("%[1]s and %[2]s", strings.Join(names[:len(names)-1], ", "), names[len(names)-1])
 }

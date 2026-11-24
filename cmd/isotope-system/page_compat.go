@@ -8,6 +8,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -71,7 +72,7 @@ func (p *compatPage) load() {
 	u, g := p.u, p.u.hooks.Glibc
 	u.mu.Lock()
 	if g == nil {
-		p.s.loadErr = "The isotope command cannot be reached, so this page cannot show the glibc environment."
+		p.s.loadErr = i18n.T("The isotope command cannot be reached, so this page cannot show the glibc environment.")
 	}
 	working := p.s.working
 	u.mu.Unlock()
@@ -83,7 +84,7 @@ func (p *compatPage) load() {
 		u.mu.Lock()
 		defer u.mu.Unlock()
 		if err != nil {
-			p.s.loadErr = "Could not read the glibc environment: " + err.Error()
+			p.s.loadErr = i18n.Tf("Could not read the glibc environment: %s", err.Error())
 			return
 		}
 		p.s.st, p.s.loaded, p.s.loadErr = st, true, ""
@@ -111,7 +112,7 @@ func (p *compatPage) toggleAuto() {
 		u.mu.Lock()
 		p.s.autoBusy = false
 		if err != nil {
-			p.s.fail = "Could not change the setting: " + err.Error()
+			p.s.fail = i18n.Tf("Could not change the setting: %s", err.Error())
 		}
 		if serr == nil {
 			p.s.st = st
@@ -134,11 +135,10 @@ func (p *compatPage) pullNow() {
 // askReset confirms, then resets.
 func (p *compatPage) askReset() {
 	st := p.state().st
-	p.u.ask("Reset the glibc environment?",
-		"Isotope removes the container isotope-glibc and creates it again from "+imageName(st.Image)+
-			". What you installed in it is lost, and so are the unpacked AppImages; your home folder is not touched. This can take a few minutes.",
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Reset", Kind: guikit.ButtonDanger, Do: func() {
+	p.u.ask(i18n.T("Reset the glibc environment?"),
+		i18n.Tf("Isotope removes the container isotope-glibc and creates it again from %s. What you installed in it is lost, and so are the unpacked AppImages; your home folder is not touched. This can take a few minutes.", imageName(st.Image)),
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Reset"), Kind: guikit.ButtonDanger, Do: func() {
 			p.run(jobReset, func(g Glibc, line func(string)) error { return g.Reset(line) })
 		}})
 }
@@ -212,22 +212,22 @@ type compatView struct {
 func compatViewOf(st GlibcStatus) compatView {
 	switch {
 	case st.Error != "":
-		return compatView{Title: "Not available", Sub: st.Error}
+		return compatView{Title: i18n.T("Not available"), Sub: st.Error}
 	case st.Busy:
-		return compatView{Title: "Being set up",
-			Sub: "Another window or a program's first run is setting up or resetting it. Open this page again to see the result."}
+		return compatView{Title: i18n.T("Being set up"),
+			Sub: i18n.T("Another window or a program's first run is setting up or resetting it. Open this page again to see the result.")}
 	case !st.Exists:
-		return compatView{Title: "Not set up yet", Setup: true,
-			Sub: "Isotope sets it up the first time you start such a program, or now. It downloads " + imageName(st.Image) + " and can take a few minutes."}
+		return compatView{Title: i18n.T("Not set up yet"), Setup: true,
+			Sub: i18n.Tf("Isotope sets it up the first time you start such a program, or now. It downloads %s and can take a few minutes.", imageName(st.Image))}
 	}
 	sub := imageName(st.Image)
 	if st.SizeBytes > 0 {
-		sub += " · " + humanSize(uint64(st.SizeBytes)) + " on disk"
+		sub += " · " + i18n.Tf("%s on disk", humanSize(uint64(st.SizeBytes)))
 	}
-	v := compatView{Title: "Ready", Sub: sub, Reset: true}
+	v := compatView{Title: i18n.T("Ready"), Sub: sub, Reset: true}
 	if !st.ImagePresent {
 		v.Pull = true
-		v.Note = "The " + imageFamily(st.Image) + " image is not on this computer. The container works without it; downloading it now means a reset does not have to."
+		v.Note = i18n.Tf("The %s image is not on this computer. The container works without it; downloading it now means a reset does not have to.", imageFamily(st.Image))
 	}
 	return v
 }
@@ -256,23 +256,23 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 	s := p.state()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Compatibility", "Run programs made for other Linux systems on Isotope."))
+		c.add(u.Heading(i18n.T("Compatibility"), i18n.T("Run programs made for other Linux systems on Isotope.")))
 		c.gap(24)
-		c.add(u.caps("GLIBC COMPATIBILITY"))
+		c.add(u.caps(i18n.T("GLIBC COMPATIBILITY")))
 		c.gap(10)
-		c.add(u.para("Isotope is built on musl. Most Linux programs you download, and AppImages, are built for glibc instead; Isotope runs them in a container for your user, an Ubuntu system that shares your home folder."))
+		c.add(u.para(i18n.T("Isotope is built on musl. Most Linux programs you download, and AppImages, are built for glibc instead; Isotope runs them in a container for your user, an Ubuntu system that shares your home folder.")))
 		c.gap(14)
 		if !s.loaded {
 			if s.loadErr != "" {
 				c.add(u.errorBox(s.loadErr))
 			} else {
-				c.add(u.spinnerLine("Reading the glibc environment…"))
+				c.add(u.spinnerLine(i18n.T("Reading the glibc environment…")))
 			}
 			return c.layout(gtx)
 		}
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return u.CheckCard(gtx, &p.auto, s.st.Auto, "Run programs built for other Linux systems automatically",
-				"When you start a program built for glibc, it runs in the container. Turned off, it does not start; `isotope glibc run` still runs it.")
+			return u.CheckCard(gtx, &p.auto, s.st.Auto, i18n.T("Run programs built for other Linux systems automatically"),
+				i18n.T("When you start a program built for glibc, it runs in the container. Turned off, it does not start; `isotope glibc run` still runs it."))
 		})
 		c.gap(14)
 		v := compatViewOf(s.st)
@@ -282,15 +282,15 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 			busy := s.working != ""
 			switch {
 			case v.Setup:
-				right = u.buttons(guikit.Action{Click: &p.setup, Kind: guikit.ButtonPrimary, Label: "Set up now", Disabled: busy})
+				right = u.buttons(guikit.Action{Click: &p.setup, Kind: guikit.ButtonPrimary, Label: i18n.T("Set up now"), Disabled: busy})
 			case v.Reset:
-				acts := []guikit.Action{{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: "Reset…", Disabled: busy}}
+				acts := []guikit.Action{{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: i18n.T("Reset…"), Disabled: busy}}
 				if v.Pull {
-					acts = append([]guikit.Action{{Click: &p.pull, Kind: guikit.ButtonPrimary, Label: "Download now", Disabled: busy}}, acts...)
+					acts = append([]guikit.Action{{Click: &p.pull, Kind: guikit.ButtonPrimary, Label: i18n.T("Download now"), Disabled: busy}}, acts...)
 				}
 				right = u.buttons(acts...)
 			}
-			rows.add(u.row("Glibc environment", v.Title, right))
+			rows.add(u.row(i18n.T("Glibc environment"), v.Title, right))
 			rows.gap(6)
 			rows.add(u.dim(v.Sub))
 			if v.Note != "" {
@@ -299,12 +299,12 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 			}
 			if busy {
 				rows.gap(14)
-				txt := "Setting up the glibc environment… This can take a few minutes; it goes on if you close this window."
+				txt := i18n.T("Setting up the glibc environment… This can take a few minutes; it goes on if you close this window.")
 				if s.working == jobPull {
-					txt = "Downloading the image… This can take a few minutes; it goes on if you close this window."
+					txt = i18n.T("Downloading the image… This can take a few minutes; it goes on if you close this window.")
 				}
 				if s.working == jobReset {
-					txt = "Resetting the glibc environment… This can take a few minutes; it goes on if you close this window."
+					txt = i18n.T("Resetting the glibc environment… This can take a few minutes; it goes on if you close this window.")
 				}
 				rows.add(u.spinnerLine(txt))
 				rows.gap(10)

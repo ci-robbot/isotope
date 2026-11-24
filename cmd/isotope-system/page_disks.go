@@ -9,12 +9,13 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/shares"
 )
 
 func init() { pageMakers[PageDisks] = func(u *UI) pageView { return newDisksPage(u) } }
 
-const onlyAdminFormat = "Only an administrator can format a disk."
+var onlyAdminFormat = i18n.Mark("Only an administrator can format a disk.")
 
 // disksPage: the drives udisks2 sees, with their partitions and the space
 // used. A removable disk may be mounted, unmounted, ejected and powered
@@ -120,7 +121,7 @@ func (p *disksPage) load() {
 		u.mu.Lock()
 		defer u.mu.Unlock()
 		if err != nil {
-			p.loadErr = "Could not read the disks: " + err.Error()
+			p.loadErr = i18n.Tf("Could not read the disks: %s", err.Error())
 			return
 		}
 		p.drives, p.rootDevs, p.loaded, p.loadErr = list, roots, true, ""
@@ -168,9 +169,9 @@ func (p *disksPage) changeable(d Drive) bool {
 func (p *disksPage) reasonText(d Drive) string {
 	switch driveReason(d, p.rootsNow()) {
 	case reasonIsotope:
-		return "Isotope's system disk"
+		return i18n.T("Isotope's system disk")
 	case reasonInternal:
-		return "Internal disk"
+		return i18n.T("Internal disk")
 	}
 	return ""
 }
@@ -181,7 +182,7 @@ func (p *disksPage) formatNote() string {
 	if p.u.sys.Admin {
 		return ""
 	}
-	return onlyAdminFormat
+	return i18n.T(onlyAdminFormat)
 }
 
 // ---- the calls ----
@@ -224,7 +225,7 @@ func unmountAll(ds Disks, drive string) error {
 				continue
 			}
 			if err := ds.Unmount(b.ID); err != nil {
-				return fmt.Errorf("cannot unmount %s: %w", b.Device, err)
+				return fmt.Errorf(i18n.T("cannot unmount %s: %w"), b.Device, err)
 			}
 		}
 	}
@@ -232,16 +233,16 @@ func unmountAll(ds Disks, drive string) error {
 }
 
 func (p *disksPage) mount(block string) {
-	p.do("Mounting…", "Could not mount the disk", func(ds Disks) error { _, err := ds.Mount(block); return err })
+	p.do(i18n.T("Mounting…"), i18n.T("Could not mount the disk"), func(ds Disks) error { _, err := ds.Mount(block); return err })
 }
 
 func (p *disksPage) unmount(block string) {
-	p.do("Unmounting…", "Could not unmount the disk", func(ds Disks) error { return ds.Unmount(block) })
+	p.do(i18n.T("Unmounting…"), i18n.T("Could not unmount the disk"), func(ds Disks) error { return ds.Unmount(block) })
 }
 
 // eject and powerOff unmount the disk first, as a file manager does.
 func (p *disksPage) eject(drive string) {
-	p.do("Ejecting…", "Could not eject the disk", func(ds Disks) error {
+	p.do(i18n.T("Ejecting…"), i18n.T("Could not eject the disk"), func(ds Disks) error {
 		if err := unmountAll(ds, drive); err != nil {
 			return err
 		}
@@ -250,7 +251,7 @@ func (p *disksPage) eject(drive string) {
 }
 
 func (p *disksPage) powerOff(drive string) {
-	p.do("Powering off…", "Could not power off the disk", func(ds Disks) error {
+	p.do(i18n.T("Powering off…"), i18n.T("Could not power off the disk"), func(ds Disks) error {
 		if err := unmountAll(ds, drive); err != nil {
 			return err
 		}
@@ -271,9 +272,9 @@ func labelFits(fs, label string) bool {
 
 func labelRule(fs string) string {
 	if fs == "ext4" {
-		return "An ext4 label has at most 16 bytes (fewer with accented letters)."
+		return i18n.T("An ext4 label has at most 16 bytes (fewer with accented letters).")
 	}
-	return "An exFAT label has at most 11 characters."
+	return i18n.T("An exFAT label has at most 11 characters.")
 }
 
 func (f *formatForm) valid() bool { return labelFits(f.fs, f.label.Editor.Text()) }
@@ -289,7 +290,7 @@ func driveName(d Drive) string {
 	if n := strings.TrimSpace(d.Vendor + " " + d.Model); n != "" {
 		return n
 	}
-	return "Disk"
+	return i18n.T("Disk")
 }
 
 // wholeDevice is the device of the whole disk (/dev/sdb).
@@ -314,14 +315,14 @@ func contents(d Drive) []Block {
 
 func fsName(b Block) string {
 	if b.FSType == "" {
-		return "no filesystem"
+		return i18n.T("no filesystem")
 	}
 	return b.FSType
 }
 
 func labelOf(b Block) string {
 	if b.Label == "" {
-		return "No label"
+		return i18n.T("No label")
 	}
 	return b.Label
 }
@@ -330,7 +331,7 @@ func labelOf(b Block) string {
 // another.
 func usedOf(b Block) string {
 	if len(b.MountPoints) > 0 {
-		return humanSize(b.Used) + " used of " + humanSize(b.Size)
+		return i18n.Tf("%[1]s used of %[2]s", humanSize(b.Used), humanSize(b.Size))
 	}
 	return humanSize(b.Size)
 }
@@ -345,9 +346,9 @@ func formatBody(d Drive) string {
 		mounted = mounted || len(b.MountPoints) > 0
 	}
 	if mounted {
-		lines = append(lines, "It is unmounted first.")
+		lines = append(lines, i18n.T("It is unmounted first."))
 	}
-	lines = append(lines, "Everything on this disk will be erased. This cannot be undone.")
+	lines = append(lines, i18n.T("Everything on this disk will be erased. This cannot be undone."))
 	return strings.Join(lines, "\n")
 }
 
@@ -360,12 +361,12 @@ func (p *disksPage) openFormat(drive string) {
 	f := &p.fmtForm
 	f.clear()
 	name := driveName(d)
-	u.askForm("Erase and format "+name+"?", formatBody(d), p.formatFormView, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: f.clear},
-		choice{Label: "Erase and format", Kind: guikit.ButtonDanger, Enabled: f.valid, Do: func() {
+	u.askForm(i18n.Tf("Erase and format %s?", name), formatBody(d), p.formatFormView, 0,
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: f.clear},
+		choice{Label: i18n.T("Erase and format"), Kind: guikit.ButtonDanger, Enabled: f.valid, Do: func() {
 			fs, label := f.fs, f.label.Editor.Text()
 			f.clear()
-			p.do("Formatting "+name+"…", "Could not format "+name, func(ds Disks) error {
+			p.do(i18n.Tf("Formatting %s…", name), i18n.Tf("Could not format %s", name), func(ds Disks) error {
 				if err := unmountAll(ds, drive); err != nil {
 					return err
 				}
@@ -392,15 +393,15 @@ func (p *disksPage) formatFormView(gtx layout.Context) layout.Dimensions {
 	}
 	var c col
 	c.add(func(gtx layout.Context) layout.Dimensions {
-		return u.ChoiceCard(gtx, &f.exfat, f.fs == "exfat", "exFAT", "Works on Windows, macOS and Linux")
+		return u.ChoiceCard(gtx, &f.exfat, f.fs == "exfat", "exFAT", i18n.T("Works on Windows, macOS and Linux"))
 	})
 	c.gap(10)
 	c.add(func(gtx layout.Context) layout.Dimensions {
-		return u.ChoiceCard(gtx, &f.ext4, f.fs == "ext4", "ext4", "Linux only")
+		return u.ChoiceCard(gtx, &f.ext4, f.fs == "ext4", "ext4", i18n.T("Linux only"))
 	})
 	c.gap(14)
 	c.add(func(gtx layout.Context) layout.Dimensions {
-		return fieldsCol(gtx, u, fieldRow{title: "Label", f: f.label})
+		return fieldsCol(gtx, u, fieldRow{title: i18n.T("Label"), f: f.label})
 	})
 	return c.layout(gtx)
 }
@@ -434,13 +435,13 @@ func (p *disksPage) driveActions(d Drive) []guikit.Action {
 	k := p.dClicks(d.ID)
 	var as []guikit.Action
 	if d.Ejectable {
-		as = append(as, guikit.Action{Click: &k.eject, Kind: guikit.ButtonSecondary, Label: "Eject"})
+		as = append(as, guikit.Action{Click: &k.eject, Kind: guikit.ButtonSecondary, Label: i18n.T("Eject")})
 	}
 	if d.CanPowerOff {
-		as = append(as, guikit.Action{Click: &k.powerOff, Kind: guikit.ButtonSecondary, Label: "Power off"})
+		as = append(as, guikit.Action{Click: &k.powerOff, Kind: guikit.ButtonSecondary, Label: i18n.T("Power off")})
 	}
 	if p.u.sys.Admin {
-		as = append(as, guikit.Action{Click: &k.format, Kind: guikit.ButtonGhost, Label: "Format…"})
+		as = append(as, guikit.Action{Click: &k.format, Kind: guikit.ButtonGhost, Label: i18n.T("Format…")})
 	}
 	return as
 }
@@ -452,9 +453,9 @@ func (p *disksPage) blockActions(d Drive, b Block) []guikit.Action {
 	}
 	k := p.bClicks(b.ID)
 	if len(b.MountPoints) > 0 {
-		return []guikit.Action{{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: "Unmount"}}
+		return []guikit.Action{{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: i18n.T("Unmount")}}
 	}
-	return []guikit.Action{{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: "Mount"}}
+	return []guikit.Action{{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: i18n.T("Mount")}}
 }
 
 func (p *disksPage) Update(gtx layout.Context) {
@@ -492,7 +493,7 @@ func (p *disksPage) Body(gtx layout.Context) layout.Dimensions {
 	sharesW := p.sharesSection()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Disks", "The disks of this computer, the ones plugged in, and network shares: space used, mount, eject and format USB disks, connect to a server."))
+		c.add(u.Heading(i18n.T("Disks"), i18n.T("The disks of this computer, the ones plugged in, and network shares: space used, mount, eject and format USB disks, connect to a server.")))
 		c.gap(20)
 		p.drivesPart(&c)
 		c.gap(28)
@@ -510,17 +511,17 @@ func (p *disksPage) drivesPart(c *col) {
 	drives := p.snapshot()
 	switch {
 	case u.hooks.Disks == nil:
-		c.add(u.errorBox("The disk service (udisks2) is not available."))
+		c.add(u.errorBox(i18n.T("The disk service (udisks2) is not available.")))
 		return
 	case loadErr != "":
 		c.add(u.errorBox(loadErr))
 		return
 	case !loaded:
-		c.add(u.spinnerLine("Reading the disks…"))
+		c.add(u.spinnerLine(i18n.T("Reading the disks…")))
 		return
 	}
 	if rootsErr != "" {
-		c.add(u.errorBox(rootsErr + ". Every disk is shown read-only."))
+		c.add(u.errorBox(i18n.Tf("%s. Every disk is shown read-only.", rootsErr)))
 		c.gap(14)
 	}
 	if working != "" {
@@ -528,7 +529,7 @@ func (p *disksPage) drivesPart(c *col) {
 		c.gap(14)
 	}
 	if len(drives) == 0 {
-		c.add(u.dim("No disks."))
+		c.add(u.dim(i18n.T("No disks.")))
 	}
 	for i, d := range drives {
 		if i > 0 {
@@ -545,7 +546,7 @@ func (p *disksPage) driveCard(d Drive) layout.Widget {
 		sub += " · " + dev
 	}
 	if d.Removable {
-		sub += " · Removable"
+		sub += " · " + i18n.T("Removable")
 	}
 	reason := p.reasonText(d)
 	as := p.driveActions(d)
@@ -601,7 +602,7 @@ func (p *disksPage) blockRow(d Drive, b Block) layout.Widget {
 func humanSize(n uint64) string {
 	units := []string{"kB", "MB", "GB", "TB", "PB"}
 	if n < 1000 {
-		return fmt.Sprintf("%d bytes", n)
+		return i18n.Tf("%d bytes", n)
 	}
 	v := float64(n) / 1000
 	i := 0

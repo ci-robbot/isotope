@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/printing"
 )
 
@@ -26,7 +26,7 @@ func init() {
 // usually says it has them all much sooner.
 const findTime = 8 * time.Second
 
-const printersOnlyAdmin = "Only an administrator can add or remove printers or choose the default. Anyone can print a test page."
+var printersOnlyAdmin = i18n.Mark("Only an administrator can add or remove printers or choose the default. Anyone can print a test page.")
 
 // printersPage: the CUPS queues with their state, the test page, the
 // default and Remove; and the driverless printers Avahi finds, with Add.
@@ -68,17 +68,17 @@ func printerState(p Printer) string {
 	var s string
 	switch p.State {
 	case printerProcessing:
-		s = "Printing"
+		s = i18n.X("printer", "Printing")
 	case printerStopped:
-		s = "Stopped"
+		s = i18n.X("printer", "Stopped")
 	default:
-		s = "Ready"
+		s = i18n.X("printer", "Ready")
 	}
 	if p.StateMessage != "" && p.State != printerIdle {
 		s += ": " + p.StateMessage
 	}
 	if !p.Accepting {
-		s += " · not accepting jobs"
+		s += " · " + i18n.T("not accepting jobs")
 	}
 	return s
 }
@@ -100,11 +100,11 @@ func printerRows(ps []Printer, canChange bool) []printerRow {
 	for _, p := range ps {
 		auto := ""
 		if p.Automatic() {
-			auto = "Set up automatically while it is plugged in"
+			auto = i18n.T("Set up automatically while it is plugged in")
 		}
 		r := printerRow{P: p, Title: p.Title(), Sub: joinDots(p.Model, p.Location, printerState(p), auto)}
 		if p.Default {
-			r.Badge = "Default"
+			r.Badge = i18n.X("printer", "Default")
 		}
 		r.CanTest = p.Accepting
 		r.CanDefault = canChange && !p.Default
@@ -162,16 +162,16 @@ func sameAddress(uri, addr string, port uint16) bool {
 func foundRows(fs []FoundPrinter, ps []Printer, canChange bool) []foundRow {
 	var rows []foundRow
 	for _, f := range fs {
-		where := "On the network"
+		where := i18n.T("On the network")
 		if f.USB {
 			where = "USB"
 		}
 		r := foundRow{F: f, Title: f.Service, Sub: joinDots(f.Model, f.Location, where)}
 		switch {
 		case hasQueue(f, ps):
-			r.Status = "Added"
+			r.Status = i18n.X("printer", "Added")
 		case !f.Driverless:
-			r.Status = "Needs a driver"
+			r.Status = i18n.T("Needs a driver")
 		default:
 			r.CanAdd = canChange
 		}
@@ -295,7 +295,7 @@ func (p *printersPage) add(f FoundPrinter) {
 	if printing.CheckText(loc) != nil {
 		loc = ""
 	}
-	p.change("Adding "+f.Service+"…", "Could not add "+f.Service,
+	p.change(i18n.Tf("Adding %s…", f.Service), i18n.Tf("Could not add %s", f.Service),
 		func(d Daemon) error { return d.AddPrinter(name, f.URI, info, loc) })
 }
 
@@ -307,10 +307,10 @@ func (p *printersPage) testPage(pr Printer) {
 	u.async(func() {
 		id, err := cups.PrintTestPage(pr.Name)
 		if err != nil {
-			u.tell("Could not print a test page", err.Error())
+			u.tell(i18n.T("Could not print a test page"), err.Error())
 			return
 		}
-		u.tell("Test page sent", fmt.Sprintf("Job %d is on its way to %s.", id, pr.Title()))
+		u.tell(i18n.T("Test page sent"), i18n.Tf("Job %d is on its way to %s.", id, pr.Title()))
 	})
 }
 
@@ -363,14 +363,14 @@ func (p *printersPage) Update(gtx layout.Context) {
 			p.testPage(r.P)
 		}
 		if k.def.Clicked(gtx) && r.CanDefault {
-			p.change("Making "+r.Title+" the default…", "Could not change the default printer",
+			p.change(i18n.Tf("Making %s the default…", r.Title), i18n.T("Could not change the default printer"),
 				func(d Daemon) error { return d.SetDefaultPrinter(r.P.Name) })
 		}
 		if k.rm.Clicked(gtx) && r.CanRemove {
-			u.ask("Remove "+r.Title+"?", "The printer is removed for every user of this computer, with the jobs waiting for it. It can be added again from the printers found below.",
-				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-				choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
-					p.change("Removing "+r.Title+"…", "Could not remove "+r.Title,
+			u.ask(i18n.Tf("Remove %s?", r.Title), i18n.T("The printer is removed for every user of this computer, with the jobs waiting for it. It can be added again from the printers found below."),
+				choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+				choice{Label: i18n.T("Remove"), Kind: guikit.ButtonDanger, Do: func() {
+					p.change(i18n.Tf("Removing %s…", r.Title), i18n.Tf("Could not remove %s", r.Title),
 						func(d Daemon) error { return d.RemovePrinter(r.P.Name) })
 				}})
 		}
@@ -390,32 +390,32 @@ func (p *printersPage) Body(gtx layout.Context) layout.Dimensions {
 	busy := s.working != ""
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Printers", "Printers that work without a driver: on the network (IPP Everywhere, AirPrint, Mopria) or on USB."))
+		c.add(u.Heading(i18n.T("Printers"), i18n.T("Printers that work without a driver: on the network (IPP Everywhere, AirPrint, Mopria) or on USB.")))
 		c.gap(20)
 		if u.hooks.Printing == nil {
-			c.add(u.errorBox("Printing is not available on this system."))
+			c.add(u.errorBox(i18n.T("Printing is not available on this system.")))
 			return c.layout(gtx)
 		}
 		if !u.sys.Admin {
-			c.add(u.notice(printersOnlyAdmin))
+			c.add(u.notice(i18n.T(printersOnlyAdmin)))
 			c.gap(14)
 		} else if u.hooks.Daemon == nil {
-			c.add(u.errorBox("The update service (isotope-updated) is not available: printers cannot be added or removed."))
+			c.add(u.errorBox(i18n.T("The update service (isotope-updated) is not available: printers cannot be added or removed.")))
 			c.gap(14)
 		}
 		if busy {
 			c.add(u.spinnerLine(s.working))
 			c.gap(14)
 		}
-		c.add(u.caps("PRINTERS"))
+		c.add(u.caps(i18n.T("PRINTERS")))
 		c.gap(10)
 		switch {
 		case s.loadErr != "":
 			c.add(u.errorBox(capitalize(s.loadErr) + "."))
 		case !s.loaded:
-			c.add(u.spinnerLine("Reading the printers…"))
+			c.add(u.spinnerLine(i18n.T("Reading the printers…")))
 		case len(s.printers) == 0:
-			c.add(u.panel(u.dim("No printer yet. Add one of the printers found below.")))
+			c.add(u.panel(u.dim(i18n.T("No printer yet. Add one of the printers found below."))))
 		default:
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -429,25 +429,25 @@ func (p *printersPage) Body(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		c.gap(24)
-		c.add(u.caps("FOUND ON THE NETWORK AND USB"))
+		c.add(u.caps(i18n.T("FOUND ON THE NETWORK AND USB")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col
 			found := foundRows(s.found, s.printers, p.canChange())
 			switch {
 			case s.searching:
-				rows.add(u.spinnerLine("Searching for printers…"))
+				rows.add(u.spinnerLine(i18n.T("Searching for printers…")))
 			case s.findErr != "":
 				rows.add(u.errorBox(capitalize(s.findErr) + "."))
 			case s.searched && len(found) == 0:
-				rows.add(u.dim("No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again."))
+				rows.add(u.dim(i18n.T("No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again.")))
 			}
 			for _, r := range found {
 				rows.gap(12)
 				rows.add(p.foundRow(r, busy))
 			}
 			rows.gap(12)
-			rows.add(u.buttons(guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: "Search again", Disabled: s.searching || busy}))
+			rows.add(u.buttons(guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: i18n.T("Search again"), Disabled: s.searching || busy}))
 			return rows.layout(gtx)
 		}))
 		return c.layout(gtx)
@@ -459,13 +459,13 @@ func (p *printersPage) printerRow(r printerRow, busy bool) layout.Widget {
 	k := p.clicks(r.P.Name)
 	var as []guikit.Action
 	if r.CanTest {
-		as = append(as, guikit.Action{Click: &k.test, Kind: guikit.ButtonSecondary, Label: "Print test page", Disabled: busy})
+		as = append(as, guikit.Action{Click: &k.test, Kind: guikit.ButtonSecondary, Label: i18n.T("Print test page"), Disabled: busy})
 	}
 	if r.CanDefault {
-		as = append(as, guikit.Action{Click: &k.def, Kind: guikit.ButtonSecondary, Label: "Make default", Disabled: busy})
+		as = append(as, guikit.Action{Click: &k.def, Kind: guikit.ButtonSecondary, Label: i18n.T("Make default"), Disabled: busy})
 	}
 	if r.CanRemove {
-		as = append(as, guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: "Remove…", Disabled: busy})
+		as = append(as, guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: busy})
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -493,7 +493,7 @@ func (p *printersPage) foundRow(r foundRow, busy bool) layout.Widget {
 			return u.Label(gtx, guikit.StSmall, guikit.ColDim, status)
 		}
 	case r.CanAdd:
-		right = u.buttons(guikit.Action{Click: p.addClick(r.F.URI), Kind: guikit.ButtonPrimary, Label: "Add", Disabled: busy})
+		right = u.buttons(guikit.Action{Click: p.addClick(r.F.URI), Kind: guikit.ButtonPrimary, Label: i18n.T("Add"), Disabled: busy})
 	}
 	return u.row(r.Title, r.Sub, right)
 }

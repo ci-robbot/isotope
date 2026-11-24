@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // GithubKeysURL is where a GitHub user's public SSH keys are, the file
@@ -70,13 +71,11 @@ func CountGithubKeys(ctx context.Context, c HTTPDoer, name string) (int, error) 
 func GithubKeysText(n int, err error) (string, bool) {
 	switch {
 	case errors.Is(err, ErrGithubNoUser):
-		return "No GitHub user of that name. You can go on without keys.", false
+		return i18n.T("No GitHub user of that name. You can go on without keys."), false
 	case err != nil:
-		return "Could not reach GitHub to check the name. You can go on.", false
+		return i18n.T("Could not reach GitHub to check the name. You can go on."), false
 	case n == 0:
-		return "No keys for that name. You can go on without keys.", false
-	case n == 1:
-		return "1 key found", true
+		return i18n.T("No keys for that name. You can go on without keys."), false
 	}
-	return strconv.Itoa(n) + " keys found", true
+	return i18n.Nf("%d key found", "%d keys found", n, n), true
 }

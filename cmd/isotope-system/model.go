@@ -5,19 +5,28 @@ package main
 // CLI's and the tray's rules (cmd/isotope/menu.go, cmd/isotope/main.go).
 
 import (
-	"fmt"
+	"errors"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/isorelease"
 )
 
 // lineLabels are the words for the image lines (cmd/isotope/policy.go).
 var lineLabels = map[string]string{
-	isorelease.GPUFull: "hardware (Intel and AMD GPU drivers, firmware)",
-	isorelease.GPUVM:   "virtual machine (no GPU drivers or firmware)",
-	isorelease.LineUKI: "Trusted Boot (signed UKI, hardware image)",
+	isorelease.GPUFull: i18n.Mark("hardware (Intel and AMD GPU drivers, firmware)"),
+	isorelease.GPUVM:   i18n.Mark("virtual machine (no GPU drivers or firmware)"),
+	isorelease.LineUKI: i18n.Mark("Trusted Boot (signed UKI, hardware image)"),
+}
+
+// lineLabel is the translated words for an image line, "" for an unknown one.
+func lineLabel(line string) string {
+	if l := lineLabels[line]; l != "" {
+		return i18n.T(l)
+	}
+	return ""
 }
 
 // flavorNames are the desktops, in the order the page shows them.
@@ -38,37 +47,37 @@ func flavorName(id string) string {
 func headline(st Status) string {
 	switch st.State {
 	case StateUnmanaged:
-		return "This system was not installed from an Isotope release"
+		return i18n.T("This system was not installed from an Isotope release")
 	case StateChecking:
-		return "Checking for updates…"
+		return i18n.T("Checking for updates…")
 	case StateUpToDate:
 		if st.Pin != "" {
-			return "Isotope " + st.Installed + " (pinned)"
+			return i18n.Tf("Isotope %s (pinned)", st.Installed)
 		}
-		return "Isotope " + st.Installed + " is up to date"
+		return i18n.Tf("Isotope %s is up to date", st.Installed)
 	case StateUpdateAvailable:
-		return "Isotope " + st.Latest + " is available"
+		return i18n.Tf("Isotope %s is available", st.Latest)
 	case StateInspecting:
-		return "Checking the image…"
+		return i18n.T("Checking the image…")
 	case StateApplying:
-		return "Installing the update…"
+		return i18n.T("Installing the update…")
 	case StateExtension:
-		return "Changing system extensions…"
+		return i18n.T("Changing system extensions…")
 	case StateBackup:
-		return "Backing up this machine…"
+		return i18n.T("Backing up this machine…")
 	case StateRebootPending:
 		switch st.Pending {
 		case pendingFailed:
-			return "The update failed; restart before trying again"
+			return i18n.T("The update failed; restart before trying again")
 		case pendingStarted:
-			return "The update was interrupted; restart before trying again"
+			return i18n.T("The update was interrupted; restart before trying again")
 		}
 		if st.Staged != "" {
-			return "Version " + st.Staged + " is installed and starts at the next restart"
+			return i18n.Tf("Version %s is installed and starts at the next restart", st.Staged)
 		}
-		return "The update is installed; restart to use it"
+		return i18n.T("The update is installed; restart to use it")
 	case StateError:
-		return "The last check failed"
+		return i18n.T("The last check failed")
 	}
 	if st.Installed == "" {
 		return "Isotope"
@@ -131,7 +140,7 @@ func OfferFor(st Status, tags []string, line string) UpdateOffer {
 // ReleaseRef and LineRef compute it.
 func releaseRef(rel isorelease.Release, flavor, line, tag string) (string, error) {
 	if rel.ImageRepo == "" {
-		return "", fmt.Errorf("the release file names no image repository")
+		return "", errors.New(i18n.T("the release file names no image repository"))
 	}
 	return rel.ImageRepo + ":" + isorelease.LineTag(flavor, line, tag), nil
 }
@@ -152,21 +161,21 @@ func newestTag(tags []string) string {
 func InspectReport(info InspectInfo) []string {
 	repo, _, _ := strings.Cut(info.Ref, "@")
 	lines := []string{
-		"Image: " + repo,
-		"Digest: " + info.Digest,
-		"Flavor: " + orUnknown(info.Flavor),
-		"Version: " + orUnknown(info.Version),
+		i18n.Tf("Image: %s", repo),
+		i18n.Tf("Digest: %s", info.Digest),
+		i18n.Tf("Flavor: %s", orUnknown(info.Flavor)),
+		i18n.Tf("Version: %s", orUnknown(info.Version)),
 	}
 	if info.GPU != "" {
-		lines = append(lines, "Graphics: "+lineLabels[info.GPU])
+		lines = append(lines, i18n.Tf("Graphics: %s", lineLabel(info.GPU)))
 	}
 	switch {
 	case info.Trusted:
-		lines = append(lines, "Source: a published Isotope release (trusted)")
+		lines = append(lines, i18n.T("Source: a published Isotope release (trusted)"))
 	case info.Isotope:
-		lines = append(lines, "Source: labelled by its publisher, not a published release")
+		lines = append(lines, i18n.T("Source: labelled by its publisher, not a published release"))
 	default:
-		lines = append(lines, "Source: not an Isotope image")
+		lines = append(lines, i18n.T("Source: not an Isotope image"))
 	}
 	return lines
 }
@@ -179,24 +188,24 @@ func overrideQuestion(info InspectInfo, advanced bool) string {
 		return ""
 	}
 	if info.Isotope {
-		return "This is not a published Isotope release. Install it anyway?"
+		return i18n.T("This is not a published Isotope release. Install it anyway?")
 	}
-	return "This is not an Isotope image. Install it anyway?"
+	return i18n.T("This is not an Isotope image. Install it anyway?")
 }
 
 // lineWarning says what installing an image of line changes (cmd/isotope/main.go).
 func lineWarning(line string) string {
 	if line == isorelease.GPUVM {
-		return "This is the virtual machine image: it has no Intel or AMD GPU drivers and no firmware, so on a real machine Wi-Fi, Bluetooth and graphics may stop working. Later upgrades stay on the virtual machine image."
+		return i18n.T("This is the virtual machine image: it has no Intel or AMD GPU drivers and no firmware, so on a real machine Wi-Fi, Bluetooth and graphics may stop working. Later upgrades stay on the virtual machine image.")
 	}
-	return "This is the hardware image: it adds Intel and AMD GPU drivers and firmware, about 600 MB more. Later upgrades stay on the hardware image."
+	return i18n.T("This is the hardware image: it adds Intel and AMD GPU drivers and firmware, about 600 MB more. Later upgrades stay on the hardware image.")
 }
 
-const switchWarning = "Your per-user desktop settings may not carry over, and the login screen may change."
+var switchWarning = i18n.Mark("Your per-user desktop settings may not carry over, and the login screen may change.")
 
 func orUnknown(s string) string {
 	if s == "" {
-		return "unknown"
+		return i18n.T("unknown")
 	}
 	return s
 }
@@ -223,14 +232,14 @@ func (j *installJob) Step(st Status) JobEnd {
 	}
 	switch st.State {
 	case StateIdle, StateUpToDate, StateUpdateAvailable:
-		return JobEnd{Done: true, Message: "The update was cancelled, or the update service restarted."}
+		return JobEnd{Done: true, Message: i18n.T("The update was cancelled, or the update service restarted.")}
 	case StateRebootPending:
 		if st.Pending == pendingFailed || st.Pending == pendingStarted {
-			return JobEnd{Done: true, Message: "The update failed after it started writing. Restart before trying again: " + st.Detail}
+			return JobEnd{Done: true, Message: i18n.Tf("The update failed after it started writing. Restart before trying again: %s", st.Detail)}
 		}
-		return JobEnd{Done: true, OK: true, Message: "The update is installed and starts on the next boot."}
+		return JobEnd{Done: true, OK: true, Message: i18n.T("The update is installed and starts on the next boot.")}
 	case StateError:
-		return JobEnd{Done: true, Message: "The update failed: " + st.Detail + ". Nothing changed on the running system; you can retry safely."}
+		return JobEnd{Done: true, Message: i18n.Tf("The update failed: %s. Nothing changed on the running system; you can retry safely.", st.Detail)}
 	}
 	return JobEnd{}
 }
@@ -302,45 +311,47 @@ type BackupView struct {
 func BackupViewOf(b BackupStatus, now time.Time) BackupView {
 	var v BackupView
 	if !b.Available {
-		v.Lines = []string{"Backup is not available on this edition (restic is not installed)."}
+		v.Lines = []string{i18n.T("Backup is not available on this edition (restic is not installed).")}
 		return v
 	}
 	if b.Restore != "" {
-		v.Warning = "After the last restore: " + b.Restore
+		v.Warning = i18n.Tf("After the last restore: %s", b.Restore)
 	}
 	if b.Target == "" {
 		v.Setup = true
-		v.Lines = []string{"This machine has no backup yet."}
+		v.Lines = []string{i18n.T("This machine has no backup yet.")}
 		return v
 	}
-	v.Lines = append(v.Lines, "Backs up to "+backupTargetName(b))
+	v.Lines = append(v.Lines, i18n.Tf("Backs up to %s", backupTargetName(b)))
 	switch b.Schedule {
-	case "daily", "weekly":
-		v.Lines = append(v.Lines, "Automatic backups: "+b.Schedule)
+	case "daily":
+		v.Lines = append(v.Lines, i18n.T("Automatic backups: daily"))
+	case "weekly":
+		v.Lines = append(v.Lines, i18n.T("Automatic backups: weekly"))
 	default:
-		v.Lines = append(v.Lines, "Automatic backups: off")
+		v.Lines = append(v.Lines, i18n.T("Automatic backups: off"))
 	}
 	if b.Last == 0 {
-		v.Lines = append(v.Lines, "Last backup: never")
+		v.Lines = append(v.Lines, i18n.T("Last backup: never"))
 	} else {
-		v.Lines = append(v.Lines, "Last backup: "+ago(now, time.Unix(b.Last, 0)))
+		v.Lines = append(v.Lines, i18n.Tf("Last backup: %s", ago(now, time.Unix(b.Last, 0))))
 	}
 	switch {
 	case strings.HasPrefix(b.Result, "partial: "):
-		v.Lines = append(v.Lines, "Last try: backed up, but "+strings.TrimPrefix(b.Result, "partial: "))
+		v.Lines = append(v.Lines, i18n.Tf("Last try: backed up, but %s", strings.TrimPrefix(b.Result, "partial: ")))
 	case b.Result != "" && b.Result != "ok":
-		v.Lines = append(v.Lines, "Last try failed: "+b.Result)
+		v.Lines = append(v.Lines, i18n.Tf("Last try failed: %s", b.Result))
 	}
 	if b.Warning != "" && v.Warning == "" {
-		v.Warning = "No backup in the last 14 days."
+		v.Warning = i18n.T("No backup in the last 14 days.")
 	}
 	v.CanBackUp = b.Present
 	switch {
 	case b.Present:
 	case b.Kind == "disk":
-		v.Lines = append(v.Lines, "Plug in "+backupDiskName(b)+" to back up")
+		v.Lines = append(v.Lines, i18n.Tf("Plug in %s to back up", backupDiskName(b)))
 	default:
-		v.Lines = append(v.Lines, "The backup disk is not plugged in.")
+		v.Lines = append(v.Lines, i18n.T("The backup disk is not plugged in."))
 	}
 	return v
 }
@@ -352,9 +363,9 @@ func backupTargetName(b BackupStatus) string {
 		return b.Target
 	}
 	if b.Label != "" {
-		return b.Label + " (USB disk)"
+		return i18n.Tf("%s (USB disk)", b.Label)
 	}
-	return b.Target + " (USB disk)"
+	return i18n.Tf("%s (USB disk)", b.Target)
 }
 
 // backupDiskName names the disk of a uuid: target in a sentence.
@@ -362,7 +373,7 @@ func backupDiskName(b BackupStatus) string {
 	if b.Label != "" {
 		return b.Label
 	}
-	return "the backup disk"
+	return i18n.T("the backup disk")
 }
 
 // SnapshotRows are the rows of the list of backups, newest first:
@@ -411,9 +422,9 @@ func ago(now, t time.Time) string {
 	y2, m2, d2 := t.Date()
 	switch {
 	case y1 == y2 && m1 == m2 && d1 == d2:
-		return "today at " + t.Format("15:04")
+		return i18n.Tf("today at %s", t.Format("15:04"))
 	case now.AddDate(0, 0, -1).Format("2006-01-02") == t.Format("2006-01-02"):
-		return "yesterday at " + t.Format("15:04")
+		return i18n.Tf("yesterday at %s", t.Format("15:04"))
 	}
 	return t.Format("2 January 2006, 15:04")
 }
@@ -422,25 +433,25 @@ func ago(now, t time.Time) string {
 func RecoveryLines(st RecoveryStatus) []string {
 	var out []string
 	if st.Edition == "trusted-boot" {
-		out = append(out, "Trusted Boot: the disk is sealed to this computer's TPM.")
+		out = append(out, i18n.T("Trusted Boot: the disk is sealed to this computer's TPM."))
 	}
 	for _, c := range st.Containers {
 		var keys []string
 		if c.Passphrase > 0 {
-			keys = append(keys, "passphrase")
+			keys = append(keys, i18n.T("passphrase"))
 		}
 		if c.Recovery > 0 {
-			keys = append(keys, "recovery key")
+			keys = append(keys, i18n.T("recovery key"))
 		}
 		if c.TPM > 0 {
 			if c.TPMWorks {
 				keys = append(keys, "TPM")
 			} else {
-				keys = append(keys, "TPM (does not unlock it now)")
+				keys = append(keys, i18n.T("TPM (does not unlock it now)"))
 			}
 		}
 		if len(keys) == 0 {
-			keys = []string{"no key Isotope knows"}
+			keys = []string{i18n.T("no key Isotope knows")}
 		}
 		out = append(out, c.Label+": "+strings.Join(keys, ", "))
 	}
@@ -479,14 +490,20 @@ func HistoryLines(h []HistoryEntry, installed string, now time.Time) []string {
 		var l string
 		switch {
 		case e.Kind == "rollback":
-			l = "Restarted into the previous system"
+			l = i18n.T("Restarted into the previous system")
 		case e.Version == "":
 			l = noVersionPhrase(e.Result)
+		case e.Result == "installed":
+			l = i18n.Tf("%s installed", e.Version)
+		case e.Result == "failed":
+			l = i18n.Tf("%s failed", e.Version)
+		case e.Result == "cancelled":
+			l = i18n.Tf("%s cancelled", e.Version)
 		default:
 			l = e.Version + " " + e.Result
 		}
 		if i == running {
-			l += " (running)"
+			l = i18n.Tf("%s (running)", l)
 		}
 		out = append(out, l+" · "+since(now, time.Unix(e.Time, 0)))
 	}
@@ -497,19 +514,15 @@ func HistoryLines(h []HistoryEntry, installed string, now time.Time) []string {
 // "3 days ago", or the date after 30 days.
 func since(now, t time.Time) string {
 	d := now.Sub(t)
-	plural := func(n int, unit string) string {
-		if n == 1 {
-			return "1 " + unit + " ago"
-		}
-		return fmt.Sprintf("%d %ss ago", n, unit)
-	}
 	switch {
 	case d < time.Minute:
-		return "just now"
+		return i18n.T("just now")
 	case d < time.Hour:
-		return plural(int(d/time.Minute), "minute")
+		n := int(d / time.Minute)
+		return i18n.Nf("%d minute ago", "%d minutes ago", n, n)
 	case d < 24*time.Hour && now.YearDay() == t.YearDay() && now.Year() == t.Year():
-		return plural(int(d/time.Hour), "hour")
+		n := int(d / time.Hour)
+		return i18n.Nf("%d hour ago", "%d hours ago", n, n)
 	}
 	// Whole local days between the two dates.
 	loc := now.Location()
@@ -519,9 +532,9 @@ func since(now, t time.Time) string {
 	days := int(time.Date(y1, m1, d1, 12, 0, 0, 0, loc).Sub(time.Date(y2, m2, d2, 12, 0, 0, 0, loc)).Round(24*time.Hour) / (24 * time.Hour))
 	switch {
 	case days <= 1:
-		return "yesterday"
+		return i18n.T("yesterday")
 	case days < 30:
-		return plural(days, "day")
+		return i18n.Nf("%d day ago", "%d days ago", days, days)
 	}
 	return t.Format("2 January 2006")
 }
@@ -530,13 +543,13 @@ func since(now, t time.Time) string {
 func noVersionPhrase(result string) string {
 	switch result {
 	case "failed":
-		return "An update failed"
+		return i18n.T("An update failed")
 	case "cancelled":
-		return "An update was cancelled"
+		return i18n.T("An update was cancelled")
 	case "installed":
-		return "An update was installed"
+		return i18n.T("An update was installed")
 	}
-	return "An update: " + result
+	return i18n.Tf("An update: %s", result)
 }
 
 // autoInput is what the AUTOMATIC UPDATES section of the Updates page is
@@ -560,26 +573,26 @@ func autoViewOf(in autoInput) autoView {
 	case in.Err != "":
 		return autoView{Sub: in.Err}
 	case !in.Loaded:
-		return autoView{Sub: "Loading…"}
+		return autoView{Sub: i18n.T("Loading…")}
 	}
 	a := in.Auto
 	v := autoView{Enabled: in.Admin}
 	switch {
 	case a.Broken != "":
-		v.Sub = "Off: the setting cannot be read (" + a.Broken + "). Turn it on or off to repair it."
-		v.Toggle = "Turn on"
+		v.Sub = i18n.Tf("Off: the setting cannot be read (%s). Turn it on or off to repair it.", a.Broken)
+		v.Toggle = i18n.T("Turn on")
 	case a.Enabled:
-		v.Sub = "On. Once a day a new release of this desktop is downloaded and installed in the background. It starts at the next restart; nothing restarts by itself."
-		v.Toggle = "Turn off"
+		v.Sub = i18n.T("On. Once a day a new release of this desktop is downloaded and installed in the background. It starts at the next restart; nothing restarts by itself.")
+		v.Toggle = i18n.T("Turn off")
 	default:
-		v.Sub = "Off. New releases are announced, and you install them."
-		v.Toggle = "Turn on"
+		v.Sub = i18n.T("Off. New releases are announced, and you install them.")
+		v.Toggle = i18n.T("Turn on")
 	}
 	if a.LastTime != 0 {
-		v.Last = "Last run " + since(in.Now, time.Unix(a.LastTime, 0)) + ": " + autoResult(a)
+		v.Last = i18n.Tf("Last run %[1]s: %[2]s", since(in.Now, time.Unix(a.LastTime, 0)), autoResult(a))
 	}
 	if !in.Admin {
-		v.Hint = "Only an administrator can turn automatic updates on or off."
+		v.Hint = i18n.T("Only an administrator can turn automatic updates on or off.")
 	}
 	return v
 }
@@ -588,13 +601,13 @@ func autoViewOf(in autoInput) autoView {
 func autoResult(a AutoStatus) string {
 	switch a.LastResult {
 	case "installed":
-		return "installed Isotope " + a.LastVersion + "."
+		return i18n.Tf("installed Isotope %s.", a.LastVersion)
 	case "up-to-date":
-		return "up to date."
+		return i18n.T("up to date.")
 	case "skipped":
 		return a.LastDetail
 	case "failed":
-		return "failed. " + a.LastDetail
+		return i18n.Tf("failed. %s", a.LastDetail)
 	}
 	return a.LastResult + ". " + a.LastDetail
 }

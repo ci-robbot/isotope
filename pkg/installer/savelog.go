@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // InstallLogPath is where the graphical installer keeps the whole install
@@ -79,7 +81,7 @@ func SaveInstallLog(src string, dirs []string) (string, error) {
 		}
 	}
 	if _, err := os.Stat(src); err != nil {
-		return "", fmt.Errorf("the install log is gone: %w", err)
+		return "", fmt.Errorf(i18n.T("the install log is gone: %w"), err)
 	}
 	return src, nil
 }

@@ -1,0 +1,1142 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: isotope isotope-welcome\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: cmd/isotope-welcome/backup.go
+msgid "the secret is too long"
+msgstr "il segreto è troppo lungo"
+
+#: cmd/isotope-welcome/backup.go
+msgid "REST server"
+msgstr "Server REST"
+
+#: cmd/isotope-welcome/backup.go
+msgid "restic's rest-server, over HTTP or HTTPS"
+msgstr "Il rest-server di restic, via HTTP o HTTPS"
+
+#: cmd/isotope-welcome/backup.go
+msgid "Amazon S3, or a service that works like it"
+msgstr "Amazon S3, o un servizio che funziona allo stesso modo"
+
+#: cmd/isotope-welcome/backup.go
+msgid "A server you reach with SSH"
+msgstr "Un server raggiungibile con SSH"
+
+#: cmd/isotope-welcome/backup.go
+msgid "The folder name has a control character."
+msgstr "Il nome della cartella contiene un carattere di controllo."
+
+#: cmd/isotope-welcome/backup.go
+msgid "The folder cannot have . or .. in it."
+msgstr "La cartella non può contenere . o .."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the folder on the disk where the backup is."
+msgstr "Scrivi la cartella del disco in cui si trova il backup."
+
+#: cmd/isotope-welcome/backup.go
+#, go-format
+msgid "The value of %s has a line break in it."
+msgstr "Il valore di %s contiene un a capo."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the address of the server, starting with http:// or https://."
+msgstr "Scrivi l'indirizzo del server, che inizia con http:// o https://."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Put the user and the password in their fields, not in the address."
+msgstr "Inserisci l'utente e la password nei rispettivi campi, non nell'indirizzo."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the endpoint of the service, such as https://s3.amazonaws.com."
+msgstr "Scrivi l'endpoint del servizio, ad esempio https://s3.amazonaws.com."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the name of the bucket."
+msgstr "Scrivi il nome del bucket."
+
+#: cmd/isotope-welcome/backup.go
+msgid "The path has a control character."
+msgstr "Il percorso contiene un carattere di controllo."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the access key ID and the secret access key."
+msgstr "Scrivi l'ID della chiave di accesso e la chiave di accesso segreta."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the user and the server as user@server."
+msgstr "Scrivi l'utente e il server come utente@server."
+
+#: cmd/isotope-welcome/backup.go
+msgid "The port is a number from 1 to 65535."
+msgstr "La porta è un numero da 1 a 65535."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Type the folder on the server where the backup is."
+msgstr "Scrivi la cartella del server in cui si trova il backup."
+
+#: cmd/isotope-welcome/backup.go
+msgid "Key"
+msgstr "Chiave"
+
+#: cmd/isotope-welcome/backup.go
+#, go-format
+msgid "%d bytes"
+msgstr "%d byte"
+
+#: cmd/isotope-welcome/backup.go
+#, go-format
+msgid "today at %s"
+msgstr "oggi alle %s"
+
+#: cmd/isotope-welcome/backup.go
+#, go-format
+msgid "yesterday at %s"
+msgstr "ieri alle %s"
+
+#: cmd/isotope-welcome/flow.go
+msgid "Welcome"
+msgstr "Benvenuto"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_language.go
+#: cmd/isotope-welcome/page_live.go
+msgid "Language"
+msgstr "Lingua"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_network.go
+msgid "Network"
+msgstr "Rete"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Appearance"
+msgstr "Aspetto"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_cosmic.go
+msgctxt "page"
+msgid "Layout"
+msgstr "Layout"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Workflow"
+msgstr "Flusso di lavoro"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Launcher"
+msgstr "Launcher"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_access.go
+msgid "Accessibility"
+msgstr "Accessibilità"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/live.go
+msgid "Apps"
+msgstr "App"
+
+#: cmd/isotope-welcome/flow.go
+#: cmd/isotope-welcome/page_shortcuts.go
+msgid "Shortcuts"
+msgstr "Scorciatoie"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Ready"
+msgstr "Pronto"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Where"
+msgstr "Dove"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Password"
+msgstr "Password"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Backup"
+msgstr "Backup"
+
+#: cmd/isotope-welcome/flow.go
+msgctxt "page"
+msgid "Restore"
+msgstr "Ripristino"
+
+#: cmd/isotope-welcome/live.go
+msgid "Help"
+msgstr "Aiuto"
+
+#: cmd/isotope-welcome/live.go
+msgid "top bar"
+msgstr "barra superiore"
+
+#: cmd/isotope-welcome/live.go
+msgid "Look around first. You can install at any time from the dock or the app launcher."
+msgstr "Prima dai un'occhiata. Puoi installare quando vuoi dalla dock o dal launcher delle app."
+
+#: cmd/isotope-welcome/live.go
+msgid "Look around first. You can install at any time from the Isotope menu (Super+Esc) or the app list."
+msgstr "Prima dai un'occhiata. Puoi installare quando vuoi dal menu di Isotope (Super+Esc) o dall'elenco delle app."
+
+#: cmd/isotope-welcome/locale.go
+msgid "Default (C.UTF-8)"
+msgstr "Predefinita (C.UTF-8)"
+
+#: cmd/isotope-welcome/main.go
+#: cmd/isotope-welcome/page_live.go
+#: cmd/isotope-welcome/page_welcome.go
+msgid "Welcome to Isotope"
+msgstr "Benvenuto in Isotope"
+
+#: cmd/isotope-welcome/nm.go
+msgid "Wrong password"
+msgstr "Password errata"
+
+#: cmd/isotope-welcome/nm.go
+msgid "Could not connect to %s"
+msgstr "Impossibile connettersi a %s"
+
+#: cmd/isotope-welcome/nm.go
+msgid "No Wi-Fi device"
+msgstr "Nessun dispositivo Wi-Fi"
+
+#: cmd/isotope-welcome/nm.go
+msgid "Timed out connecting to %s"
+msgstr "Tempo scaduto durante la connessione a %s"
+
+#: cmd/isotope-welcome/notify.go
+msgid "Apps installed"
+msgstr "App installate"
+
+#: cmd/isotope-welcome/notify.go
+#, go-format
+msgid "Installed: %s. Find them with the app launcher."
+msgstr "Installate: %s. Le trovi nel launcher delle app."
+
+#. TRANSLATORS: %[1]s and %[2]s are lists of app names; the end says where to find the apps again.
+#: cmd/isotope-welcome/notify.go
+msgid "Some apps did not install"
+msgstr "Alcune app non sono state installate"
+
+#. TRANSLATORS: %[1]s and %[2]s are lists of app names; the end says where to find the apps again.
+#: cmd/isotope-welcome/notify.go
+#, go-format
+msgid "Installed: %[1]s. Failed: %[2]s. Open it later from the Isotope menu (Super+Esc → Welcome)."
+msgstr "Installate: %[1]s. Non riuscite: %[2]s. Riaprilo più tardi dal menu di Isotope (Super+Esc → Welcome)."
+
+#: cmd/isotope-welcome/notify.go
+msgid "Apps did not install"
+msgstr "Le app non sono state installate"
+
+#: cmd/isotope-welcome/notify.go
+#, go-format
+msgid "Failed: %s. Open it later from the Isotope menu (Super+Esc → Welcome)."
+msgstr "Non riuscite: %s. Riaprilo più tardi dal menu di Isotope (Super+Esc → Welcome)."
+
+#: cmd/isotope-welcome/notify.go
+msgctxt "verb"
+msgid "Open"
+msgstr "Apri"
+
+#: cmd/isotope-welcome/notify.go
+msgid "Install essential apps"
+msgstr "Installa le app essenziali"
+
+#: cmd/isotope-welcome/notify.go
+msgid "Pick a few essential apps from Flathub, or install the ones that did not finish."
+msgstr "Scegli alcune app essenziali da Flathub, o installa quelle che non sono state completate."
+
+#: cmd/isotope-welcome/notify.go
+msgid "Install a browser and essential apps"
+msgstr "Installa un browser e le app essenziali"
+
+#: cmd/isotope-welcome/notify.go
+msgid "Isotope has no browser yet. Pick one and a few essentials from Flathub."
+msgstr "Isotope non ha ancora un browser. Scegline uno e qualche app essenziale da Flathub."
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Some X11 apps need a restart. i3 restarts at once to use it; your windows stay open."
+msgstr "Alcune app X11 vanno riavviate. i3 si riavvia subito per applicarla; le finestre restano aperte."
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Set for every screen connected now. A screen you plug in later keeps its own scale."
+msgstr "Impostata per ogni schermo collegato ora. Uno schermo collegato in seguito mantiene la propria scala."
+
+#: cmd/isotope-welcome/page_access.go
+msgid "To make text bigger, choose a larger scale."
+msgstr "Per ingrandire il testo, scegli una scala maggiore."
+
+#: cmd/isotope-welcome/page_access.go
+#, go-format
+msgid "Could not change the display scale: %v"
+msgstr "Impossibile cambiare la scala dello schermo: %v"
+
+#: cmd/isotope-welcome/page_access.go
+#, go-format
+msgid "Could not change the text size: %v"
+msgstr "Impossibile cambiare la dimensione del testo: %v"
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Text in apps is a quarter larger. Apps follow at once."
+msgstr "Il testo nelle app è più grande di un quarto. Le app si adeguano subito."
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Text in GTK Flatpak apps is a quarter larger. For every app, choose a larger scale."
+msgstr "Il testo nelle app Flatpak GTK è più grande di un quarto. Per tutte le app, scegli una scala maggiore."
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Make the screen easier to read. Your choice applies now and stays for later logins."
+msgstr "Rendi lo schermo più facile da leggere. La scelta si applica subito e resta per i prossimi accessi."
+
+#: cmd/isotope-welcome/page_access.go
+#: cmd/isotope-welcome/page_appearance.go
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Applying…"
+msgstr "Applicazione in corso…"
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Display scale"
+msgstr "Scala dello schermo"
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Default"
+msgstr "Predefinita"
+
+#: cmd/isotope-welcome/page_access.go
+msgid "Larger text"
+msgstr "Testo più grande"
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Apps use a light theme; the bar and menus stay dark"
+msgstr "Le app usano un tema chiaro; la barra e i menu restano scuri"
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Light windows and panels"
+msgstr "Finestre e pannelli chiari"
+
+#: cmd/isotope-welcome/page_appearance.go
+#, go-format
+msgid "Could not change the appearance: %v"
+msgstr "Impossibile cambiare l'aspetto: %v"
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Dark is Isotope's look. You can change it later in the Isotope menu."
+msgstr "Lo scuro è l'aspetto di Isotope. Puoi cambiarlo più tardi dal menu di Isotope."
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Dark"
+msgstr "Scuro"
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Easy on the eyes, the Isotope look"
+msgstr "Riposante per gli occhi, l'aspetto di Isotope"
+
+#: cmd/isotope-welcome/page_appearance.go
+msgid "Light"
+msgstr "Chiaro"
+
+#: cmd/isotope-welcome/page_apps.go
+#: cmd/isotope-welcome/page_language.go
+#: cmd/isotope-welcome/page_network.go
+#: cmd/isotope-welcome/page_ready.go
+msgid "Try again"
+msgstr "Riprova"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "No network connection."
+msgstr "Nessuna connessione di rete."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Connect to a network and try again. If you skip, Isotope reminds you at your next login."
+msgstr "Connettiti a una rete e riprova. Se salti, Isotope te lo ricorderà al prossimo accesso."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Flathub is not ready."
+msgstr "Flathub non è pronto."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "The Flathub remote is missing or disabled for your user. Try again later. If you skip, Isotope reminds you at your next login."
+msgstr "Il remote Flathub manca o è disattivato per il tuo utente. Riprova più tardi. Se salti, Isotope te lo ricorderà al prossimo accesso."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Install apps"
+msgstr "Installa app"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Checking the network and Flathub…"
+msgstr "Verifica della rete e di Flathub in corso…"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Isotope includes no browser. Its apps come from Flathub."
+msgstr "Isotope non include un browser. Le sue app arrivano da Flathub."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Installing apps"
+msgstr "Installazione delle app"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "The apps install in the background. You can go on; Isotope tells you when they are done."
+msgstr "Le app si installano in background. Puoi proseguire; Isotope ti avvisa quando hanno finito."
+
+#. TRANSLATORS: %[1]s is an app's name; then its place in the batch and the number of apps.
+#: cmd/isotope-welcome/page_apps.go
+#, go-format
+msgid "Installing %[1]s (%[2]d of %[3]d)"
+msgstr "Installazione di %[1]s (%[2]d di %[3]d)"
+
+#. TRANSLATORS: apps installed of the batch's apps.
+#: cmd/isotope-welcome/page_apps.go
+#, go-format
+msgid "%[1]d of %[2]d installed"
+msgstr "%[1]d di %[2]d installate"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Isotope includes no browser. These apps come from Flathub and install for your user only."
+msgstr "Isotope non include un browser. Queste app arrivano da Flathub e si installano solo per il tuo utente."
+
+#: cmd/isotope-welcome/page_apps.go
+#, go-format
+msgid "Could not install %s. They are ticked: Continue tries again."
+msgstr "Impossibile installare %s. Sono selezionate: Continua riprova."
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Essentials"
+msgstr "Essenziali"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "Browser (pick one)"
+msgstr "Browser (scegline uno)"
+
+#: cmd/isotope-welcome/page_apps.go
+msgid "No browser"
+msgstr "Nessun browser"
+
+#. TRANSLATORS: an app that is already installed.
+#: cmd/isotope-welcome/page_apps.go
+msgctxt "app"
+msgid "Installed"
+msgstr "Installata"
+
+#: cmd/isotope-welcome/page_cosmic.go
+#, go-format
+msgid "Could not read the panel layouts: %v"
+msgstr "Impossibile leggere i layout del pannello: %v"
+
+#: cmd/isotope-welcome/page_cosmic.go
+#, go-format
+msgid "Could not change the layout: %v"
+msgstr "Impossibile cambiare il layout: %v"
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Move the panel or dock to any edge, change their size, and automatically hide them in Settings."
+msgstr "Sposta il pannello o la dock su qualsiasi bordo, cambiane la dimensione e nascondili automaticamente da Impostazioni."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "The panel restarts when you continue."
+msgstr "Il pannello si riavvia quando continui."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Workspaces for your workflow"
+msgstr "Spazi di lavoro per il tuo flusso di lavoro"
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Float or automatically tile windows per-workspace using the tiling applet."
+msgstr "Finestre fluttuanti o affiancate automaticamente per ogni spazio di lavoro, con l'applet di tiling."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Vertical or horizontal"
+msgstr "Verticali o orizzontali"
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "You can select vertical or horizontal workspaces. You can also pin workspaces to make them static."
+msgstr "Puoi scegliere spazi di lavoro verticali o orizzontali. Puoi anche fissarli per renderli statici."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Change these any time in COSMIC Settings. Nothing is set on this page."
+msgstr "Puoi cambiarli quando vuoi nelle Impostazioni di COSMIC. Questa pagina non imposta nulla."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Fast and efficient"
+msgstr "Veloce ed efficiente"
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Press the Super (or Windows) key to activate the Launcher. Search and press Enter to open an app or switch to it."
+msgstr "Premi il tasto Super (o Windows) per attivare il Launcher. Cerca e premi Enter per aprire un'app o passare a essa."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Press Super"
+msgstr "Premi Super"
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "You can also jump to settings or system functions like suspend. Type “?” to learn about the Launcher's advanced features."
+msgstr "Puoi anche passare alle impostazioni o a funzioni di sistema come la sospensione. Scrivi “?” per scoprire le funzioni avanzate del Launcher."
+
+#: cmd/isotope-welcome/page_cosmic.go
+msgid "Nothing is set on this page."
+msgstr "Questa pagina non imposta nulla."
+
+#: cmd/isotope-welcome/page_language.go
+msgid "Ask an administrator to change the language"
+msgstr "Chiedi a un amministratore di cambiare la lingua"
+
+#: cmd/isotope-welcome/page_language.go
+#, go-format
+msgid "Could not list the languages: %v"
+msgstr "Impossibile elencare le lingue: %v"
+
+#: cmd/isotope-welcome/page_language.go
+msgid "Isotope could not list the languages."
+msgstr "Isotope non è riuscito a elencare le lingue."
+
+#: cmd/isotope-welcome/page_language.go
+#: cmd/isotope-welcome/page_live.go
+msgid "Not set"
+msgstr "Non impostata"
+
+#: cmd/isotope-welcome/page_language.go
+msgid "The system language applies to every user of this computer."
+msgstr "La lingua di sistema vale per tutti gli utenti di questo computer."
+
+#: cmd/isotope-welcome/page_language.go
+msgid "Current language"
+msgstr "Lingua attuale"
+
+#: cmd/isotope-welcome/page_language.go
+msgid "The system language applies to every user of this computer. You can change it later in the Isotope menu."
+msgstr "La lingua di sistema vale per tutti gli utenti di questo computer. Puoi cambiarla più tardi dal menu di Isotope."
+
+#: cmd/isotope-welcome/page_language.go
+#: cmd/isotope-welcome/page_live.go
+msgid "Search languages"
+msgstr "Cerca lingue"
+
+#: cmd/isotope-welcome/page_language.go
+msgid "Setting the language…"
+msgstr "Impostazione della lingua in corso…"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "New apps use this language. The installer uses it too."
+msgstr "Le app avviate da ora usano questa lingua. Anche l'installer la usa."
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Use this language"
+msgstr "Usa questa lingua"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Keyboard layout"
+msgstr "Layout della tastiera"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "The layout changes at once. The installer uses it too."
+msgstr "Il layout cambia subito. Anche l'installer lo usa."
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Search layouts"
+msgstr "Cerca layout"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Use this layout"
+msgstr "Usa questo layout"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "The installer is not available."
+msgstr "L'installer non è disponibile."
+
+#: cmd/isotope-welcome/page_live.go
+#, go-format
+msgid "Could not start the installer: %v"
+msgstr "Impossibile avviare l'installer: %v"
+
+#: cmd/isotope-welcome/page_live.go
+#: cmd/isotope-welcome/page_restore.go
+msgid "Cancel"
+msgstr "Annulla"
+
+#: cmd/isotope-welcome/page_live.go
+#, go-format
+msgid "Could not save the choice for the installer: %v"
+msgstr "Impossibile salvare la scelta per l'installer: %v"
+
+#: cmd/isotope-welcome/page_live.go
+#, go-format
+msgid "Could not apply it to this session: %v"
+msgstr "Impossibile applicarla a questa sessione: %v"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "You are running Isotope from the USB stick. Nothing on this computer changes until you install it."
+msgstr "Stai usando Isotope dalla chiavetta USB. Su questo computer non cambia nulla finché non lo installi."
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Changes in this session are lost when you shut down."
+msgstr "Le modifiche fatte in questa sessione si perdono allo spegnimento."
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Install Isotope"
+msgstr "Installa Isotope"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Put Isotope on this computer's disk. It takes a few minutes."
+msgstr "Metti Isotope sul disco di questo computer. Ci vuole qualche minuto."
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Try it out"
+msgstr "Provalo"
+
+#: cmd/isotope-welcome/page_live.go
+msgid "Keyboard"
+msgstr "Tastiera"
+
+#: cmd/isotope-welcome/page_network.go
+#, go-format
+msgid "Could not reach NetworkManager: %v"
+msgstr "Impossibile contattare NetworkManager: %v"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Enter the network name"
+msgstr "Inserisci il nome della rete"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Enter the password"
+msgstr "Inserisci la password"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Connected"
+msgstr "Connesso"
+
+#: cmd/isotope-welcome/page_network.go
+#, go-format
+msgid "Connected to %s"
+msgstr "Connesso a %s"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "You are online. Apps and updates can use the connection."
+msgstr "Sei online. Le app e gli aggiornamenti possono usare la connessione."
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Plug in a network cable, or continue without a network."
+msgstr "Collega un cavo di rete, o continua senza rete."
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Isotope could not look for networks."
+msgstr "Isotope non è riuscito a cercare le reti."
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Looking for networks…"
+msgstr "Ricerca delle reti…"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Pick a Wi-Fi network. You can also continue without one."
+msgstr "Scegli una rete Wi-Fi. Puoi anche continuare senza."
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Show the list of networks"
+msgstr "Mostra l'elenco delle reti"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "No Wi-Fi networks found."
+msgstr "Nessuna rete Wi-Fi trovata."
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Hidden network…"
+msgstr "Rete nascosta…"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Scan again"
+msgstr "Cerca di nuovo"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Secured"
+msgstr "Protetta"
+
+#: cmd/isotope-welcome/page_network.go
+#: cmd/isotope-welcome/page_restore.go
+msgid "Password"
+msgstr "Password"
+
+#: cmd/isotope-welcome/page_network.go
+#: cmd/isotope-welcome/page_restore.go
+msgid "Connect"
+msgstr "Connetti"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Connecting…"
+msgstr "Connessione in corso…"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Network name"
+msgstr "Nome della rete"
+
+#: cmd/isotope-welcome/page_network.go
+msgid "Leave empty for an open network."
+msgstr "Lascia vuoto per una rete aperta."
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Finish"
+msgstr "Fine"
+
+#: cmd/isotope-welcome/page_ready.go
+#, go-format
+msgid "Could not log out: %v. Log out from the power menu instead."
+msgstr "Impossibile uscire dalla sessione: %v. Esci dal menu di spegnimento."
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Isotope is ready"
+msgstr "Isotope è pronto"
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "You can open this again from the Isotope menu (Super+Esc → Welcome)."
+msgstr "Puoi riaprire questa finestra dal menu di Isotope (Super+Esc → Welcome)."
+
+#: cmd/isotope-welcome/page_ready.go
+#, go-format
+msgid "Could not install %s."
+msgstr "Impossibile installare %s."
+
+#: cmd/isotope-welcome/page_ready.go
+#, go-format
+msgid "Log out to use %s"
+msgstr "Esci dalla sessione per usare %s"
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "The desktop and apps change language when you sign in again."
+msgstr "Il desktop e le app cambiano lingua al prossimo accesso."
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Installing apps…"
+msgstr "Installazione delle app in corso…"
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Log out"
+msgstr "Esci dalla sessione"
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Unchanged"
+msgstr "Invariato"
+
+#. TRANSLATORS: the state of a setting on the last page: it was set.
+#: cmd/isotope-welcome/page_ready.go
+msgctxt "state"
+msgid "Set"
+msgstr "Impostato"
+
+#: cmd/isotope-welcome/page_ready.go
+msgid "Skipped"
+msgstr "Saltato"
+
+#. TRANSLATORS: %s is a list of app names ("Firefox, GIMP and VLC").
+#: cmd/isotope-welcome/page_ready.go
+#, go-format
+msgid "Installed %s"
+msgstr "Installate: %s"
+
+#. TRANSLATORS: the end of a list of names: "Firefox, GIMP" and "VLC".
+#: cmd/isotope-welcome/page_ready.go
+#, go-format
+msgid "%[1]s and %[2]s"
+msgstr "%[1]s e %[2]s"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Only members of the admin group can do this."
+msgstr "Solo i membri del gruppo admin possono farlo."
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "USB disks cannot be listed: %v"
+msgstr "Impossibile elencare i dischi USB: %v"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "USB disk %s"
+msgstr "Disco USB %s"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Plug in the USB disk with the backup, and choose it."
+msgstr "Collega il disco USB con il backup e sceglilo."
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "%s (USB disk)"
+msgstr "%s (disco USB)"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Connect to the server and confirm its key."
+msgstr "Connettiti al server e conferma la sua chiave."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Choose the kind of server."
+msgstr "Scegli il tipo di server."
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Could not read the backup's SSH key: %s"
+msgstr "Impossibile leggere la chiave SSH del backup: %s"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Could not reach %[1]s: %[2]s"
+msgstr "Impossibile contattare %[1]s: %[2]s"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "the server sent no key"
+msgstr "il server non ha inviato alcuna chiave"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "%s holds no backup."
+msgstr "%s non contiene alcun backup."
+
+#. TRANSLATORS: %[1]s is a date ("today at 14:05"), %[2]s a computer's name.
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid ""
+"The backup of %[1]s from %[2]s brings this whole machine back as it was: the users and their passwords, the hostname, every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"
+"What is on this machine now is replaced. The machine restarts at the end."
+msgstr ""
+"Il backup di %[1]s da %[2]s riporta l'intera macchina com'era: gli utenti e le loro password, il nome host, tutte le cartelle home, le chiavi SSH, le estensioni, le impostazioni e le app Flatpak (installate di nuovo dopo il riavvio).\n"
+"Ciò che si trova ora su questa macchina viene sostituito. Alla fine la macchina si riavvia."
+
+#. TRANSLATORS: %s is a date ("today at 14:05").
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid ""
+"The backup of %s brings this whole machine back as it was: the users and their passwords, the hostname, every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"
+"What is on this machine now is replaced. The machine restarts at the end."
+msgstr ""
+"Il backup di %s riporta l'intera macchina com'era: gli utenti e le loro password, il nome host, tutte le cartelle home, le chiavi SSH, le estensioni, le impostazioni e le app Flatpak (installate di nuovo dopo il riavvio).\n"
+"Ciò che si trova ora su questa macchina viene sostituito. Alla fine la macchina si riavvia."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Restore this machine?"
+msgstr "Ripristinare questa macchina?"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Restore and restart"
+msgstr "Ripristina e riavvia"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The restore failed."
+msgstr "Il ripristino non è riuscito."
+
+#: cmd/isotope-welcome/page_restore.go
+#: cmd/isotope-welcome/ui.go
+msgid "Continue"
+msgstr "Continua"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "A USB disk"
+msgstr "Un disco USB"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Plugged in to this computer"
+msgstr "Collegato a questo computer"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "A remote server"
+msgstr "Un server remoto"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "A REST server, S3 or SFTP"
+msgstr "Un server REST, S3 o SFTP"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "USB disks cannot be listed: udisks2 is not running."
+msgstr "Impossibile elencare i dischi USB: udisks2 non è in esecuzione."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Looking for USB disks…"
+msgstr "Ricerca dei dischi USB in corso…"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Plug in the USB disk with the backup, then click Look again."
+msgstr "Collega il disco USB con il backup, poi fai clic su Cerca di nuovo."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Look again"
+msgstr "Cerca di nuovo"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Folder"
+msgstr "Cartella"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The folder on the disk where the backup is."
+msgstr "La cartella del disco in cui si trova il backup."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Address"
+msgstr "Indirizzo"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Such as https://backup.example.com:8000/anna/"
+msgstr "Ad esempio https://backup.example.com:8000/anna/"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "User"
+msgstr "Utente"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Endpoint"
+msgstr "Endpoint"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Such as https://s3.amazonaws.com"
+msgstr "Ad esempio https://s3.amazonaws.com"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Bucket"
+msgstr "Bucket"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Path"
+msgstr "Percorso"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "In the bucket. Optional."
+msgstr "Nel bucket. Facoltativo."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Access key ID"
+msgstr "ID della chiave di accesso"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Secret access key"
+msgstr "Chiave di accesso segreta"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Region"
+msgstr "Regione"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Optional."
+msgstr "Facoltativo."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "User and server"
+msgstr "Utente e server"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Such as anna@nas.local"
+msgstr "Ad esempio anna@nas.local"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Port"
+msgstr "Porta"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Folder on the server"
+msgstr "Cartella sul server"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Such as /srv/backup"
+msgstr "Ad esempio /srv/backup"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Reading the backup's SSH key…"
+msgstr "Lettura della chiave SSH del backup…"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Add this key to the server's authorized_keys, then Connect."
+msgstr "Aggiungi questa chiave al file authorized_keys del server, poi fai clic su Connetti."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Copy"
+msgstr "Copia"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Copied."
+msgstr "Copiata."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Fetching the server's keys…"
+msgstr "Recupero delle chiavi del server in corso…"
+
+#. TRANSLATORS: %s is the server and its port ("nas.local:22").
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "%s sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and confirm it only when it is the same."
+msgstr "%s ha inviato queste chiavi. Sul server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub mostra le sue, con il tipo. Scegli la chiave che hai confrontato e confermala solo se è la stessa."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "This is the server's key"
+msgstr "Questa è la chiave del server"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Key of %[1]s confirmed: %[2]s"
+msgstr "Chiave di %[1]s confermata: %[2]s"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Where is the backup?"
+msgstr "Dove si trova il backup?"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "A USB disk, or the server this machine backed up to."
+msgstr "Un disco USB, o il server su cui questa macchina ha fatto il backup."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Find the backups"
+msgstr "Trova i backup"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The password shown when the backup was set up. For a key shown by Isotope, spaces and capitals do not matter."
+msgstr "La password mostrata quando è stato configurato il backup. Per una chiave mostrata da Isotope, spazi e maiuscole non contano."
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Reading the backups in %s…"
+msgstr "Lettura dei backup in %s…"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The backup's password"
+msgstr "La password del backup"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Type the password of the backup in %s."
+msgstr "Scrivi la password del backup in %s."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Restore…"
+msgstr "Ripristina…"
+
+#: cmd/isotope-welcome/page_restore.go
+#, go-format
+msgid "Backup %s"
+msgstr "Backup %s"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Which backup?"
+msgstr "Quale backup?"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The backups there, by computer, the newest first."
+msgstr "I backup presenti, per computer, dal più recente."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The restore did not start"
+msgstr "Il ripristino non è partito"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Nothing on this machine changed."
+msgstr "Su questa macchina non è cambiato nulla."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The restore failed"
+msgstr "Il ripristino non è riuscito"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Parts of the backup may already be on this machine, and it may restart. If it does not, restart it and check your files; to try again, use isotope restore in a terminal."
+msgstr "Parti del backup potrebbero essere già su questa macchina, che potrebbe riavviarsi. Se non lo fa, riavviala e controlla i tuoi file; per riprovare, usa isotope restore in un terminale."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Restarting"
+msgstr "Riavvio in corso"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "The backup is back. The machine restarts now; after the restart it installs the apps and extensions again."
+msgstr "Il backup è stato ripristinato. La macchina si riavvia ora; dopo il riavvio installa di nuovo le app e le estensioni."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Restoring the backup"
+msgstr "Ripristino del backup in corso"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "This can take a long time. Leave the computer on: it restarts when the restore is done."
+msgstr "Può richiedere molto tempo. Lascia acceso il computer: si riavvia al termine del ripristino."
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Starting the restore"
+msgstr "Avvio del ripristino"
+
+#: cmd/isotope-welcome/page_restore.go
+msgid "Asking the update service…"
+msgstr "Richiesta al servizio di aggiornamento in corso…"
+
+#: cmd/isotope-welcome/page_shortcuts.go
+#, go-format
+msgid "The shortcut sheet did not open: %v"
+msgstr "Impossibile aprire la scheda delle scorciatoie: %v"
+
+#: cmd/isotope-welcome/page_shortcuts.go
+msgid "Isotope is made to be used from the keyboard. Super is the key with the Windows logo. These keys work in every app."
+msgstr "Isotope è fatto per essere usato dalla tastiera. Super è il tasto con il logo di Windows. Questi tasti funzionano in ogni app."
+
+#: cmd/isotope-welcome/page_shortcuts.go
+msgid "Show all shortcuts"
+msgstr "Mostra tutte le scorciatoie"
+
+#: cmd/isotope-welcome/page_welcome.go
+#: cmd/isotope-welcome/ui.go
+msgid "Skip setup"
+msgstr "Salta la configurazione"
+
+#: cmd/isotope-welcome/page_welcome.go
+msgid "A few choices make this computer yours: the language, the network, the look and the apps. Each step can be skipped, and you can come back to this window later from the Isotope menu."
+msgstr "Poche scelte rendono tuo questo computer: la lingua, la rete, l'aspetto e le app. Ogni passaggio si può saltare, e puoi tornare a questa finestra più tardi dal menu di Isotope."
+
+#: cmd/isotope-welcome/page_welcome.go
+msgid "Set up as new"
+msgstr "Configura come nuovo"
+
+#: cmd/isotope-welcome/page_welcome.go
+msgid "Choose the settings step by step"
+msgstr "Scegli le impostazioni passo per passo"
+
+#: cmd/isotope-welcome/page_welcome.go
+msgid "Restore from a backup"
+msgstr "Ripristina da un backup"
+
+#: cmd/isotope-welcome/page_welcome.go
+msgid "Bring back a machine from its Isotope backup"
+msgstr "Ripristina una macchina dal suo backup di Isotope"
+
+#: cmd/isotope-welcome/shortcuts.go
+msgid "All keyboard shortcuts"
+msgstr "Tutte le scorciatoie da tastiera"
+
+#: cmd/isotope-welcome/ui.go
+msgid "Skip setup?"
+msgstr "Saltare la configurazione?"
+
+#: cmd/isotope-welcome/ui.go
+msgid "Isotope keeps the settings it has. You can open this window again from the Isotope menu (Super+Esc → Welcome)."
+msgstr "Isotope mantiene le impostazioni attuali. Puoi riaprire questa finestra dal menu di Isotope (Super+Esc → Welcome)."
+
+#: cmd/isotope-welcome/ui.go
+msgid "Keep going"
+msgstr "Continua la configurazione"
+
+#. TRANSLATORS: a page name in the sidebar, then the app being installed and the number of apps ("Apps 2/5").
+#: cmd/isotope-welcome/ui.go
+#, go-format
+msgid "%[1]s %[2]d/%[3]d"
+msgstr "%[1]s %[2]d/%[3]d"
+
+#: cmd/isotope-welcome/ui.go
+msgid "Skip"
+msgstr "Salta"
+
+#: cmd/isotope-welcome/ui.go
+msgid "Done"
+msgstr "Fatto"
+
+#: cmd/isotope-welcome/ui.go
+msgid "Go back"
+msgstr "Indietro"
+
+#: cmd/isotope-welcome/ui.go
+msgid "This page is not available yet."
+msgstr "Questa pagina non è ancora disponibile."

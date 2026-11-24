@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The tray answers two kinds of question for the session, so they get an
@@ -273,9 +275,9 @@ func openConnectMessage(conn map[string]map[string]dbus.Variant) string {
 	user, gw := variantStr(conn, "vpn", "user-name"), data["gateway"]
 	switch {
 	case user != "" && gw != "":
-		return "Log in to " + gw + " as " + user + "."
+		return i18n.Tf("Log in to %[1]s as %[2]s.", gw, user)
 	case gw != "":
-		return "Log in to " + gw + "."
+		return i18n.Tf("Log in to %s.", gw)
 	}
 	return ""
 }
@@ -307,9 +309,9 @@ func (a *secretAgent) openConnect(conn map[string]map[string]dbus.Variant, name 
 			code = ""
 			return c, nil
 		}
-		msg := "The server asks for a second step to log in."
+		msg := i18n.T("The server asks for a second step to log in.")
 		if prompt != "" {
-			msg += " It asks for: " + strings.TrimSuffix(prompt, ":")
+			msg = i18n.Tf("The server asks for a second step to log in. It asks for: %s", strings.TrimSuffix(prompt, ":"))
 		}
 		r := a.askUntil(ctx.Done(), []string{"vpn-secret", "--name", name, "--fields", "otp", "--message", msg})
 		if r.canceled {
@@ -346,13 +348,13 @@ func (a *secretAgent) openConnect(conn map[string]map[string]dbus.Variant, name 
 		if notify == nil {
 			notify = Notify
 		}
-		body := "Could not log in: " + err.Error()
+		body := i18n.Tf("Could not log in: %s", err.Error())
 		var le *LoginError
 		switch {
 		case errors.As(err, &le):
-			body = "The login failed: " + le.Reason
+			body = i18n.Tf("The login failed: %s", le.Reason)
 		case errors.Is(err, context.DeadlineExceeded):
-			body = "The server did not answer in time."
+			body = i18n.T("The server did not answer in time.")
 		}
 		if nerr := notify("VPN "+name, body); nerr != nil {
 			log.Printf("isotope: the VPN notification: %v", nerr)

@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 const (
@@ -26,8 +28,8 @@ const (
 )
 
 var (
-	errNoObex       = errors.New("File transfer is not available")
-	errSendCanceled = errors.New("sending canceled")
+	errNoObex       error = nmTextError(i18n.Mark("File transfer is not available"))
+	errSendCanceled       = errors.New("sending canceled")
 )
 
 // obexChange is one Transfer1 PropertiesChanged signal.
@@ -157,7 +159,7 @@ func (b *bluezBluetooth) deviceAddress(path string) (addr string, err error) {
 		}
 		a, _ := objs[dbus.ObjectPath(path)][bluezDevice]["Address"].Value().(string)
 		if a == "" {
-			return fmt.Errorf("the device %s has no address", path)
+			return fmt.Errorf(i18n.T("the device %s has no address"), path)
 		}
 		addr = a
 		return nil
@@ -179,7 +181,7 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 	b.mu.Lock()
 	if b.sending {
 		b.mu.Unlock()
-		return errors.New("A file is already being sent.")
+		return errors.New(i18n.T("A file is already being sent."))
 	}
 	b.sending = true
 	b.cancelSend = cancel
@@ -229,7 +231,7 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 			if obexMissing(c.err) {
 				return errNoObex
 			}
-			return fmt.Errorf("cannot connect to the device: %w", c.err)
+			return fmt.Errorf(i18n.T("cannot connect to the device: %w"), c.err)
 		}
 		sess = c.sess
 	case <-cancel:
@@ -245,7 +247,7 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 
 	changes, stop, err := bus.Changes(sess)
 	if err != nil {
-		return fmt.Errorf("cannot watch the transfer: %w", err)
+		return fmt.Errorf(i18n.T("cannot watch the transfer: %w"), err)
 	}
 	defer stop()
 
@@ -264,7 +266,7 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 	select {
 	case r := <-sr:
 		if r.err != nil {
-			return fmt.Errorf("cannot send the file: %w", r.err)
+			return fmt.Errorf(i18n.T("cannot send the file: %w"), r.err)
 		}
 		tr, props = r.tr, r.props
 	case <-cancel:
@@ -317,7 +319,7 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 			}
 			return nil
 		case "error":
-			return errors.New("the device did not accept the file")
+			return errors.New(i18n.T("the device did not accept the file"))
 		}
 		select {
 		case <-cancel:
@@ -325,10 +327,10 @@ func (b *bluezBluetooth) SendFile(path, file string, progress func(sent, total i
 			return errSendCanceled
 		case <-timer.C:
 			_ = bus.Cancel(tr)
-			return errors.New("the device stopped answering")
+			return errors.New(i18n.T("the device stopped answering"))
 		case ch, ok := <-changes:
 			if !ok {
-				return errors.New("The connection to file transfer was lost.")
+				return errors.New(i18n.T("The connection to file transfer was lost."))
 			}
 			if ch.Path != tr {
 				continue

@@ -1,5 +1,7 @@
 package main
 
+import "github.com/kairos-community/isotope/pkg/i18n"
+
 // Page is one page of the window, and the argument that opens on it:
 // `isotope system PAGE`.
 type Page string
@@ -30,31 +32,31 @@ var later = map[Page]bool{}
 func (p Page) Title() string {
 	switch p {
 	case PageApps:
-		return "Apps"
+		return i18n.T("Apps")
 	case PageUpdates:
-		return "Updates"
+		return i18n.T("Updates")
 	case PageDesktop:
-		return "Desktop & image"
+		return i18n.T("Desktop & image")
 	case PageExtensions:
-		return "Extensions"
+		return i18n.T("Extensions")
 	case PageBackup:
-		return "Backup"
+		return i18n.T("Backup")
 	case PageSecurity:
-		return "Security"
+		return i18n.T("Security")
 	case PageNetwork:
-		return "Network"
+		return i18n.T("Network")
 	case PageBluetooth:
-		return "Bluetooth"
+		return i18n.T("Bluetooth")
 	case PagePrinters:
-		return "Printers"
+		return i18n.T("Printers")
 	case PageUsers:
-		return "Users"
+		return i18n.T("Users")
 	case PageDisks:
-		return "Disks"
+		return i18n.T("Disks")
 	case PageCompat:
-		return "Compatibility"
+		return i18n.T("Compatibility")
 	case PageAbout:
-		return "About"
+		return i18n.T("About")
 	}
 	return string(p)
 }

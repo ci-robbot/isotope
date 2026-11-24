@@ -8,6 +8,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() { pageMakers[PWelcome] = func(u *UI) page { return &welcomePage{basePage: basePage{u}} } }
@@ -85,7 +86,7 @@ func (p *welcomePage) choose(restore bool) {
 }
 
 func (p *welcomePage) Footer(n nav) (leading, trailing []guikit.Action) {
-	return []guikit.Action{{Click: &p.quit, Kind: guikit.ButtonGhost, Label: "Skip setup"}},
+	return []guikit.Action{{Click: &p.quit, Kind: guikit.ButtonGhost, Label: i18n.T("Skip setup")}},
 		[]guikit.Action{*n.Continue}
 }
 
@@ -136,7 +137,7 @@ func (p *welcomePage) Body(gtx layout.Context) layout.Dimensions {
 				}),
 				guikit.VGap(14),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StHero, guikit.ColText, "Welcome to Isotope")
+					return u.Label(gtx, guikit.StHero, guikit.ColText, i18n.T("Welcome to Isotope"))
 				}),
 				guikit.VGap(8),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -145,12 +146,12 @@ func (p *welcomePage) Body(gtx layout.Context) layout.Dimensions {
 				guikit.VGap(20),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return u.Centered(gtx, guikit.StLead, guikit.ColText2, 1.55,
-						"A few choices make this computer yours: the language, the network, the look and the apps. Each step can be skipped, and you can come back to this window later from the Isotope menu.")
+						i18n.T("A few choices make this computer yours: the language, the network, the look and the apps. Each step can be skipped, and you can come back to this window later from the Isotope menu."))
 				}),
 				guikit.VGap(26),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 420))
-					return u.ChoiceCard(gtx, &p.asNew, !p.restoring(), "Set up as new", "Choose the settings step by step")
+					return u.ChoiceCard(gtx, &p.asNew, !p.restoring(), i18n.T("Set up as new"), i18n.T("Choose the settings step by step"))
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if !p.restoreOffered() {
@@ -158,7 +159,7 @@ func (p *welcomePage) Body(gtx layout.Context) layout.Dimensions {
 					}
 					return layout.Inset{Top: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 420))
-						return u.ChoiceCard(gtx, &p.restore, p.restoring(), "Restore from a backup", "Bring back a machine from its Isotope backup")
+						return u.ChoiceCard(gtx, &p.restore, p.restoring(), i18n.T("Restore from a backup"), i18n.T("Bring back a machine from its Isotope backup"))
 					})
 				}),
 			)

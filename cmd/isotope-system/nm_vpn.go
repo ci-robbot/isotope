@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // VPN is one saved VPN connection.
@@ -114,7 +116,7 @@ func (n nmNetwork) VPNs() ([]VPN, error) {
 func connByUUID(c *dbus.Conn, uuid string) (dbus.ObjectPath, error) {
 	var p dbus.ObjectPath
 	if err := c.Object(nmName, nmSettingsPath).Call(nmIface+".Settings.GetConnectionByUuid", 0, uuid).Store(&p); err != nil {
-		return "", fmt.Errorf("No such VPN connection: %w", err)
+		return "", fmt.Errorf(i18n.T("No such VPN connection: %w"), err)
 	}
 	return p, nil
 }
@@ -124,31 +126,31 @@ func connByUUID(c *dbus.Conn, uuid string) (dbus.ObjectPath, error) {
 func activeReason(r uint32) string {
 	switch r {
 	case 2:
-		return "it was disconnected"
+		return i18n.T("it was disconnected")
 	case 3:
-		return "the network device disconnected"
+		return i18n.T("the network device disconnected")
 	case 4:
-		return "the VPN service stopped"
+		return i18n.T("the VPN service stopped")
 	case 5:
-		return "the VPN settings are not valid"
+		return i18n.T("the VPN settings are not valid")
 	case 6:
-		return "the connection timed out: the server may be unreachable"
+		return i18n.T("the connection timed out: the server may be unreachable")
 	case 7:
-		return "the VPN service did not start in time"
+		return i18n.T("the VPN service did not start in time")
 	case 8:
-		return "the VPN service could not start"
+		return i18n.T("the VPN service could not start")
 	case 9:
-		return "no password or key was given, or the login failed"
+		return i18n.T("no password or key was given, or the login failed")
 	case 10:
-		return "the login failed: check the key or password"
+		return i18n.T("the login failed: check the key or password")
 	case 11:
-		return "the connection was removed"
+		return i18n.T("the connection was removed")
 	case 12:
-		return "a connection it needs failed"
+		return i18n.T("a connection it needs failed")
 	case 13, 14:
-		return "the network device is not available"
+		return i18n.T("the network device is not available")
 	}
-	return "NetworkManager gave no reason"
+	return i18n.T("NetworkManager gave no reason")
 }
 
 func (n nmNetwork) ActivateVPN(uuid string) error {
@@ -190,7 +192,7 @@ func (n nmNetwork) ActivateVPN(uuid string) error {
 
 // errVPNTimeout is waitVPN's answer when NetworkManager settled nothing in
 // time.
-var errVPNTimeout = errors.New("Timed out connecting the VPN")
+var errVPNTimeout error = nmTextError(i18n.Mark("Timed out connecting the VPN"))
 
 // vpnWaitBound is how long the page waits for NetworkManager to settle a
 // VPN of type kind (the connection.type). An OpenConnect login runs through
@@ -217,7 +219,7 @@ var (
 // bound it gives up with errVPNTimeout.
 func waitVPN(sig <-chan *dbus.Signal, active dbus.ObjectPath, state func() (uint32, error), bound, poll time.Duration) error {
 	failed := func(reason uint32) error {
-		return fmt.Errorf("The VPN did not connect: %s", activeReason(reason))
+		return fmt.Errorf(i18n.T("The VPN did not connect: %s"), activeReason(reason))
 	}
 	deadline := time.NewTimer(bound)
 	defer deadline.Stop()
@@ -360,15 +362,15 @@ func openConnectSettings(o OpenConnect) (settings, error) {
 	name := strings.TrimSpace(o.Name)
 	switch {
 	case gw == "":
-		return nil, fmt.Errorf("Type the VPN server")
+		return nil, errors.New(i18n.T("Type the VPN server"))
 	case strings.HasPrefix(gw, "-") || strings.ContainsAny(gw, " \t\r\n"):
-		return nil, fmt.Errorf("%q is not a server address", gw)
+		return nil, fmt.Errorf(i18n.T("%q is not a server address"), gw)
 	case !openConnectProtocol(o.Protocol):
-		return nil, fmt.Errorf("Choose the type of VPN")
+		return nil, errors.New(i18n.T("Choose the type of VPN"))
 	case user == "":
-		return nil, fmt.Errorf("Type your user name")
+		return nil, errors.New(i18n.T("Type your user name"))
 	case strings.ContainsAny(user, "\r\n"):
-		return nil, fmt.Errorf("The user name cannot have line breaks")
+		return nil, errors.New(i18n.T("The user name cannot have line breaks"))
 	}
 	if name == "" {
 		name = gw

@@ -5,6 +5,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/recoverykey"
 )
 
@@ -63,7 +64,7 @@ func resealView(st RecoveryStatus) (offer bool, note string) {
 		}
 	}
 	if tpmUnlocksAll(st) {
-		return false, "The TPM unlocks the disk; nothing to reseal"
+		return false, i18n.T("The TPM unlocks the disk; nothing to reseal")
 	}
 	return false, ""
 }
@@ -126,20 +127,20 @@ func (p *securityPage) openNewKey() {
 		p.showNewKey("")
 		return
 	}
-	title, hint := "The disk passphrase or the current recovery key", ""
+	title, hint := i18n.T("The disk passphrase or the current recovery key"), ""
 	if trusted {
-		title, hint = "The current recovery key", "The TPM does not unlock the disk now."
+		title, hint = i18n.T("The current recovery key"), i18n.T("The TPM does not unlock the disk now.")
 	}
 	u := p.u
-	u.askForm("New recovery key", "The new key replaces the old one, which then stops working.", func(gtx layout.Context) layout.Dimensions {
+	u.askForm(i18n.T("New recovery key"), i18n.T("The new key replaces the old one, which then stops working."), func(gtx layout.Context) layout.Dimensions {
 		if !p.curFocused {
 			p.curFocused = true
 			gtx.Execute(focus(&p.cur.Editor))
 		}
 		return fieldsCol(gtx, u, fieldRow{title: title, f: p.cur, hint: hint})
 	}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: p.clearForms},
-		choice{Label: "Continue", Kind: guikit.ButtonPrimary, Enabled: func() bool { return p.cur.Editor.Text() != "" }, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: p.clearForms},
+		choice{Label: i18n.T("Continue"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return p.cur.Editor.Text() != "" }, Do: func() {
 			cur := p.cur.Editor.Text()
 			p.clearForms()
 			p.showNewKey(cur)
@@ -152,13 +153,13 @@ func (p *securityPage) showNewKey(current string) {
 	u := p.u
 	key, err := recoverykey.New()
 	if err != nil {
-		u.tell("Could not make a recovery key", err.Error())
+		u.tell(i18n.T("Could not make a recovery key"), err.Error())
 		return
 	}
-	u.keyDialog("Your new recovery key", "Write it down and keep it away from this computer. It is shown only now.", key, func() {
-		p.run("Replacing the recovery key…", "The recovery key was not replaced",
+	u.keyDialog(i18n.T("Your new recovery key"), i18n.T("Write it down and keep it away from this computer. It is shown only now."), key, func() {
+		p.run(i18n.T("Replacing the recovery key…"), i18n.T("The recovery key was not replaced"),
 			newKeyFailNote,
-			"Recovery key replaced", "The new recovery key works; the old one does not any more.",
+			i18n.T("Recovery key replaced"), i18n.T("The new recovery key works; the old one does not any more."),
 			func(d Daemon) error { return d.RecoveryNewKey(current, key) })
 	})
 }
@@ -171,9 +172,9 @@ func (p *securityPage) showNewKey(current string) {
 func newKeyFailNote(err error) string {
 	switch errName(err) {
 	case "NotAuthorized", "Busy", "Exiting", "RebootPending", "Rebooting", "Refused":
-		return "The key you wrote down does not work; your old key still does."
+		return i18n.T("The key you wrote down does not work; your old key still does.")
 	}
-	return "Keep both your old key and the key you wrote down: some parts of the disk may already use the new key."
+	return i18n.T("Keep both your old key and the key you wrote down: some parts of the disk may already use the new key.")
 }
 
 // openReseal asks for the recovery key and seals the disk to the TPM
@@ -185,19 +186,19 @@ func (p *securityPage) openReseal() {
 	}
 	p.clearForms()
 	u := p.u
-	u.askForm("Seal to this computer's TPM again", "After a firmware update the TPM may no longer unlock the disk. The recovery key opens it, then the disk is sealed to the TPM as it is now.", func(gtx layout.Context) layout.Dimensions {
+	u.askForm(i18n.T("Seal to this computer's TPM again"), i18n.T("After a firmware update the TPM may no longer unlock the disk. The recovery key opens it, then the disk is sealed to the TPM as it is now."), func(gtx layout.Context) layout.Dimensions {
 		if !p.resealFocused {
 			p.resealFocused = true
 			gtx.Execute(focus(&p.resealKey.Editor))
 		}
-		return fieldsCol(gtx, u, fieldRow{title: "Recovery key", f: p.resealKey, hint: "8 groups of 8 letters; dashes optional."})
+		return fieldsCol(gtx, u, fieldRow{title: i18n.T("Recovery key"), f: p.resealKey, hint: i18n.T("8 groups of 8 letters; dashes optional.")})
 	}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: p.clearForms},
-		choice{Label: "Seal again", Kind: guikit.ButtonPrimary, Enabled: func() bool { return recoverykey.Canonical(p.resealKey.Editor.Text()) != "" }, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: p.clearForms},
+		choice{Label: i18n.T("Seal again"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return recoverykey.Canonical(p.resealKey.Editor.Text()) != "" }, Do: func() {
 			key := recoverykey.Canonical(p.resealKey.Editor.Text())
 			p.clearForms()
-			p.run("Sealing the disk to the TPM…", "The disk was not sealed again", nil,
-				"Sealed again", "The next start unlocks the disk without the recovery key.",
+			p.run(i18n.T("Sealing the disk to the TPM…"), i18n.T("The disk was not sealed again"), nil,
+				i18n.T("Sealed again"), i18n.T("The next start unlocks the disk without the recovery key."),
 				func(d Daemon) error { return d.RecoveryReseal(key) })
 		}})
 }
@@ -206,9 +207,9 @@ func (p *securityPage) openReseal() {
 // read and while a call runs.
 func (p *securityPage) actions() []guikit.Action {
 	st, ok := p.keys()
-	as := []guikit.Action{{Click: &p.newKeyBtn, Kind: guikit.ButtonPrimary, Label: "New recovery key…", Disabled: !ok}}
+	as := []guikit.Action{{Click: &p.newKeyBtn, Kind: guikit.ButtonPrimary, Label: i18n.T("New recovery key…"), Disabled: !ok}}
 	if offer, _ := resealView(st); offer {
-		as = append(as, guikit.Action{Click: &p.resealBtn, Kind: guikit.ButtonSecondary, Label: "Seal to this computer's TPM again", Disabled: !ok})
+		as = append(as, guikit.Action{Click: &p.resealBtn, Kind: guikit.ButtonSecondary, Label: i18n.T("Seal to this computer's TPM again"), Disabled: !ok})
 	}
 	return as
 }
@@ -223,7 +224,7 @@ func (p *securityPage) Shown() {
 		u.mu.Lock()
 		defer u.mu.Unlock()
 		if err != nil {
-			p.loadErr = "Could not read the disk's keys: " + Describe(err)
+			p.loadErr = i18n.Tf("Could not read the disk's keys: %s", Describe(err))
 			return
 		}
 		p.rec, p.loaded, p.loadErr = st, true, ""
@@ -249,23 +250,23 @@ func (p *securityPage) Body(gtx layout.Context) layout.Dimensions {
 	acts := p.actions()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Security", "Disk encryption keeps your files unreadable without the passphrase, the recovery key or this computer's TPM."))
+		c.add(u.Heading(i18n.T("Security"), i18n.T("Disk encryption keeps your files unreadable without the passphrase, the recovery key or this computer's TPM.")))
 		c.gap(24)
 		if !u.sys.Encrypted {
-			c.add(u.lead("The disk is not encrypted"))
+			c.add(u.lead(i18n.T("The disk is not encrypted")))
 			c.gap(6)
-			c.add(u.para("Encryption is chosen when Isotope is installed (\"Encrypt your files?\"). To encrypt this machine, back it up, install again with encryption on, and restore the backup."))
+			c.add(u.para(i18n.T("Encryption is chosen when Isotope is installed (\"Encrypt your files?\"). To encrypt this machine, back it up, install again with encryption on, and restore the backup.")))
 			return c.layout(gtx)
 		}
-		c.add(u.lead("The disk is encrypted"))
+		c.add(u.lead(i18n.T("The disk is encrypted")))
 		c.gap(12)
 		switch {
 		case !u.sys.Admin:
-			c.add(u.notice("Only an administrator (a member of the admin group) can see and change the disk's keys."))
+			c.add(u.notice(i18n.T("Only an administrator (a member of the admin group) can see and change the disk's keys.")))
 		case loadErr != "":
 			c.add(u.errorBox(loadErr))
 		case !loaded:
-			c.add(u.spinnerLine("Reading the disk's keys…"))
+			c.add(u.spinnerLine(i18n.T("Reading the disk's keys…")))
 		default:
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -279,12 +280,12 @@ func (p *securityPage) Body(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		c.gap(28)
-		c.add(u.caps("RECOVERY KEY"))
+		c.add(u.caps(i18n.T("RECOVERY KEY")))
 		c.gap(10)
-		c.add(u.para("A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working."))
+		c.add(u.para(i18n.T("A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working.")))
 		c.gap(12)
 		if !u.sys.Admin {
-			c.add(u.dim("Only an administrator can create a recovery key or seal the disk to the TPM again."))
+			c.add(u.dim(i18n.T("Only an administrator can create a recovery key or seal the disk to the TPM again.")))
 			c.gap(10)
 		}
 		if busy != "" {

@@ -14,6 +14,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/unit"
 	"gioui.org/widget"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // ButtonKind is the look of a button.
@@ -405,7 +407,7 @@ func (th *Theme) PickList(gtx layout.Context, l *widget.List, shown []int, sel i
 		gtx.Constraints.Min = gtx.Constraints.Max
 		if len(shown) == 0 {
 			return layout.Inset{Top: 9, Left: 12}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return th.Label(gtx, StBody, ColDim, "Nothing matches.")
+				return th.Label(gtx, StBody, ColDim, i18n.T("Nothing matches."))
 			})
 		}
 		return l.List.Layout(gtx, len(shown), func(gtx layout.Context, n int) layout.Dimensions {

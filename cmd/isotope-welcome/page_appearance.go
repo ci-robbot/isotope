@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -15,10 +16,10 @@ func init() {
 
 // lightNoteTiling is the light card's line where only the apps follow the
 // choice: the bar, terminal, notifications and menus stay dark.
-const lightNoteTiling = "Apps use a light theme; the bar and menus stay dark"
+var lightNoteTiling = i18n.Mark("Apps use a light theme; the bar and menus stay dark")
 
 // lightNoteCosmic is its line on COSMIC, where the whole desktop turns light.
-const lightNoteCosmic = "Light windows and panels"
+var lightNoteCosmic = i18n.Mark("Light windows and panels")
 
 // appearancePage is dark or light. What is set now is read in the
 // background, and Continue writes the choice there too (gsettings can take a
@@ -115,7 +116,7 @@ func (p *appearancePage) Continue() {
 		p.mu.Lock()
 		p.busy = false
 		if err != nil {
-			p.err = "Could not change the appearance: " + err.Error()
+			p.err = i18n.Tf("Could not change the appearance: %v", err)
 		} else {
 			p.applied = true
 		}
@@ -137,7 +138,7 @@ func (p *appearancePage) Body(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 620))
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Appearance", "Dark is Isotope's look. You can change it later in the Isotope menu.")),
+			layout.Rigid(u.Heading(i18n.T("Appearance"), i18n.T("Dark is Isotope's look. You can change it later in the Isotope menu."))),
 			guikit.VGap(22),
 		}
 		switch {
@@ -145,17 +146,17 @@ func (p *appearancePage) Body(gtx layout.Context) layout.Dimensions {
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, errText) }), guikit.VGap(14))
 		case busy:
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Applying…")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Applying…"))
 			}), guikit.VGap(14))
 		}
 		kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &p.darkC, dark, "Dark", "Easy on the eyes, the Isotope look")
+					return u.ChoiceCard(gtx, &p.darkC, dark, i18n.T("Dark"), i18n.T("Easy on the eyes, the Isotope look"))
 				}),
 				layout.Rigid(layout.Spacer{Width: 14}.Layout),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &p.light, !dark, "Light", lightNote)
+					return u.ChoiceCard(gtx, &p.light, !dark, i18n.T("Light"), i18n.T(lightNote))
 				}))
 		}))
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)

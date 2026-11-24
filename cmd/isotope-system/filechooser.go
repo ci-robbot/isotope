@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // FileFilter is one choice of the picker's file type list: a name and
@@ -133,7 +135,7 @@ func (f portalFiles) OpenFile(req FileRequest) (string, error) {
 	defer stopGone()
 	filters := make([]portalFilter, 0, len(req.Filters))
 	for _, ff := range req.Filters {
-		pf := portalFilter{Name: ff.Name}
+		pf := portalFilter{Name: i18n.T(ff.Name)}
 		for _, p := range ff.Patterns {
 			pf.Patterns = append(pf.Patterns, portalPattern{0, p})
 		}
@@ -145,7 +147,7 @@ func (f portalFiles) OpenFile(req FileRequest) (string, error) {
 		"multiple":     dbus.MakeVariant(false),
 	}
 	if req.Accept != "" {
-		opts["accept_label"] = dbus.MakeVariant(req.Accept)
+		opts["accept_label"] = dbus.MakeVariant(i18n.T(req.Accept))
 	}
 	if len(filters) > 0 {
 		opts["filters"] = dbus.MakeVariant(filters)
@@ -155,7 +157,7 @@ func (f portalFiles) OpenFile(req FileRequest) (string, error) {
 	// the user. A portal that does not answer the call in a few seconds
 	// (none on the bus: ServiceUnknown; one that hangs) is no portal.
 	ctx, cancel := context.WithTimeout(context.Background(), portalCallLimit)
-	handle, err := bus.OpenFile(ctx, req.Title, opts)
+	handle, err := bus.OpenFile(ctx, i18n.T(req.Title), opts)
 	cancel()
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", errNoPortal, err)
@@ -210,10 +212,10 @@ func portalResult(code uint32, results map[string]dbus.Variant) (string, error) 
 func fileURIPath(uri string) (string, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
-		return "", fmt.Errorf("the file chooser gave a bad address: %v", err)
+		return "", fmt.Errorf(i18n.T("the file chooser gave a bad address: %v"), err)
 	}
 	if u.Scheme != "file" || (u.Host != "" && u.Host != "localhost") || !filepath.IsAbs(u.Path) {
-		return "", fmt.Errorf("the file chooser gave %s, which is not a local file", uri)
+		return "", fmt.Errorf(i18n.T("the file chooser gave %s, which is not a local file"), uri)
 	}
 	return filepath.Clean(u.Path), nil
 }
@@ -308,7 +310,7 @@ func (u *UI) chooseFile(req FileRequest, picked func(path string), typed func())
 		case errors.Is(err, errNoPortal):
 			typed()
 		default:
-			u.tell(req.Title, err.Error())
+			u.tell(i18n.T(req.Title), err.Error())
 		}
 	})
 }

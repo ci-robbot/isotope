@@ -1,11 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // NetState is what the Network page needs to know about the machine.
@@ -230,7 +233,8 @@ func apRSN(c *dbus.Conn, dev dbus.ObjectPath, ssid string) uint32 {
 
 // errWrongPassword is a secured connection that NetworkManager dropped
 // while activating: nearly always a wrong key.
-var errWrongPassword = fmt.Errorf("Wrong password")
+// The Network page translates it where it shows it.
+var errWrongPassword = errors.New(i18n.Mark("Wrong password"))
 
 // connectFailure is the error of a connection that NetworkManager dropped
 // while activating. Only a network joined with a WPA-PSK password can say
@@ -239,7 +243,7 @@ func connectFailure(ssid, password string) error {
 	if password != "" {
 		return errWrongPassword
 	}
-	return fmt.Errorf("Could not connect to %s", ssid)
+	return fmt.Errorf(i18n.T("Could not connect to %s"), ssid)
 }
 
 func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
@@ -253,7 +257,7 @@ func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
 		return err
 	}
 	if dev == "" {
-		return fmt.Errorf("No Wi-Fi device")
+		return errors.New(i18n.T("No Wi-Fi device"))
 	}
 	var settingsPath, active dbus.ObjectPath
 	err = c.Object(nmName, nmPath).Call(nmIface+".AddAndActivateConnection", 0,
@@ -279,5 +283,5 @@ func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
 	}
 	_ = c.Object(nmName, nmPath).Call(nmIface+".DeactivateConnection", 0, active).Err
 	_ = c.Object(nmName, settingsPath).Call(nmIface+".Settings.Connection.Delete", 0).Err
-	return fmt.Errorf("Timed out connecting to %s", ssid)
+	return fmt.Errorf(i18n.T("Timed out connecting to %s"), ssid)
 }

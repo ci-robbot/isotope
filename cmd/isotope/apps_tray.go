@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kairos-community/isotope/pkg/flatpak"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The tray says when app updates are waiting: with automatic app updates
@@ -113,7 +113,7 @@ func (w appsWatch) once(ctx context.Context) {
 		return
 	}
 	summary, body := appsNotice(set, auto)
-	err = w.notify(summary, body, "Open Isotope System", func() {
+	err = w.notify(summary, body, i18n.T("Open Isotope System"), func() {
 		if err := w.open("apps updates"); err != nil {
 			w.log.Printf("opening Isotope System: %v", err)
 		}
@@ -140,18 +140,17 @@ func appsNotice(set []flatpak.Update, auto bool) (summary, body string) {
 	list := names[0]
 	switch {
 	case len(names) == 2:
-		list = names[0] + " and " + names[1]
+		list = i18n.Tf("%[1]s and %[2]s", names[0], names[1])
 	case len(names) > 2:
-		list = fmt.Sprintf("%s, %s and %d more", names[0], names[1], len(names)-2)
+		list = i18n.Nf("%[1]s, %[2]s and %[3]d more", "%[1]s, %[2]s and %[3]d more", len(names)-2, names[0], names[1], len(names)-2)
 	}
+	n := len(set)
 	if auto {
-		if len(set) == 1 {
-			return "An app update needs your OK", list + " asks for more permissions. Isotope System's Apps page shows what it asks for."
-		}
-		return fmt.Sprintf("%d app updates need your OK", len(set)), list + " ask for more permissions. Isotope System's Apps page shows what they ask for."
+		return i18n.Nf("An app update needs your OK", "%d app updates need your OK", n, n),
+			i18n.Nf("%s asks for more permissions. Isotope System's Apps page shows what it asks for.",
+				"%s ask for more permissions. Isotope System's Apps page shows what they ask for.", n, list)
 	}
-	if len(set) == 1 {
-		return "1 app update", list + " can be updated. Isotope System's Apps page installs it."
-	}
-	return fmt.Sprintf("%d app updates", len(set)), list + " can be updated. Isotope System's Apps page installs them."
+	return i18n.Nf("%d app update", "%d app updates", n, n),
+		i18n.Nf("%s can be updated. Isotope System's Apps page installs it.",
+			"%s can be updated. Isotope System's Apps page installs them.", n, list)
 }

@@ -6,11 +6,13 @@ package main
 // Wi-Fi: ModemManager's own D-Bus policy is for root and the admin group.
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 const nmDeviceModem = 8 // NM_DEVICE_TYPE_MODEM
@@ -38,7 +40,7 @@ type Modem struct {
 // a locked SIM or no signal prevents.
 func modemState(s uint32) string {
 	if s == 20 {
-		return "Not ready: no signal, or the SIM is locked"
+		return i18n.Mark("Not ready: no signal, or the SIM is locked")
 	}
 	return deviceState(s)
 }
@@ -96,11 +98,11 @@ func newModemSettings(apn string) settings {
 // name (letters, digits, dots, dashes, underscores), at most 100 characters.
 func checkAPN(apn string) error {
 	if len(apn) > 100 {
-		return fmt.Errorf("An APN has at most 100 characters")
+		return errors.New(i18n.T("An APN has at most 100 characters"))
 	}
 	for _, r := range apn {
 		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '-' || r == '_') {
-			return fmt.Errorf("An APN has only letters, digits, dots, dashes and underscores")
+			return errors.New(i18n.T("An APN has only letters, digits, dots, dashes and underscores"))
 		}
 	}
 	return nil
@@ -168,10 +170,10 @@ func modemConnection(c *dbus.Conn, dev dbus.ObjectPath) (dbus.ObjectPath, settin
 func modemDevice(c *dbus.Conn, id string) (dbus.ObjectPath, error) {
 	dev := dbus.ObjectPath(id)
 	if !dev.IsValid() {
-		return "", fmt.Errorf("No such modem")
+		return "", errors.New(i18n.T("No such modem"))
 	}
 	if t, err := prop[uint32](c.Object(nmName, dev), nmIface+".Device.DeviceType"); err != nil || t != nmDeviceModem {
-		return "", fmt.Errorf("No such modem")
+		return "", errors.New(i18n.T("No such modem"))
 	}
 	return dev, nil
 }
@@ -240,12 +242,12 @@ func (n nmNetwork) ConnectModem(id string) error {
 		time.Sleep(500 * time.Millisecond)
 	}
 	_ = c.Object(nmName, nmPath).Call(nmIface+".DeactivateConnection", 0, active).Err
-	return fmt.Errorf("Timed out connecting the modem")
+	return errors.New(i18n.T("Timed out connecting the modem"))
 }
 
 // errModemConnect is a modem connection NetworkManager gave up on. The
 // saved connection stays: its APN is the user's to fix.
-var errModemConnect = fmt.Errorf("The modem did not connect. Check the APN (APN…), the SIM and the signal")
+var errModemConnect error = nmTextError(i18n.Mark("The modem did not connect. Check the APN (APN…), the SIM and the signal"))
 
 func (n nmNetwork) DisconnectModem(id string) error {
 	c, err := n.conn()
@@ -276,7 +278,7 @@ func (n nmNetwork) SetModemAPN(id, apn string) error {
 	}
 	if p, s := modemConnection(c, dev); p != "" {
 		if t, _ := s["connection"]["type"].Value().(string); t != "gsm" {
-			return fmt.Errorf("This modem's network (CDMA) has no APN")
+			return errors.New(i18n.T("This modem's network (CDMA) has no APN"))
 		}
 		return c.Object(nmName, p).Call(nmIface+".Settings.Connection.Update", 0, withAPN(s, apn)).Err
 	}

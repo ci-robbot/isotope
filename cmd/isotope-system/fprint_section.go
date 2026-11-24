@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"strconv"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The FINGERPRINTS section of the Users page: the user's own enrolled
@@ -18,17 +18,19 @@ import (
 // extension instead. See
 // docs/superpowers/specs/2026-11-24-fingerprint-design.md.
 
-const (
-	fpExtension  = "fingerprint"
-	fpNotNeeded  = "A finger unlocks the screen and approves sudo and administrator prompts. Logging in still asks for your password, which also unlocks your keyring."
-	fpNoExt      = "Unlock the screen and approve sudo and administrator prompts with a finger. Fingerprint sign-in comes with the fingerprint extension."
-	fpNoExtUser  = " An administrator can install it."
-	fpNoReader   = "No fingerprint reader was found. Connect one, or check that this computer's reader is supported by libfprint."
-	fpRestart    = "Restart the computer to finish setting up fingerprint sign-in."
-	fpPassTitle  = "Confirm it is you"
-	fpPassBody   = "Enter your password to change your fingerprints."
-	fpPickTitle  = "Add a fingerprint"
-	fpEnrollHead = "Adding a fingerprint"
+const fpExtension = "fingerprint"
+
+// The section's texts, marked here and translated where they are shown.
+var (
+	fpNotNeeded  = i18n.Mark("A finger unlocks the screen and approves sudo and administrator prompts. Logging in still asks for your password, which also unlocks your keyring.")
+	fpNoExt      = i18n.Mark("Unlock the screen and approve sudo and administrator prompts with a finger. Fingerprint sign-in comes with the fingerprint extension.")
+	fpNoExtUser  = i18n.Mark("Unlock the screen and approve sudo and administrator prompts with a finger. Fingerprint sign-in comes with the fingerprint extension. An administrator can install it.")
+	fpNoReader   = i18n.Mark("No fingerprint reader was found. Connect one, or check that this computer's reader is supported by libfprint.")
+	fpRestart    = i18n.Mark("Restart the computer to finish setting up fingerprint sign-in.")
+	fpPassTitle  = i18n.Mark("Confirm it is you")
+	fpPassBody   = i18n.Mark("Enter your password to change your fingerprints.")
+	fpPickTitle  = i18n.Mark("Add a fingerprint")
+	fpEnrollHead = i18n.Mark("Adding a fingerprint")
 )
 
 // fingerSection is the section's state.
@@ -88,7 +90,7 @@ func (s *fingerSection) load() {
 		defer u.mu.Unlock()
 		s.loaded = true
 		if err != nil {
-			s.loadErr = "Could not read the fingerprints: " + describeFprint(err)
+			s.loadErr = i18n.Tf("Could not read the fingerprints: %s", describeFprint(err))
 			return
 		}
 		s.st, s.loadErr = st, ""
@@ -99,17 +101,17 @@ func (s *fingerSection) load() {
 func describeFprint(err error) string {
 	switch dbusErrName(err) {
 	case "net.reactivated.Fprint.Error.PermissionDenied", "org.freedesktop.PolicyKit1.Error.NotAuthorized":
-		return "you were not allowed to (the password was not given or not right)."
+		return i18n.T("you were not allowed to (the password was not given or not right).")
 	case "net.reactivated.Fprint.Error.AlreadyInUse":
-		return "the reader is in use by another program. Try again in a moment."
+		return i18n.T("the reader is in use by another program. Try again in a moment.")
 	case "net.reactivated.Fprint.Error.NoSuchDevice":
-		return "the reader is gone."
+		return i18n.T("the reader is gone.")
 	case "net.reactivated.Fprint.Error.NoEnrolledPrints":
-		return "that fingerprint is not enrolled."
+		return i18n.T("that fingerprint is not enrolled.")
 	case "net.reactivated.Fprint.Error.PrintsNotDeleted", "net.reactivated.Fprint.Error.PrintsNotDeletedFromDevice":
-		return "the reader kept the fingerprint."
+		return i18n.T("the reader kept the fingerprint.")
 	case "org.freedesktop.DBus.Error.ServiceUnknown", "org.freedesktop.DBus.Error.NameHasNoOwner":
-		return "fprintd is not running."
+		return i18n.T("fprintd is not running.")
 	}
 	return Describe(err)
 }
@@ -130,12 +132,12 @@ func (s *fingerSection) askPassword(ctx context.Context, q AuthAsk) (string, boo
 	prev := u.dlg
 	s.pass = f
 	u.mu.Unlock()
-	body := fpPassBody
+	body := i18n.T(fpPassBody)
 	if q.Info != "" {
 		body += "\n\n" + q.Info
 	}
 	var d *dialog
-	d = newDialog(fpPassTitle, body, func(gtx layout.Context) layout.Dimensions {
+	d = newDialog(i18n.T(fpPassTitle), body, func(gtx layout.Context) layout.Dimensions {
 		if f.Submitted(gtx) && f.Editor.Text() != "" {
 			u.pick(d, 1)
 		}
@@ -143,12 +145,12 @@ func (s *fingerSection) askPassword(ctx context.Context, q AuthAsk) (string, boo
 			focused = true
 			gtx.Execute(focus(&f.Editor))
 		}
-		return u.Labelled(gtx, "Password", f, "", func(gtx layout.Context) layout.Dimensions {
+		return u.Labelled(gtx, i18n.T("Password"), f, "", func(gtx layout.Context) layout.Dimensions {
 			return u.Input(gtx, f, guikit.StBody, 38, "", nil)
 		})
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: func() { ch <- answer{} }},
-		choice{Label: "OK", Kind: guikit.ButtonPrimary, Enabled: func() bool { return f.Editor.Text() != "" }, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: func() { ch <- answer{} }},
+		choice{Label: i18n.T("OK"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return f.Editor.Text() != "" }, Do: func() {
 			ch <- answer{pw: f.Editor.Text(), ok: true}
 		}})
 	u.open(d)
@@ -193,11 +195,11 @@ func (s *fingerSection) openAdd() {
 			}
 		}
 	}
-	u.askForm(fpPickTitle, "Which finger? You can add more than one.", func(gtx layout.Context) layout.Dimensions {
+	u.askForm(i18n.T(fpPickTitle), i18n.T("Which finger? You can add more than one."), func(gtx layout.Context) layout.Dimensions {
 		return s.pickForm(gtx, enrolled)
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Next", Kind: guikit.ButtonPrimary, Enabled: func() bool { return s.picked != "" }, Do: func() { s.enroll(s.picked, st) }})
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Next"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return s.picked != "" }, Do: func() { s.enroll(s.picked, st) }})
 }
 
 // pickForm is the fingers in two columns, left hand and right hand; an
@@ -219,7 +221,7 @@ func (s *fingerSection) pickForm(gtx layout.Context, enrolled map[string]bool) l
 				c.add(func(gtx layout.Context) layout.Dimensions {
 					label := fingerShort(n)
 					if enrolled[n] {
-						label += " (added)"
+						label = i18n.Tf("%s (added)", label)
 					}
 					return u.Card(gtx, s.clickFor(s.pick, n), s.picked == n, layout.Inset{Top: 8, Bottom: 8, Left: 12, Right: 12}, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
@@ -240,9 +242,9 @@ func (s *fingerSection) pickForm(gtx layout.Context, enrolled map[string]bool) l
 		}
 	}
 	return layout.Flex{}.Layout(gtx,
-		layout.Flexed(1, hand(fingerNames[:5], "LEFT")),
+		layout.Flexed(1, hand(fingerNames[:5], i18n.T("LEFT"))),
 		layout.Rigid(layout.Spacer{Width: 14}.Layout),
-		layout.Flexed(1, hand(fingerNames[5:], "RIGHT")),
+		layout.Flexed(1, hand(fingerNames[5:], i18n.T("RIGHT"))),
 	)
 }
 
@@ -251,19 +253,20 @@ func (s *fingerSection) enrollText(st FingerState) (string, string) {
 	s.u.mu.Lock()
 	finger, passed, msg := s.enrolling, s.passed, s.message
 	s.u.mu.Unlock()
-	verb := "Touch"
+	// TRANSLATORS: %s is a finger, such as "your right index finger".
+	do := i18n.Tf("Touch the reader with %s.", fingerPhrase(finger))
 	if st.Swipe {
-		verb = "Swipe"
+		// TRANSLATORS: %s is a finger, such as "your right index finger".
+		do = i18n.Tf("Swipe the reader with %s.", fingerPhrase(finger))
 	}
-	do := verb + " the reader with " + fingerPhrase(finger) + "."
 	if msg != "" {
 		do = msg
 	}
 	far := ""
 	if st.Stages > 0 {
-		far = strconv.Itoa(min(passed, st.Stages)) + " of " + strconv.Itoa(st.Stages) + " scans"
+		far = i18n.Tf("%[1]d of %[2]d scans", min(passed, st.Stages), st.Stages)
 	} else if passed > 0 {
-		far = strconv.Itoa(passed) + " scans"
+		far = i18n.Tf("%d scans", passed)
 	}
 	return do, far
 }
@@ -279,7 +282,7 @@ func (s *fingerSection) enroll(finger string, st FingerState) {
 	u.mu.Lock()
 	s.enrolling, s.passed, s.message, s.cancel = finger, 0, "", cancel
 	u.mu.Unlock()
-	d := newDialog(fpEnrollHead, fingerLabel(finger), func(gtx layout.Context) layout.Dimensions {
+	d := newDialog(i18n.T(fpEnrollHead), fingerLabel(finger), func(gtx layout.Context) layout.Dimensions {
 		do, far := s.enrollText(st)
 		var c col
 		c.add(func(gtx layout.Context) layout.Dimensions {
@@ -290,7 +293,7 @@ func (s *fingerSection) enroll(finger string, st FingerState) {
 			c.add(u.dim(far))
 		}
 		return c.layout(gtx)
-	}, 0, choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: cancel})
+	}, 0, choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: cancel})
 	u.open(d)
 	go func() {
 		err := f.Enroll(ctx, finger, s.askPassword, func(step EnrollStep) {
@@ -309,9 +312,11 @@ func (s *fingerSection) enroll(finger string, st FingerState) {
 		switch {
 		case ctx.Err() != nil:
 		case err != nil:
-			u.tell("Could not add the fingerprint", "Isotope could not add "+fingerPhrase(finger)+": "+describeFprintEnroll(err))
+			u.tell(i18n.T("Could not add the fingerprint"),
+				// TRANSLATORS: %[1]s is a finger ("your right index finger"), %[2]s the reason.
+				i18n.Tf("Isotope could not add %[1]s: %[2]s", fingerPhrase(finger), describeFprintEnroll(err)))
 		default:
-			u.tell("Fingerprint added", fingerLabel(finger)+" now unlocks the screen and approves sudo and administrator prompts.")
+			u.tell(i18n.T("Fingerprint added"), i18n.Tf("%s now unlocks the screen and approves sudo and administrator prompts.", fingerLabel(finger)))
 		}
 		cancel()
 		s.load()
@@ -331,12 +336,12 @@ func (s *fingerSection) openRemove(finger string) {
 	if f == nil {
 		return
 	}
-	u.ask("Remove "+fingerLabel(finger)+"?", "It will no longer unlock the screen or approve prompts.",
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
+	u.ask(i18n.Tf("Remove %s?", fingerLabel(finger)), i18n.T("It will no longer unlock the screen or approve prompts."),
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Remove"), Kind: guikit.ButtonDanger, Do: func() {
 			u.async(func() {
 				if err := f.Delete(context.Background(), finger, s.askPassword); err != nil {
-					u.tell("Could not remove the fingerprint", "Isotope could not remove "+fingerPhrase(finger)+": "+describeFprint(err))
+					u.tell(i18n.T("Could not remove the fingerprint"), i18n.Tf("Isotope could not remove %[1]s: %[2]s", fingerPhrase(finger), describeFprint(err)))
 				}
 				s.load()
 			})
@@ -364,48 +369,44 @@ func (s *fingerSection) body() layout.Widget {
 	st, loaded, loadErr := s.state()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps("FINGERPRINTS"))
+		c.add(u.caps(i18n.T("FINGERPRINTS")))
 		c.gap(10)
 		switch {
 		case !loaded:
-			c.add(u.spinnerLine("Looking for a fingerprint reader…"))
+			c.add(u.spinnerLine(i18n.T("Looking for a fingerprint reader…")))
 		case loadErr != "":
 			c.add(u.errorBox(loadErr))
 		case !st.Installed:
-			sub := fpNoExt
+			sub := i18n.T(fpNoExt)
 			if !u.sys.Admin {
-				sub += fpNoExtUser
+				sub = i18n.T(fpNoExtUser)
 			}
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var p col
-				p.add(u.row("Fingerprint sign-in is not installed", sub, nil))
+				p.add(u.row(i18n.T("Fingerprint sign-in is not installed"), sub, nil))
 				p.gap(10)
-				p.add(u.buttons(guikit.Action{Click: &s.install, Kind: guikit.ButtonSecondary, Label: "Install the fingerprint extension"}))
+				p.add(u.buttons(guikit.Action{Click: &s.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install the fingerprint extension")}))
 				return p.layout(gtx)
 			}))
 		case st.NeedsRestart:
-			c.add(u.notice(fpRestart))
+			c.add(u.notice(i18n.T(fpRestart)))
 		case st.Reader == "":
-			c.add(u.panel(u.row("No fingerprint reader", fpNoReader, nil)))
+			c.add(u.panel(u.row(i18n.T("No fingerprint reader"), i18n.T(fpNoReader), nil)))
 		default:
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var p col
-				sub := "No fingerprints yet."
-				switch n := len(st.Enrolled); n {
-				case 0:
-				case 1:
-					sub = "1 fingerprint"
-				default:
-					sub = strconv.Itoa(n) + " fingerprints"
+				sub := i18n.T("No fingerprints yet.")
+				if n := len(st.Enrolled); n > 0 {
+					sub = i18n.Nf("%d fingerprint", "%d fingerprints", n, n)
 				}
-				p.add(u.row(st.Reader, sub, u.buttons(guikit.Action{Click: &s.add, Kind: guikit.ButtonSecondary, Label: "Add a fingerprint…"})))
+				p.add(u.row(st.Reader, sub, u.buttons(guikit.Action{Click: &s.add, Kind: guikit.ButtonSecondary, Label: i18n.T("Add a fingerprint…")})))
 				for _, n := range st.Enrolled {
 					n := n
 					p.gap(8)
-					p.add(u.row(fingerLabel(n), "", u.buttons(guikit.Action{Click: s.clickFor(s.remove, n), Kind: guikit.ButtonGhost, Label: "Remove…"})))
+					p.add(u.row(fingerLabel(n), "", u.buttons(guikit.Action{Click: s.clickFor(s.remove, n), Kind: guikit.ButtonGhost, Label: i18n.T("Remove…")})))
 				}
 				p.gap(12)
-				p.add(u.dim(fpNotNeeded))
+				p.add(u.dim(i18n.T(fpNotNeeded)))
 				return p.layout(gtx)
 			}))
 		}

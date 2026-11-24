@@ -1,0 +1,4662 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: isotope isotope-system\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "Updates · %d"
+msgstr "Actualizaciones · %d"
+
+#: cmd/isotope-system/apps.go
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_updates.go
+msgid "Updates"
+msgstr "Actualizaciones"
+
+#: cmd/isotope-system/apps.go
+msgctxt "app state"
+msgid "Installed"
+msgstr "Instalada"
+
+#: cmd/isotope-system/apps.go
+msgid "in Isotope's extension catalog · needs an administrator"
+msgstr "en el catálogo de extensiones de Isotope · necesita un administrador"
+
+#: cmd/isotope-system/apps.go
+msgid "installed · managed in Extensions"
+msgstr "instalada · se gestiona en Extensiones"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "Also installed: %[1]d system extension (%[2]s)."
+msgid_plural "Also installed: %[1]d system extensions (%[2]s)."
+msgstr[0] "También instalada: %[1]d extensión del sistema (%[2]s)."
+msgstr[1] "También instaladas: %[1]d extensiones del sistema (%[2]s)."
+
+#: cmd/isotope-system/apps.go
+msgid "running"
+msgstr "en ejecución"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "%s runtime"
+msgstr "runtime %s"
+
+#: cmd/isotope-system/apps.go
+msgid "Its permissions could not be compared. Automatic updates skip it until you update it here."
+msgstr "No se pudieron comparar sus permisos. Las actualizaciones automáticas lo omiten hasta que lo actualice aquí."
+
+#. TRANSLATORS: start it with the translation of "Asks for more:", which the page shows in amber.
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "Asks for more: %s. Automatic updates skip it until you agree."
+msgstr "Pide más: %s. Las actualizaciones automáticas lo omiten hasta que lo acepte."
+
+#: cmd/isotope-system/apps.go
+msgid "running, restarts later"
+msgstr "en ejecución, se reinicia después"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "Used by %s."
+msgstr "Lo usa %s."
+
+#: cmd/isotope-system/apps.go
+msgid "A runtime or extension your apps use."
+msgstr "Un runtime o extensión que usan sus aplicaciones."
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "READY TO UPDATE · %d"
+msgstr "LISTAS PARA ACTUALIZAR · %d"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "%[1]s uses the %[2]s runtime, which no longer gets security fixes. Only its developer can move it to a newer one."
+msgid_plural "%[1]s use the %[2]s runtime, which no longer gets security fixes. Only their developer can move them to a newer one."
+msgstr[0] "%[1]s usa el runtime %[2]s, que ya no recibe correcciones de seguridad. Solo su desarrollador puede pasarla a uno más reciente."
+msgstr[1] "%[1]s usan el runtime %[2]s, que ya no recibe correcciones de seguridad. Solo sus desarrolladores pueden pasarlas a uno más reciente."
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "%[1]s and %[2]s"
+msgstr "%[1]s y %[2]s"
+
+#: cmd/isotope-system/apps.go
+msgid "Off. You are told when updates are ready, and you install them here."
+msgstr "Desactivado. Se le avisa cuando hay actualizaciones y usted las instala aquí."
+
+#: cmd/isotope-system/apps.go
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/model.go
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/remote.go
+msgid "Turn on"
+msgstr "Activar"
+
+#: cmd/isotope-system/apps.go
+msgid "On. Once a day, not on a metered connection or a low battery. An app that is open updates the next time it starts."
+msgstr "Activado. Una vez al día, no con una conexión de uso medido ni con la batería baja. Una aplicación abierta se actualiza la próxima vez que se inicie."
+
+#: cmd/isotope-system/apps.go
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/model.go
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/remote.go
+msgid "Turn off"
+msgstr "Desactivar"
+
+#: cmd/isotope-system/apps.go
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Last run %[1]s: %[2]s"
+msgstr "Última ejecución %[1]s: %[2]s"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "updated %s."
+msgstr "se actualizó %s."
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "updated %d apps and runtimes."
+msgstr "se actualizaron %d aplicaciones y runtimes."
+
+#: cmd/isotope-system/apps.go
+msgid "everything was up to date."
+msgstr "todo estaba actualizado."
+
+#: cmd/isotope-system/apps.go
+msgctxt "installed version"
+msgid "INSTALLED"
+msgstr "INSTALADA"
+
+#: cmd/isotope-system/apps.go
+msgid "NEWEST"
+msgstr "MÁS RECIENTE"
+
+#: cmd/isotope-system/apps.go
+msgid "VERSION"
+msgstr "VERSIÓN"
+
+#: cmd/isotope-system/apps.go
+msgid "SIZE"
+msgstr "TAMAÑO"
+
+#: cmd/isotope-system/apps.go
+msgid "DOWNLOAD"
+msgstr "DESCARGA"
+
+#: cmd/isotope-system/apps.go
+msgid "LICENCE"
+msgstr "LICENCIA"
+
+#: cmd/isotope-system/apps.go
+msgid "SOURCE"
+msgstr "ORIGEN"
+
+#: cmd/isotope-system/apps.go
+msgid "Proprietary"
+msgstr "Privativa"
+
+#: cmd/isotope-system/apps.go
+#, go-format
+msgid "The app goes, and %s comes back. Its settings and files stay, so installing it again picks up where you left off."
+msgstr "La aplicación se quita y se liberan %s. Su configuración y sus archivos se conservan, así que al instalarla de nuevo continúa donde lo dejó."
+
+#: cmd/isotope-system/apps.go
+msgid "The app goes. Its settings and files stay, so installing it again picks up where you left off."
+msgstr "La aplicación se quita. Su configuración y sus archivos se conservan, así que al instalarla de nuevo continúa donde lo dejó."
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_apps.go
+msgid "Apps"
+msgstr "Aplicaciones"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_desktop.go
+msgid "Desktop & image"
+msgstr "Escritorio e imagen"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_extensions.go
+msgid "Extensions"
+msgstr "Extensiones"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_backup.go
+msgid "Backup"
+msgstr "Copia de seguridad"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_security.go
+msgid "Security"
+msgstr "Seguridad"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_network.go
+msgid "Network"
+msgstr "Red"
+
+#: cmd/isotope-system/args.go
+msgid "Bluetooth"
+msgstr "Bluetooth"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_printers.go
+msgid "Printers"
+msgstr "Impresoras"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_users.go
+msgid "Users"
+msgstr "Usuarios"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_disks.go
+msgid "Disks"
+msgstr "Discos"
+
+#: cmd/isotope-system/args.go
+#: cmd/isotope-system/page_compat.go
+msgid "Compatibility"
+msgstr "Compatibilidad"
+
+#: cmd/isotope-system/args.go
+msgid "About"
+msgstr "Acerca de"
+
+#: cmd/isotope-system/ask.go
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/page_users.go
+#: cmd/isotope-system/remote.go
+#: cmd/isotope-system/shares.go
+msgid "Password"
+msgstr "Contraseña"
+
+#: cmd/isotope-system/ask.go
+msgid "Second password"
+msgstr "Segunda contraseña"
+
+#: cmd/isotope-system/ask.go
+msgid "One-time code"
+msgstr "Código de un solo uso"
+
+#: cmd/isotope-system/ask.go
+msgid "Private key"
+msgstr "Clave privada"
+
+#: cmd/isotope-system/ask.go
+#, go-format
+msgid "Connect to %s"
+msgstr "Conectar con %s"
+
+#: cmd/isotope-system/ask.go
+msgid "Connect to the VPN"
+msgstr "Conectar con la VPN"
+
+#: cmd/isotope-system/ask.go
+msgid "The VPN asks for this to connect."
+msgstr "La VPN lo pide para conectarse."
+
+#: cmd/isotope-system/ask.go
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/keydialog.go
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_backup.go
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_compat.go
+#: cmd/isotope-system/page_disks.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_security.go
+#: cmd/isotope-system/page_updates.go
+#: cmd/isotope-system/page_users.go
+#: cmd/isotope-system/remote.go
+#: cmd/isotope-system/shares.go
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: cmd/isotope-system/ask.go
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/shares.go
+msgid "Connect"
+msgstr "Conectar"
+
+#: cmd/isotope-system/ask.go
+msgid "A Bluetooth device"
+msgstr "Un dispositivo Bluetooth"
+
+#: cmd/isotope-system/ask.go
+#, go-format
+msgid "%[1]s wants to send you %[2]s. The file goes to your Downloads folder."
+msgstr "%[1]s quiere enviarle %[2]s. El archivo va a su carpeta Descargas."
+
+#: cmd/isotope-system/ask.go
+#, go-format
+msgid "%[1]s wants to send you %[2]s (%[3]s). The file goes to your Downloads folder."
+msgstr "%[1]s quiere enviarle %[2]s (%[3]s). El archivo va a su carpeta Descargas."
+
+#: cmd/isotope-system/ask.go
+msgid "Receive a file?"
+msgstr "¿Recibir un archivo?"
+
+#: cmd/isotope-system/ask.go
+msgid "Decline"
+msgstr "Rechazar"
+
+#: cmd/isotope-system/ask.go
+msgid "Accept"
+msgstr "Aceptar"
+
+#: cmd/isotope-system/avahi.go
+msgid "the network printer search (Avahi) is not running"
+msgstr "la búsqueda de impresoras de red (Avahi) no se está ejecutando"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "REST server"
+msgstr "Servidor REST"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "restic's rest-server, over HTTP or HTTPS"
+msgstr "El rest-server de restic, por HTTP o HTTPS"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Amazon S3, or a service that works like it"
+msgstr "Amazon S3, o un servicio que funciona igual"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A server you reach with SSH"
+msgstr "Un servidor al que se accede por SSH"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The folder name has a control character."
+msgstr "El nombre de la carpeta contiene un carácter de control."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The folder cannot have . or .. in it."
+msgstr "La carpeta no puede contener . ni .."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the folder on the disk for the backup."
+msgstr "Escriba la carpeta del disco para la copia de seguridad."
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "The value of %s has a line break in it."
+msgstr "El valor de %s contiene un salto de línea."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the address of the server, starting with http:// or https://."
+msgstr "Escriba la dirección del servidor, que empiece por http:// o https://."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Put the user and the password in their fields, not in the address."
+msgstr "Ponga el usuario y la contraseña en sus campos, no en la dirección."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the endpoint of the service, such as https://s3.amazonaws.com."
+msgstr "Escriba el endpoint del servicio, por ejemplo https://s3.amazonaws.com."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the name of the bucket."
+msgstr "Escriba el nombre del bucket."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The path has a control character."
+msgstr "La ruta contiene un carácter de control."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the access key ID and the secret access key."
+msgstr "Escriba el ID de la clave de acceso y la clave de acceso secreta."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the user and the server as user@server."
+msgstr "Escriba el usuario y el servidor como usuario@servidor."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The port is a number from 1 to 65535."
+msgstr "El puerto es un número de 1 a 65535."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type the folder on the server for the backup."
+msgstr "Escriba la carpeta del servidor para la copia de seguridad."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Type a file name."
+msgstr "Escriba un nombre de archivo."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A file name has no /."
+msgstr "Un nombre de archivo no contiene /."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A file name does not start with a dot."
+msgstr "Un nombre de archivo no empieza por un punto."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The file name has a control character."
+msgstr "El nombre del archivo contiene un carácter de control."
+
+#. TRANSLATORS: %[1]s is when the backup was made ("2 days ago"), %[2]s the hostname of its machine.
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid ""
+"The backup of %[1]s from %[2]s brings this whole machine back as it was: the users and their passwords, the hostname, every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"
+"What is on this machine now is replaced. The machine restarts at the end."
+msgstr ""
+"La copia de seguridad de %[1]s desde %[2]s devuelve este equipo entero a como estaba: los usuarios y sus contraseñas, el nombre del equipo, todas las carpetas personales, las claves SSH, las extensiones, la configuración y las aplicaciones Flatpak (instaladas de nuevo tras el reinicio).\n"
+"Lo que hay ahora en este equipo se reemplaza. Al final el equipo se reinicia."
+
+#. TRANSLATORS: %s is when the backup was made ("2 days ago").
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid ""
+"The backup of %s brings this whole machine back as it was: the users and their passwords, the hostname, every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"
+"What is on this machine now is replaced. The machine restarts at the end."
+msgstr ""
+"La copia de seguridad de %s devuelve este equipo entero a como estaba: los usuarios y sus contraseñas, el nombre del equipo, todas las carpetas personales, las claves SSH, las extensiones, la configuración y las aplicaciones Flatpak (instaladas de nuevo tras el reinicio).\n"
+"Lo que hay ahora en este equipo se reemplaza. Al final el equipo se reinicia."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Plug in a USB disk, and choose it."
+msgstr "Conecte un disco USB y elíjalo."
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%s (USB disk)"
+msgstr "%s (disco USB)"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Connect to the server and confirm its key."
+msgstr "Conéctese al servidor y confirme su clave."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Choose the kind of server."
+msgstr "Elija el tipo de servidor."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "udisks2 is not running"
+msgstr "udisks2 no se está ejecutando"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "it was mounted nowhere"
+msgstr "no se montó en ningún sitio"
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Could not mount %s"
+msgstr "No se pudo montar %s"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Set up the backup"
+msgstr "Configurar la copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Backups go to %s. Create a new backup there, with a new password, or use a backup that is there already, with its password."
+msgstr "Las copias de seguridad van a %s. Cree allí una copia de seguridad nueva, con una contraseña nueva, o use una que ya esté allí, con su contraseña."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Use an existing backup"
+msgstr "Usar una copia existente"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Create a new backup"
+msgstr "Crear una copia nueva"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Could not make a password"
+msgstr "No se pudo crear una contraseña"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The password of this backup"
+msgstr "La contraseña de esta copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Write it down and keep it away from this computer. It is shown only now. Without it, nobody can read the backup, not even you."
+msgstr "Anótela y guárdela lejos de este equipo. Solo se muestra ahora. Sin ella nadie puede leer la copia de seguridad, ni siquiera usted."
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Type the password of the backup in %s."
+msgstr "Escriba la contraseña de la copia de seguridad de %s."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Use this backup"
+msgstr "Usar esta copia"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Setting up the backup in %s…"
+msgstr "Configurando la copia de seguridad en %s…"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The backup was not set up"
+msgstr "No se configuró la copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The backup is set up"
+msgstr "La copia de seguridad está configurada"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "This machine backs up to %s. Click Back up now for the first backup, or choose a schedule."
+msgstr "Este equipo hace copias de seguridad en %s. Pulse Hacer una copia de seguridad ahora para la primera, o elija una programación."
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Could not read the backup's SSH key: %s"
+msgstr "No se pudo leer la clave SSH de la copia de seguridad: %s"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Cannot connect"
+msgstr "No se puede conectar"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "the server sent no key"
+msgstr "el servidor no envió ninguna clave"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Could not reach %s"
+msgstr "No se pudo acceder a %s"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Is this the server's key?"
+msgstr "¿Es esta la clave del servidor?"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "%s (port %d) sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and say yes only when it is the same."
+msgstr "%s (puerto %d) envió estas claves. En el servidor, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub muestra las suyas, con su tipo. Elija la clave que comparó y responda sí solo si es la misma."
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/page_bluetooth.go
+msgid "No"
+msgstr "No"
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Yes"
+msgstr "Sí"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Key"
+msgstr "Clave"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Cannot export"
+msgstr "No se puede exportar"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "USB disks cannot be listed: udisks2 is not running."
+msgstr "No se pueden listar los discos USB: udisks2 no se está ejecutando."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Export to a file"
+msgstr "Exportar a un archivo"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The file holds the whole backup, encrypted with its password. isotope restore reads it on any machine."
+msgstr "El archivo contiene la copia de seguridad entera, cifrada con su contraseña. isotope restore la lee en cualquier equipo."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Plug in a USB disk."
+msgstr "Conecte un disco USB."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "File name"
+msgstr "Nombre del archivo"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Written at the top of the disk."
+msgstr "Se escribe en la carpeta raíz del disco."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Export"
+msgstr "Exportar"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The export did not start"
+msgstr "La exportación no se inició"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Restoring over a machine in use is done in a terminal: isotope restore --only homes,apps,extensions"
+msgstr "La restauración sobre un equipo en uso se hace en una terminal: isotope restore --only homes,apps,extensions"
+
+#. TRANSLATORS: %s is the daemon's reason, in English, such as "there are users with a home".
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "A whole restore is offered only on a new machine, and on this one %s."
+msgstr "La restauración completa solo se ofrece en un equipo nuevo, y en este %s."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Choose where the backup is"
+msgstr "Elija dónde está la copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Restore this machine from a backup"
+msgstr "Restaurar este equipo desde una copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Find the backups"
+msgstr "Buscar las copias"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Reading the backups in %s…"
+msgstr "Leyendo las copias de seguridad de %s…"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Could not read the backup"
+msgstr "No se pudo leer la copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "There is no backup there"
+msgstr "Ahí no hay ninguna copia de seguridad"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "%s holds no backup yet."
+msgstr "%s aún no contiene ninguna copia de seguridad."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Which backup?"
+msgstr "¿Qué copia de seguridad?"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "The backups in %s, the newest first."
+msgstr "Las copias de seguridad de %s, de la más reciente a la más antigua."
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/page_backup.go
+#: cmd/isotope-system/page_security.go
+msgid "Continue"
+msgstr "Continuar"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Backup %s"
+msgstr "Copia %s"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Restore this machine?"
+msgstr "¿Restaurar este equipo?"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Restore and restart"
+msgstr "Restaurar y reiniciar"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "The restore did not start"
+msgstr "La restauración no se inició"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "not mounted"
+msgstr "sin montar"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "%s free"
+msgstr "%s libres"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "BACK UP THIS MACHINE"
+msgstr "COPIA DE SEGURIDAD DE ESTE EQUIPO"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A USB disk"
+msgstr "Un disco USB"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Plugged in to this computer"
+msgstr "Conectado a este equipo"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A remote server"
+msgstr "Un servidor remoto"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "A REST server, S3 or SFTP"
+msgstr "Un servidor REST, S3 o SFTP"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "It shows here when it is plugged in. A disk with exFAT, FAT, NTFS, ext4, Btrfs or XFS can hold backups."
+msgstr "Aparece aquí cuando se conecta. Un disco con exFAT, FAT, NTFS, ext4, Btrfs o XFS puede guardar copias de seguridad."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Folder"
+msgstr "Carpeta"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "On the disk. It is made if it is not there."
+msgstr "En el disco. Se crea si no existe."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Address"
+msgstr "Dirección"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Such as https://backup.example.com:8000/anna/"
+msgstr "Por ejemplo https://backup.example.com:8000/anna/"
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/shares.go
+msgid "User"
+msgstr "Usuario"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Endpoint"
+msgstr "Endpoint"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Such as https://s3.amazonaws.com"
+msgstr "Por ejemplo https://s3.amazonaws.com"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Bucket"
+msgstr "Bucket"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Path"
+msgstr "Ruta"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "In the bucket. Optional."
+msgstr "Dentro del bucket. Opcional."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Access key ID"
+msgstr "ID de la clave de acceso"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Secret access key"
+msgstr "Clave de acceso secreta"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Region"
+msgstr "Región"
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/shares.go
+msgid "Optional."
+msgstr "Opcional."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "User and server"
+msgstr "Usuario y servidor"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Such as anna@nas.local"
+msgstr "Por ejemplo anna@nas.local"
+
+#: cmd/isotope-system/backup_setup.go
+#: cmd/isotope-system/firewall.go
+msgid "Port"
+msgstr "Puerto"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Folder on the server"
+msgstr "Carpeta en el servidor"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Such as /srv/backup"
+msgstr "Por ejemplo /srv/backup"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Reading the backup's SSH key…"
+msgstr "Leyendo la clave SSH de la copia de seguridad…"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Add this key to the server's authorized_keys, then Connect."
+msgstr "Añada esta clave al archivo authorized_keys del servidor y luego pulse Conectar."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Copy"
+msgstr "Copiar"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Copied."
+msgstr "Copiada."
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Fetching the server's key…"
+msgstr "Obteniendo la clave del servidor…"
+
+#: cmd/isotope-system/backup_setup.go
+#, go-format
+msgid "Key of %[1]s confirmed: %[2]s"
+msgstr "Clave de %[1]s confirmada: %[2]s"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Include Docker and Podman storage"
+msgstr "Incluir los datos de Docker y Podman"
+
+#: cmd/isotope-system/backup_setup.go
+msgid "Images, containers and volumes. They can be large."
+msgstr "Imágenes, contenedores y volúmenes. Pueden ocupar mucho."
+
+#: cmd/isotope-system/bluez.go
+msgid "no Bluetooth adapter"
+msgstr "no hay adaptador Bluetooth"
+
+#: cmd/isotope-system/bus.go
+msgid "Only members of the admin group can do this."
+msgstr "Solo los miembros del grupo admin pueden hacer esto."
+
+#: cmd/isotope-system/bus.go
+msgid "The last update waits for a restart; restart first."
+msgstr "La última actualización espera un reinicio; reinicie primero."
+
+#: cmd/isotope-system/bus.go
+msgid "The update service is busy with another job; try again when it ends."
+msgstr "El servicio de actualización está ocupado con otra tarea; vuelva a intentarlo cuando termine."
+
+#: cmd/isotope-system/bus.go
+msgid "The update service was stopping; try again."
+msgstr "El servicio de actualización se estaba deteniendo; vuelva a intentarlo."
+
+#: cmd/isotope-system/bus.go
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_desktop.go
+#: cmd/isotope-system/page_users.go
+msgid "The update service (isotope-updated) is not available."
+msgstr "El servicio de actualizaciones (isotope-updated) no está disponible."
+
+#: cmd/isotope-system/bus.go
+msgid "the secret is too long"
+msgstr "el secreto es demasiado largo"
+
+#: cmd/isotope-system/bus.go
+msgid "subscribing to the update service: %w"
+msgstr "suscripción al servicio de actualización: %w"
+
+#: cmd/isotope-system/codec.go
+msgid "Opus (gaming)"
+msgstr "Opus (juegos)"
+
+#: cmd/isotope-system/codec.go
+msgctxt "codec"
+msgid "Automatic"
+msgstr "Automático"
+
+#: cmd/isotope-system/codec.go
+msgid "this device has no audio card yet"
+msgstr "este dispositivo todavía no tiene tarjeta de sonido"
+
+#: cmd/isotope-system/codec.go
+msgid "the device has no profile %s"
+msgstr "el dispositivo no tiene el perfil %s"
+
+#: cmd/isotope-system/compat.go
+msgid "isotope glibc status gave no status (%v); is isotope up to date?"
+msgstr "isotope glibc status no devolvió un estado (%v); ¿está isotope actualizado?"
+
+#: cmd/isotope-system/compat.go
+msgid "%s: the isotope command is not installed"
+msgstr "%s: el comando isotope no está instalado"
+
+#: cmd/isotope-system/cups.go
+msgid "the printing service (CUPS) is not running"
+msgstr "el servicio de impresión (CUPS) no se está ejecutando"
+
+#: cmd/isotope-system/cups.go
+msgid "CUPS answered %s"
+msgstr "CUPS respondió %s"
+
+#: cmd/isotope-system/cups.go
+msgid "CUPS's answer cannot be read: %v"
+msgstr "no se puede leer la respuesta de CUPS: %v"
+
+#: cmd/isotope-system/cups.go
+msgid "CUPS's test page is missing: %v"
+msgstr "falta la página de prueba de CUPS: %v"
+
+#: cmd/isotope-system/cups.go
+msgid "no printer search on this system"
+msgstr "no hay búsqueda de impresoras en este sistema"
+
+#: cmd/isotope-system/dialog.go
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/page_bluetooth.go
+msgid "OK"
+msgstr "Aceptar"
+
+#: cmd/isotope-system/disks_model.go
+msgid "cannot tell which disk holds the system: %w"
+msgstr "no se puede saber qué disco contiene el sistema: %w"
+
+#. TRANSLATORS: %[1]s is a device, %[2]s the folder it is mounted on.
+#: cmd/isotope-system/disks_model.go
+#, go-format
+msgid "%[1]s at %[2]s"
+msgstr "%[1]s en %[2]s"
+
+#: cmd/isotope-system/filechooser.go
+msgid "the file chooser gave a bad address: %v"
+msgstr "el selector de archivos devolvió una dirección no válida: %v"
+
+#: cmd/isotope-system/filechooser.go
+msgid "the file chooser gave %s, which is not a local file"
+msgstr "el selector de archivos devolvió %s, que no es un archivo local"
+
+#: cmd/isotope-system/firewall.go
+msgid "Off on the live system. It is on after the install."
+msgstr "Desactivado en el sistema en vivo. Se activa tras la instalación."
+
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/model.go
+#: cmd/isotope-system/remote.go
+#: cmd/isotope-system/shares.go
+msgid "Loading…"
+msgstr "Cargando…"
+
+#: cmd/isotope-system/firewall.go
+msgid "The firewall settings could not be read."
+msgstr "No se pudo leer la configuración del cortafuegos."
+
+#: cmd/isotope-system/firewall.go
+msgid "Reset to defaults"
+msgstr "Restablecer valores predeterminados"
+
+#: cmd/isotope-system/firewall.go
+msgid "No port could be read from them: a reset gives the default list, SSH (22/tcp)."
+msgstr "No se pudo leer ningún puerto: al restablecer se usa la lista predeterminada, SSH (22/tcp)."
+
+#: cmd/isotope-system/firewall.go
+msgid "These ports could still be read; a reset keeps them:"
+msgstr "Estos puertos aún se pudieron leer; al restablecer se conservan:"
+
+#: cmd/isotope-system/firewall.go
+msgid "Only an administrator can change the firewall."
+msgstr "Solo un administrador puede cambiar el cortafuegos."
+
+#: cmd/isotope-system/firewall.go
+msgid "On · Incoming connections are blocked unless their port is allowed."
+msgstr "Activado · Las conexiones entrantes se bloquean salvo que su puerto esté permitido."
+
+#: cmd/isotope-system/firewall.go
+#, go-format
+msgid "%[1]s · Nothing is blocked. %[2]s"
+msgstr "%[1]s · No se bloquea nada. %[2]s"
+
+#: cmd/isotope-system/firewall.go
+msgid "Off · Every port is open to the network."
+msgstr "Desactivado · Todos los puertos están abiertos a la red."
+
+#: cmd/isotope-system/firewall.go
+msgid "No port is allowed."
+msgstr "No se permite ningún puerto."
+
+#: cmd/isotope-system/firewall.go
+msgid "Firewall"
+msgstr "Cortafuegos"
+
+#: cmd/isotope-system/firewall.go
+msgid "Turn the firewall off?"
+msgstr "¿Desactivar el cortafuegos?"
+
+#: cmd/isotope-system/firewall.go
+msgid "Every program that listens on a port can then be reached from the network."
+msgstr "Cualquier programa que escuche en un puerto será accesible desde la red."
+
+#: cmd/isotope-system/firewall.go
+msgid "Turning the firewall off…"
+msgstr "Desactivando el cortafuegos…"
+
+#: cmd/isotope-system/firewall.go
+msgid "Turning the firewall on…"
+msgstr "Activando el cortafuegos…"
+
+#: cmd/isotope-system/firewall.go
+#, go-format
+msgid "The firewall is turned on with the ports that could still be read: %s. Everything else in the file is replaced."
+msgstr "El cortafuegos se activa con los puertos que aún se pudieron leer: %s. Todo lo demás del archivo se reemplaza."
+
+#: cmd/isotope-system/firewall.go
+msgid "None of the saved settings could be read. The ports saved in the file are lost: the firewall is turned on with the default list, SSH (22/tcp)."
+msgstr "No se pudo leer ninguno de los ajustes guardados. Los puertos guardados en el archivo se pierden: el cortafuegos se activa con la lista predeterminada, SSH (22/tcp)."
+
+#: cmd/isotope-system/firewall.go
+msgid "Reset the firewall settings?"
+msgstr "¿Restablecer la configuración del cortafuegos?"
+
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/page_compat.go
+msgid "Reset"
+msgstr "Restablecer"
+
+#: cmd/isotope-system/firewall.go
+msgid "Resetting the firewall settings…"
+msgstr "Restableciendo la configuración del cortafuegos…"
+
+#: cmd/isotope-system/firewall.go
+msgid "Incoming connections on this port are blocked again."
+msgstr "Las conexiones entrantes en este puerto se vuelven a bloquear."
+
+#: cmd/isotope-system/firewall.go
+msgid "Nobody can then log in to this computer over SSH."
+msgstr "Nadie podrá iniciar sesión en este equipo por SSH."
+
+#: cmd/isotope-system/firewall.go
+#, go-format
+msgid "Stop allowing %s?"
+msgstr "¿Dejar de permitir %s?"
+
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+msgid "Remove"
+msgstr "Quitar"
+
+#: cmd/isotope-system/firewall.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+#, go-format
+msgid "Removing %s…"
+msgstr "Quitando %s…"
+
+#: cmd/isotope-system/firewall.go
+msgid "FIREWALL"
+msgstr "CORTAFUEGOS"
+
+#: cmd/isotope-system/firewall.go
+msgid "Allow incoming…"
+msgstr "Permitir entrantes…"
+
+#: cmd/isotope-system/firewall.go
+msgid "Allow incoming connections"
+msgstr "Permitir conexiones entrantes"
+
+#: cmd/isotope-system/firewall.go
+msgid "Programs on other computers can then connect to this one on the port."
+msgstr "Los programas de otros equipos podrán conectarse a este en el puerto."
+
+#: cmd/isotope-system/firewall.go
+msgid "Type a port number from 1 to 65535."
+msgstr "Escriba un número de puerto de 1 a 65535."
+
+#: cmd/isotope-system/firewall.go
+msgid "Up to 64 characters, with no quotes or backslashes."
+msgstr "Hasta 64 caracteres, sin comillas ni barras invertidas."
+
+#: cmd/isotope-system/firewall.go
+msgid "For example 8080 for a web server, or 51820 for WireGuard."
+msgstr "Por ejemplo 8080 para un servidor web, o 51820 para WireGuard."
+
+#: cmd/isotope-system/firewall.go
+msgid "Protocol"
+msgstr "Protocolo"
+
+#: cmd/isotope-system/firewall.go
+msgid "Description"
+msgstr "Descripción"
+
+#: cmd/isotope-system/firewall.go
+msgid "Optional. What the port is for."
+msgstr "Opcional. Para qué sirve el puerto."
+
+#: cmd/isotope-system/firewall.go
+msgid "Allow"
+msgstr "Permitir"
+
+#: cmd/isotope-system/firewall.go
+#, go-format
+msgid "Allowing %s…"
+msgstr "Permitiendo %s…"
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "Downloading %s…"
+msgstr "Descargando %s…"
+
+#: cmd/isotope-system/firmware.go
+msgid "Looking for devices…"
+msgstr "Buscando dispositivos…"
+
+#: cmd/isotope-system/firmware.go
+msgid "Firmware updates are not available on this system."
+msgstr "Las actualizaciones de firmware no están disponibles en este sistema."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "Version %s"
+msgstr "Versión %s"
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "%s. The update is ready: restart to finish it."
+msgstr "%s. La actualización está lista: reinicie para terminarla."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "%[1]s. Version %[2]s is available: %[3]s"
+msgstr "%[1]s. La versión %[2]s está disponible: %[3]s"
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "%[1]s. Version %[2]s is available."
+msgstr "%[1]s. La versión %[2]s está disponible."
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_apps.go
+msgid "Update"
+msgstr "Actualizar"
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "%s, up to date."
+msgstr "%s, actualizado."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "The last update failed: %s"
+msgstr "La última actualización falló: %s"
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_apps.go
+msgid "Starting…"
+msgstr "Iniciando…"
+
+#: cmd/isotope-system/firmware.go
+msgid "No device in this computer gets firmware updates through the LVFS."
+msgstr "Ningún dispositivo de este equipo recibe actualizaciones de firmware a través de LVFS."
+
+#: cmd/isotope-system/firmware.go
+msgid "Only an administrator (a member of the admin group) can update firmware."
+msgstr "Solo un administrador (un miembro del grupo admin) puede actualizar el firmware."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "Could not read the firmware updates: %s"
+msgstr "No se pudieron leer las actualizaciones de firmware: %s"
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Update %s?"
+msgstr "¿Actualizar %s?"
+
+#: cmd/isotope-system/firmware.go
+msgid "fwupd refused this. Installing an update needs an administrator (a member of the admin group); a downgrade or a firmware setting also needs the administrator password, which this window cannot ask for. Run fwupdmgr in a terminal (for example: fwupdmgr downgrade): it asks for the password there."
+msgstr "fwupd lo rechazó. Instalar una actualización requiere un administrador (un miembro del grupo admin); volver a una versión anterior o cambiar un ajuste del firmware también requiere la contraseña de administrador, que esta ventana no puede pedir. Ejecute fwupdmgr en una terminal (por ejemplo: fwupdmgr downgrade): allí pide la contraseña."
+
+#: cmd/isotope-system/firmware.go
+msgid "Some firmware updates turn Secure Boot back on. If the computer then does not start Isotope, turn Secure Boot off in the firmware setup."
+msgstr "Algunas actualizaciones de firmware vuelven a activar Secure Boot. Si después el equipo no inicia Isotope, desactive Secure Boot en la configuración del firmware."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "Version %s is downloaded from the LVFS and written to the device. Keep the computer plugged in, and do not unplug the device until it is done. Some updates finish at the next restart."
+msgstr "La versión %s se descarga de LVFS y se escribe en el dispositivo. Mantenga el equipo enchufado y no desconecte el dispositivo hasta que termine. Algunas actualizaciones terminan en el próximo reinicio."
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Could not update %s"
+msgstr "No se pudo actualizar %s"
+
+#: cmd/isotope-system/firmware.go
+msgid "Restart to finish the firmware update?"
+msgstr "¿Reiniciar para terminar la actualización del firmware?"
+
+#: cmd/isotope-system/firmware.go
+msgid "The update is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off."
+msgstr "La actualización está lista y se escribe en el próximo reinicio. El equipo puede reiniciarse más de una vez y mostrar su propia pantalla de actualización: no lo apague."
+
+#: cmd/isotope-system/firmware.go
+#, go-format
+msgid "The update of %s is ready and is written at the next restart. The computer may restart more than once and show its own update screen: do not turn it off."
+msgstr "La actualización de %s está lista y se escribe en el próximo reinicio. El equipo puede reiniciarse más de una vez y mostrar su propia pantalla de actualización: no lo apague."
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/install.go
+msgid "Later"
+msgstr "Más tarde"
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_updates.go
+msgid "Restart"
+msgstr "Reiniciar"
+
+#: cmd/isotope-system/firmware.go
+msgid "FIRMWARE"
+msgstr "FIRMWARE"
+
+#: cmd/isotope-system/firmware.go
+msgid "Firmware of this computer and its devices, from the Linux Vendor Firmware Service (LVFS)."
+msgstr "El firmware de este equipo y de sus dispositivos, del Linux Vendor Firmware Service (LVFS)."
+
+#: cmd/isotope-system/firmware.go
+msgid "Restart to finish the firmware update"
+msgstr "Reinicie para terminar la actualización del firmware"
+
+#: cmd/isotope-system/firmware.go
+msgid "The firmware is written while the computer starts."
+msgstr "El firmware se escribe mientras el equipo se inicia."
+
+#: cmd/isotope-system/firmware.go
+#: cmd/isotope-system/page_updates.go
+msgid "Restart…"
+msgstr "Reiniciar…"
+
+#: cmd/isotope-system/fprint.go
+msgid "Left thumb"
+msgstr "Pulgar izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "Left index finger"
+msgstr "Índice izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "Left middle finger"
+msgstr "Corazón izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "Left ring finger"
+msgstr "Anular izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "Left little finger"
+msgstr "Meñique izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "Right thumb"
+msgstr "Pulgar derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "Right index finger"
+msgstr "Índice derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "Right middle finger"
+msgstr "Corazón derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "Right ring finger"
+msgstr "Anular derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "Right little finger"
+msgstr "Meñique derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "Thumb"
+msgstr "Pulgar"
+
+#: cmd/isotope-system/fprint.go
+msgid "Index finger"
+msgstr "Índice"
+
+#: cmd/isotope-system/fprint.go
+msgid "Middle finger"
+msgstr "Corazón"
+
+#: cmd/isotope-system/fprint.go
+msgid "Ring finger"
+msgstr "Anular"
+
+#: cmd/isotope-system/fprint.go
+msgid "Little finger"
+msgstr "Meñique"
+
+#: cmd/isotope-system/fprint.go
+msgid "your left thumb"
+msgstr "el pulgar izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "your left index finger"
+msgstr "el índice izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "your left middle finger"
+msgstr "el dedo corazón izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "your left ring finger"
+msgstr "el anular izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "your left little finger"
+msgstr "el meñique izquierdo"
+
+#: cmd/isotope-system/fprint.go
+msgid "your right thumb"
+msgstr "el pulgar derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "your right index finger"
+msgstr "el índice derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "your right middle finger"
+msgstr "el dedo corazón derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "your right ring finger"
+msgstr "el anular derecho"
+
+#: cmd/isotope-system/fprint.go
+msgid "your right little finger"
+msgstr "el meñique derecho"
+
+#: cmd/isotope-system/fprint.go
+#, go-format
+msgid "your %s"
+msgstr "el dedo %s"
+
+#: cmd/isotope-system/fprint.go
+msgid "Good. Lift your finger, then swipe the reader again."
+msgstr "Bien. Levante el dedo y luego deslícelo de nuevo por el lector."
+
+#: cmd/isotope-system/fprint.go
+msgid "Good. Lift your finger, then touch the reader again."
+msgstr "Bien. Levante el dedo y luego toque de nuevo el lector."
+
+#: cmd/isotope-system/fprint.go
+msgid "That scan did not work. Swipe the reader again."
+msgstr "Esa lectura no funcionó. Deslice de nuevo el dedo por el lector."
+
+#: cmd/isotope-system/fprint.go
+msgid "That scan did not work. Touch the reader again."
+msgstr "Esa lectura no funcionó. Toque de nuevo el lector."
+
+#: cmd/isotope-system/fprint.go
+msgid "The swipe was too short. Swipe again."
+msgstr "El deslizamiento fue demasiado corto. Deslice de nuevo."
+
+#: cmd/isotope-system/fprint.go
+msgid "Put your finger in the middle of the reader and try again."
+msgstr "Ponga el dedo en el centro del lector y vuelva a intentarlo."
+
+#: cmd/isotope-system/fprint.go
+msgid "Lift your finger, then try again."
+msgstr "Levante el dedo y vuelva a intentarlo."
+
+#: cmd/isotope-system/fprint.go
+msgid "Too fast. Wait a moment, then try again."
+msgstr "Demasiado rápido. Espere un momento y vuelva a intentarlo."
+
+#: cmd/isotope-system/fprint.go
+msgid "this finger is already enrolled, for you or another user"
+msgstr "este dedo ya está registrado, para usted o para otro usuario"
+
+#: cmd/isotope-system/fprint.go
+msgid "the reader has no room for another fingerprint"
+msgstr "el lector no tiene espacio para otra huella digital"
+
+#: cmd/isotope-system/fprint.go
+msgid "the reader was disconnected"
+msgstr "el lector se desconectó"
+
+#: cmd/isotope-system/fprint.go
+msgid "the reader could not enroll this finger: try again"
+msgstr "el lector no pudo registrar este dedo: vuelva a intentarlo"
+
+#: cmd/isotope-system/fprint.go
+#, go-format
+msgid "the reader reported %s"
+msgstr "el lector informó de %s"
+
+#: cmd/isotope-system/fprint.go
+msgid "Fingerprint reader"
+msgstr "Lector de huellas digitales"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "A finger unlocks the screen and approves sudo and administrator prompts. Logging in still asks for your password, which also unlocks your keyring."
+msgstr "Un dedo desbloquea la pantalla y aprueba las peticiones de sudo y de administrador. Al iniciar la sesión se sigue pidiendo su contraseña, que también desbloquea su depósito de claves."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Unlock the screen and approve sudo and administrator prompts with a finger. Fingerprint sign-in comes with the fingerprint extension."
+msgstr "Desbloquee la pantalla y apruebe las peticiones de sudo y de administrador con un dedo. El acceso con huella digital viene con la extensión fingerprint."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Unlock the screen and approve sudo and administrator prompts with a finger. Fingerprint sign-in comes with the fingerprint extension. An administrator can install it."
+msgstr "Desbloquee la pantalla y apruebe las peticiones de sudo y de administrador con un dedo. El acceso con huella digital viene con la extensión fingerprint. Un administrador puede instalarla."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "No fingerprint reader was found. Connect one, or check that this computer's reader is supported by libfprint."
+msgstr "No se encontró ningún lector de huellas digitales. Conecte uno o compruebe que libfprint admite el lector de este equipo."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Restart the computer to finish setting up fingerprint sign-in."
+msgstr "Reinicie el equipo para terminar de configurar el acceso con huella digital."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Confirm it is you"
+msgstr "Confirme que es usted"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Enter your password to change your fingerprints."
+msgstr "Escriba su contraseña para cambiar sus huellas digitales."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Add a fingerprint"
+msgstr "Añadir una huella digital"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Adding a fingerprint"
+msgstr "Añadiendo una huella digital"
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "Could not read the fingerprints: %s"
+msgstr "No se pudieron leer las huellas digitales: %s"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "you were not allowed to (the password was not given or not right)."
+msgstr "no tenía permiso (no se dio la contraseña o no era correcta)."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "the reader is in use by another program. Try again in a moment."
+msgstr "otro programa está usando el lector. Vuelva a intentarlo dentro de un momento."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "the reader is gone."
+msgstr "el lector ya no está."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "that fingerprint is not enrolled."
+msgstr "esa huella digital no está registrada."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "the reader kept the fingerprint."
+msgstr "el lector conservó la huella digital."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "fprintd is not running."
+msgstr "fprintd no se está ejecutando."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Which finger? You can add more than one."
+msgstr "¿Qué dedo? Puede añadir más de uno."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Next"
+msgstr "Siguiente"
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "%s (added)"
+msgstr "%s (añadido)"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "LEFT"
+msgstr "IZQUIERDA"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "RIGHT"
+msgstr "DERECHA"
+
+#. TRANSLATORS: %s is a finger, such as "your right index finger".
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "Touch the reader with %s."
+msgstr "Toque el lector con %s."
+
+#. TRANSLATORS: %s is a finger, such as "your right index finger".
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "Swipe the reader with %s."
+msgstr "Deslice %s por el lector."
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "%[1]d of %[2]d scans"
+msgstr "%[1]d de %[2]d lecturas"
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "%d scans"
+msgstr "%d lecturas"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Could not add the fingerprint"
+msgstr "No se pudo añadir la huella digital"
+
+#. TRANSLATORS: %[1]s is a finger ("your right index finger"), %[2]s the reason.
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "Isotope could not add %[1]s: %[2]s"
+msgstr "Isotope no pudo añadir %[1]s: %[2]s"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Fingerprint added"
+msgstr "Huella digital añadida"
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "%s now unlocks the screen and approves sudo and administrator prompts."
+msgstr "%s ahora desbloquea la pantalla y aprueba las peticiones de sudo y de administrador."
+
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Remove %s?"
+msgstr "¿Quitar %s?"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "It will no longer unlock the screen or approve prompts."
+msgstr "Ya no desbloqueará la pantalla ni aprobará peticiones."
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Could not remove the fingerprint"
+msgstr "No se pudo quitar la huella digital"
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "Isotope could not remove %[1]s: %[2]s"
+msgstr "Isotope no pudo quitar %[1]s: %[2]s"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "FINGERPRINTS"
+msgstr "HUELLAS DIGITALES"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Looking for a fingerprint reader…"
+msgstr "Buscando un lector de huellas digitales…"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Fingerprint sign-in is not installed"
+msgstr "El acceso con huella digital no está instalado"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Install the fingerprint extension"
+msgstr "Instalar la extensión fingerprint"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "No fingerprint reader"
+msgstr "Ningún lector de huellas digitales"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "No fingerprints yet."
+msgstr "Aún no hay huellas digitales."
+
+#: cmd/isotope-system/fprint_section.go
+#, go-format
+msgid "%d fingerprint"
+msgid_plural "%d fingerprints"
+msgstr[0] "%d huella digital"
+msgstr[1] "%d huellas digitales"
+
+#: cmd/isotope-system/fprint_section.go
+msgid "Add a fingerprint…"
+msgstr "Añadir una huella digital…"
+
+#: cmd/isotope-system/fprint_section.go
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_users.go
+msgid "Remove…"
+msgstr "Quitar…"
+
+#: cmd/isotope-system/install.go
+msgid "Cannot install"
+msgstr "No se puede instalar"
+
+#: cmd/isotope-system/install.go
+#, go-format
+msgid "Checking %s…"
+msgstr "Comprobando %s…"
+
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Cannot install %s"
+msgstr "No se puede instalar %s"
+
+#: cmd/isotope-system/install.go
+msgid "The running system is not touched; the new one is used from the next boot."
+msgstr "El sistema en ejecución no se toca; el nuevo se usa a partir del próximo arranque."
+
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_extensions.go
+msgid "Install anyway"
+msgstr "Instalar de todos modos"
+
+#: cmd/isotope-system/install.go
+#, go-format
+msgid "Install %s?"
+msgstr "¿Instalar %s?"
+
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_updates.go
+msgid "Install"
+msgstr "Instalar"
+
+#: cmd/isotope-system/install.go
+msgid "The update did not start"
+msgstr "La actualización no se inició"
+
+#: cmd/isotope-system/install.go
+msgid "The update did not install"
+msgstr "La actualización no se instaló"
+
+#: cmd/isotope-system/install.go
+msgid "Restart now?"
+msgstr "¿Reiniciar ahora?"
+
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_updates.go
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+#: cmd/isotope-system/install.go
+#: cmd/isotope-system/page_updates.go
+msgid "Cannot restart"
+msgstr "No se puede reiniciar"
+
+#: cmd/isotope-system/install.go
+msgid "A firmware update is being written. Restarting now could damage the device. Try again when it is done."
+msgstr "Se está escribiendo una actualización de firmware. Reiniciar ahora podría dañar el dispositivo. Vuelva a intentarlo cuando termine."
+
+#: cmd/isotope-system/keydialog.go
+#, go-format
+msgid "The letters are only these: %s"
+msgstr "Las letras son solo estas: %s"
+
+#: cmd/isotope-system/keydialog.go
+msgid "I saved it"
+msgstr "La he guardado"
+
+#: cmd/isotope-system/keydialog.go
+#, go-format
+msgid "To check you saved it, type group %d of 8 of the new key."
+msgstr "Para comprobar que la ha guardado, escriba el grupo %d de 8 de la nueva clave."
+
+#: cmd/isotope-system/keydialog.go
+msgid "That is not it. Check what you wrote down."
+msgstr "No es eso. Compruebe lo que anotó."
+
+#: cmd/isotope-system/keydialog.go
+#, go-format
+msgid "Group %d"
+msgstr "Grupo %d"
+
+#: cmd/isotope-system/keydialog.go
+msgid "8 letters."
+msgstr "8 letras."
+
+#: cmd/isotope-system/keydialog.go
+msgid "Confirm"
+msgstr "Confirmar"
+
+#: cmd/isotope-system/live.go
+#: cmd/isotope-system/remote.go
+msgid "Not available on the live system. Install Isotope first."
+msgstr "No disponible en el sistema en vivo. Instale Isotope primero."
+
+#: cmd/isotope-system/live.go
+msgid "Cannot start the installer"
+msgstr "No se puede iniciar el instalador"
+
+#: cmd/isotope-system/live.go
+msgid "Install Isotope"
+msgstr "Instalar Isotope"
+
+#: cmd/isotope-system/model.go
+msgid "hardware (Intel and AMD GPU drivers, firmware)"
+msgstr "hardware (controladores de GPU Intel y AMD, firmware)"
+
+#: cmd/isotope-system/model.go
+msgid "virtual machine (no GPU drivers or firmware)"
+msgstr "máquina virtual (sin controladores de GPU ni firmware)"
+
+#: cmd/isotope-system/model.go
+msgid "Trusted Boot (signed UKI, hardware image)"
+msgstr "Trusted Boot (UKI firmada, imagen para hardware)"
+
+#: cmd/isotope-system/model.go
+msgid "This system was not installed from an Isotope release"
+msgstr "Este sistema no se instaló desde una versión de Isotope"
+
+#: cmd/isotope-system/model.go
+msgid "Checking for updates…"
+msgstr "Buscando actualizaciones…"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Isotope %s (pinned)"
+msgstr "Isotope %s (fijado)"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Isotope %s is up to date"
+msgstr "Isotope %s está actualizado"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Isotope %s is available"
+msgstr "Isotope %s está disponible"
+
+#: cmd/isotope-system/model.go
+msgid "Checking the image…"
+msgstr "Comprobando la imagen…"
+
+#: cmd/isotope-system/model.go
+msgid "Installing the update…"
+msgstr "Instalando la actualización…"
+
+#: cmd/isotope-system/model.go
+msgid "Changing system extensions…"
+msgstr "Cambiando las extensiones del sistema…"
+
+#: cmd/isotope-system/model.go
+#: cmd/isotope-system/page_backup.go
+msgid "Backing up this machine…"
+msgstr "Haciendo una copia de seguridad de este equipo…"
+
+#: cmd/isotope-system/model.go
+msgid "The update failed; restart before trying again"
+msgstr "La actualización falló; reinicie antes de volver a intentarlo"
+
+#: cmd/isotope-system/model.go
+msgid "The update was interrupted; restart before trying again"
+msgstr "La actualización se interrumpió; reinicie antes de volver a intentarlo"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Version %s is installed and starts at the next restart"
+msgstr "La versión %s está instalada y se inicia en el próximo reinicio"
+
+#: cmd/isotope-system/model.go
+msgid "The update is installed; restart to use it"
+msgstr "La actualización está instalada; reinicie para usarla"
+
+#: cmd/isotope-system/model.go
+msgid "The last check failed"
+msgstr "La última comprobación falló"
+
+#: cmd/isotope-system/model.go
+msgid "the release file names no image repository"
+msgstr "el archivo de versión no indica ningún repositorio de imágenes"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Image: %s"
+msgstr "Imagen: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Digest: %s"
+msgstr "Digest: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Flavor: %s"
+msgstr "Variante: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Version: %s"
+msgstr "Versión: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Graphics: %s"
+msgstr "Gráficos: %s"
+
+#: cmd/isotope-system/model.go
+msgid "Source: a published Isotope release (trusted)"
+msgstr "Origen: una versión publicada de Isotope (de confianza)"
+
+#: cmd/isotope-system/model.go
+msgid "Source: labelled by its publisher, not a published release"
+msgstr "Origen: etiquetada por su editor, no es una versión publicada"
+
+#: cmd/isotope-system/model.go
+msgid "Source: not an Isotope image"
+msgstr "Origen: no es una imagen de Isotope"
+
+#: cmd/isotope-system/model.go
+msgid "This is not a published Isotope release. Install it anyway?"
+msgstr "Esta no es una versión publicada de Isotope. ¿Instalarla de todos modos?"
+
+#: cmd/isotope-system/model.go
+msgid "This is not an Isotope image. Install it anyway?"
+msgstr "Esta no es una imagen de Isotope. ¿Instalarla de todos modos?"
+
+#: cmd/isotope-system/model.go
+msgid "This is the virtual machine image: it has no Intel or AMD GPU drivers and no firmware, so on a real machine Wi-Fi, Bluetooth and graphics may stop working. Later upgrades stay on the virtual machine image."
+msgstr "Esta es la imagen para máquina virtual: no tiene controladores de GPU Intel ni AMD ni firmware, así que en un equipo real el Wi-Fi, el Bluetooth y los gráficos pueden dejar de funcionar. Las actualizaciones posteriores se quedan en la imagen para máquina virtual."
+
+#: cmd/isotope-system/model.go
+msgid "This is the hardware image: it adds Intel and AMD GPU drivers and firmware, about 600 MB more. Later upgrades stay on the hardware image."
+msgstr "Esta es la imagen para hardware: añade controladores de GPU Intel y AMD y firmware, unos 600 MB más. Las actualizaciones posteriores se quedan en la imagen para hardware."
+
+#: cmd/isotope-system/model.go
+msgid "Your per-user desktop settings may not carry over, and the login screen may change."
+msgstr "Puede que la configuración de escritorio de su usuario no se conserve y que la pantalla de inicio de sesión cambie."
+
+#: cmd/isotope-system/model.go
+msgid "unknown"
+msgstr "desconocido"
+
+#: cmd/isotope-system/model.go
+msgid "The update was cancelled, or the update service restarted."
+msgstr "La actualización se canceló o el servicio de actualizaciones se reinició."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "The update failed after it started writing. Restart before trying again: %s"
+msgstr "La actualización falló después de empezar a escribir. Reinicie antes de volver a intentarlo: %s"
+
+#: cmd/isotope-system/model.go
+msgid "The update is installed and starts on the next boot."
+msgstr "La actualización está instalada y se inicia en el próximo arranque."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "The update failed: %s. Nothing changed on the running system; you can retry safely."
+msgstr "La actualización falló: %s. Nada cambió en el sistema en ejecución; puede volver a intentarlo sin riesgo."
+
+#: cmd/isotope-system/model.go
+msgid "Backup is not available on this edition (restic is not installed)."
+msgstr "La copia de seguridad no está disponible en esta edición (restic no está instalado)."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "After the last restore: %s"
+msgstr "Tras la última restauración: %s"
+
+#: cmd/isotope-system/model.go
+msgid "This machine has no backup yet."
+msgstr "Este equipo aún no tiene copia de seguridad."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Backs up to %s"
+msgstr "Hace la copia de seguridad en %s"
+
+#: cmd/isotope-system/model.go
+msgid "Automatic backups: daily"
+msgstr "Copias de seguridad automáticas: diarias"
+
+#: cmd/isotope-system/model.go
+msgid "Automatic backups: weekly"
+msgstr "Copias de seguridad automáticas: semanales"
+
+#: cmd/isotope-system/model.go
+msgid "Automatic backups: off"
+msgstr "Copias de seguridad automáticas: desactivadas"
+
+#: cmd/isotope-system/model.go
+msgid "Last backup: never"
+msgstr "Última copia de seguridad: nunca"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Last backup: %s"
+msgstr "Última copia de seguridad: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Last try: backed up, but %s"
+msgstr "Último intento: copia hecha, pero %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Last try failed: %s"
+msgstr "El último intento falló: %s"
+
+#: cmd/isotope-system/model.go
+msgid "No backup in the last 14 days."
+msgstr "No hay copias de seguridad en los últimos 14 días."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Plug in %s to back up"
+msgstr "Conecte %s para hacer la copia de seguridad"
+
+#: cmd/isotope-system/model.go
+msgid "The backup disk is not plugged in."
+msgstr "El disco de copia de seguridad no está conectado."
+
+#: cmd/isotope-system/model.go
+msgid "the backup disk"
+msgstr "el disco de copia de seguridad"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "today at %s"
+msgstr "hoy a las %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "yesterday at %s"
+msgstr "ayer a las %s"
+
+#: cmd/isotope-system/model.go
+msgid "Trusted Boot: the disk is sealed to this computer's TPM."
+msgstr "Trusted Boot: el disco está sellado con el TPM de este equipo."
+
+#: cmd/isotope-system/model.go
+msgid "passphrase"
+msgstr "frase de contraseña"
+
+#: cmd/isotope-system/model.go
+msgid "recovery key"
+msgstr "clave de recuperación"
+
+#: cmd/isotope-system/model.go
+msgid "TPM (does not unlock it now)"
+msgstr "TPM (ahora no lo desbloquea)"
+
+#: cmd/isotope-system/model.go
+msgid "no key Isotope knows"
+msgstr "ninguna clave que Isotope conozca"
+
+#: cmd/isotope-system/model.go
+msgid "Restarted into the previous system"
+msgstr "Reiniciado en el sistema anterior"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%s installed"
+msgstr "%s instalada"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%s failed"
+msgstr "%s falló"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%s cancelled"
+msgstr "%s cancelada"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%s (running)"
+msgstr "%s (en ejecución)"
+
+#: cmd/isotope-system/model.go
+msgid "just now"
+msgstr "justo ahora"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%d minute ago"
+msgid_plural "%d minutes ago"
+msgstr[0] "hace %d minuto"
+msgstr[1] "hace %d minutos"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%d hour ago"
+msgid_plural "%d hours ago"
+msgstr[0] "hace %d hora"
+msgstr[1] "hace %d horas"
+
+#: cmd/isotope-system/model.go
+msgid "yesterday"
+msgstr "ayer"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "%d day ago"
+msgid_plural "%d days ago"
+msgstr[0] "hace %d día"
+msgstr[1] "hace %d días"
+
+#: cmd/isotope-system/model.go
+msgid "An update failed"
+msgstr "Una actualización falló"
+
+#: cmd/isotope-system/model.go
+msgid "An update was cancelled"
+msgstr "Se canceló una actualización"
+
+#: cmd/isotope-system/model.go
+msgid "An update was installed"
+msgstr "Se instaló una actualización"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "An update: %s"
+msgstr "Una actualización: %s"
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "Off: the setting cannot be read (%s). Turn it on or off to repair it."
+msgstr "Desactivado: no se puede leer la configuración (%s). Actívela o desactívela para repararla."
+
+#: cmd/isotope-system/model.go
+msgid "On. Once a day a new release of this desktop is downloaded and installed in the background. It starts at the next restart; nothing restarts by itself."
+msgstr "Activado. Una vez al día se descarga e instala en segundo plano una nueva versión de este escritorio. Se inicia en el próximo reinicio; nada se reinicia solo."
+
+#: cmd/isotope-system/model.go
+msgid "Off. New releases are announced, and you install them."
+msgstr "Desactivado. Se avisa de las nuevas versiones y usted las instala."
+
+#: cmd/isotope-system/model.go
+msgid "Only an administrator can turn automatic updates on or off."
+msgstr "Solo un administrador puede activar o desactivar las actualizaciones automáticas."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "installed Isotope %s."
+msgstr "se instaló Isotope %s."
+
+#: cmd/isotope-system/model.go
+msgid "up to date."
+msgstr "ya estaba actualizado."
+
+#: cmd/isotope-system/model.go
+#, go-format
+msgid "failed. %s"
+msgstr "falló. %s"
+
+#: cmd/isotope-system/nm.go
+msgid "Wired"
+msgstr "Cableada"
+
+#: cmd/isotope-system/nm.go
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Connected"
+msgstr "Conectado"
+
+#: cmd/isotope-system/nm.go
+msgid "Connecting"
+msgstr "Conectando"
+
+#: cmd/isotope-system/nm.go
+msgid "Disconnected"
+msgstr "Desconectado"
+
+#: cmd/isotope-system/nm.go
+msgid "Cable unplugged"
+msgstr "Cable desconectado"
+
+#: cmd/isotope-system/nm.go
+msgid "Disconnecting"
+msgstr "Desconectando"
+
+#: cmd/isotope-system/nm.go
+msgid "Not managed"
+msgstr "No administrado"
+
+#: cmd/isotope-system/nm.go
+msgid "Unavailable"
+msgstr "No disponible"
+
+#: cmd/isotope-system/nm.go
+msgid "%s is not a saved network"
+msgstr "%s no es una red guardada"
+
+#: cmd/isotope-system/nm.go
+msgid "No Wi-Fi device"
+msgstr "No hay ningún dispositivo Wi-Fi"
+
+#: cmd/isotope-system/nm.go
+msgid "Wrong password"
+msgstr "Contraseña incorrecta"
+
+#: cmd/isotope-system/nm.go
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Could not connect to %s"
+msgstr "No se pudo conectar con %s"
+
+#: cmd/isotope-system/nm.go
+msgid "Timed out connecting to %s"
+msgstr "Se agotó el tiempo al conectar con %s"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "Not ready: no signal, or the SIM is locked"
+msgstr "No está listo: no hay señal o la SIM está bloqueada"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "An APN has at most 100 characters"
+msgstr "Un APN tiene como máximo 100 caracteres"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "An APN has only letters, digits, dots, dashes and underscores"
+msgstr "Un APN solo contiene letras, dígitos, puntos, guiones y guiones bajos"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "No such modem"
+msgstr "No existe ese módem"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "Timed out connecting the modem"
+msgstr "Se agotó el tiempo al conectar el módem"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "The modem did not connect. Check the APN (APN…), the SIM and the signal"
+msgstr "El módem no se conectó. Compruebe el APN (APN…), la SIM y la señal"
+
+#: cmd/isotope-system/nm_modem.go
+msgid "This modem's network (CDMA) has no APN"
+msgstr "La red de este módem (CDMA) no tiene APN"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "No such VPN connection: %w"
+msgstr "No existe esa conexión VPN: %w"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "it was disconnected"
+msgstr "se desconectó"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the network device disconnected"
+msgstr "el dispositivo de red se desconectó"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the VPN service stopped"
+msgstr "el servicio VPN se detuvo"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the VPN settings are not valid"
+msgstr "la configuración de la VPN no es válida"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the connection timed out: the server may be unreachable"
+msgstr "se agotó el tiempo de la conexión: puede que el servidor no esté accesible"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the VPN service did not start in time"
+msgstr "el servicio VPN no se inició a tiempo"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the VPN service could not start"
+msgstr "el servicio VPN no se pudo iniciar"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "no password or key was given, or the login failed"
+msgstr "no se proporcionó ninguna contraseña o clave, o el inicio de sesión falló"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the login failed: check the key or password"
+msgstr "el inicio de sesión falló: compruebe la clave o la contraseña"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the connection was removed"
+msgstr "la conexión se quitó"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "a connection it needs failed"
+msgstr "falló una conexión que necesita"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "the network device is not available"
+msgstr "el dispositivo de red no está disponible"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "NetworkManager gave no reason"
+msgstr "NetworkManager no indicó ningún motivo"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "Timed out connecting the VPN"
+msgstr "Se agotó el tiempo al conectar la VPN"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "The VPN did not connect: %s"
+msgstr "La VPN no se conectó: %s"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "Type the VPN server"
+msgstr "Escriba el servidor VPN"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "%q is not a server address"
+msgstr "%q no es una dirección de servidor"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "Choose the type of VPN"
+msgstr "Elija el tipo de VPN"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "Type your user name"
+msgstr "Escriba su nombre de usuario"
+
+#: cmd/isotope-system/nm_vpn.go
+msgid "The user name cannot have line breaks"
+msgstr "El nombre de usuario no puede tener saltos de línea"
+
+#: cmd/isotope-system/obex.go
+msgid "File transfer is not available"
+msgstr "La transferencia de archivos no está disponible"
+
+#: cmd/isotope-system/obex.go
+msgid "the device %s has no address"
+msgstr "el dispositivo %s no tiene dirección"
+
+#: cmd/isotope-system/obex.go
+msgid "A file is already being sent."
+msgstr "Ya se está enviando un archivo."
+
+#: cmd/isotope-system/obex.go
+msgid "cannot connect to the device: %w"
+msgstr "no se puede conectar con el dispositivo: %w"
+
+#: cmd/isotope-system/obex.go
+msgid "cannot watch the transfer: %w"
+msgstr "no se puede seguir la transferencia: %w"
+
+#: cmd/isotope-system/obex.go
+msgid "cannot send the file: %w"
+msgstr "no se puede enviar el archivo: %w"
+
+#: cmd/isotope-system/obex.go
+msgid "the device did not accept the file"
+msgstr "el dispositivo no aceptó el archivo"
+
+#: cmd/isotope-system/obex.go
+msgid "the device stopped answering"
+msgstr "el dispositivo dejó de responder"
+
+#: cmd/isotope-system/obex.go
+msgid "The connection to file transfer was lost."
+msgstr "Se perdió la conexión con la transferencia de archivos."
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Could not download Flathub's catalog: %s"
+msgstr "No se pudo descargar el catálogo de Flathub: %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Could not list your apps: %s"
+msgstr "No se pudieron listar sus aplicaciones: %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Could not look for updates: %s"
+msgstr "No se pudieron buscar actualizaciones: %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Could not read what it can reach: %s"
+msgstr "No se pudo leer a qué puede acceder: %s"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Flathub is not set up for this user."
+msgstr "Flathub no está configurado para este usuario."
+
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Could not install %s"
+msgstr "No se pudo instalar %s"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Could not open the app"
+msgstr "No se pudo abrir la aplicación"
+
+#. TRANSLATORS: the app's data folder has nothing in it.
+#: cmd/isotope-system/page_apps.go
+msgctxt "data folder"
+msgid "empty"
+msgstr "vacía"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Also delete its data"
+msgstr "Eliminar también sus datos"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Keep"
+msgstr "Conservar"
+
+#: cmd/isotope-system/page_apps.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Could not remove %s"
+msgstr "No se pudo quitar %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid ""
+"The new version asks for more than the version you have:\n"
+"\n"
+"• %s\n"
+"\n"
+"Automatic updates skip it until you update it here. Flatseal can take permissions away later."
+msgstr ""
+"La nueva versión pide más que la versión que tiene:\n"
+"\n"
+"• %s\n"
+"\n"
+"Las actualizaciones automáticas la omiten hasta que la actualice aquí. Flatseal puede retirar permisos más tarde."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Its permissions could not be compared with the version you have. Automatic updates skip it until you update it here."
+msgstr "No se pudieron comparar sus permisos con la versión que tiene. Las actualizaciones automáticas la omiten hasta que la actualice aquí."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Could not change the setting"
+msgstr "No se pudo cambiar la configuración"
+
+#: cmd/isotope-system/page_apps.go
+msgid "your apps"
+msgstr "sus aplicaciones"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Apps from Flathub. They install for you only and update without a restart."
+msgstr "Aplicaciones de Flathub. Se instalan solo para usted y se actualizan sin reiniciar."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Flatpak is not on this system, so apps from Flathub cannot be installed here."
+msgstr "Flatpak no está en este sistema, así que aquí no se pueden instalar aplicaciones de Flathub."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Reading your apps…"
+msgstr "Leyendo sus aplicaciones…"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Flathub is not set up for this user, so apps cannot be installed or updated here. The apps you have still open and can be removed."
+msgstr "Flathub no está configurado para este usuario, así que aquí no se pueden instalar ni actualizar aplicaciones. Las aplicaciones que tiene se siguen abriendo y se pueden quitar."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Browse"
+msgstr "Explorar"
+
+#: cmd/isotope-system/page_apps.go
+msgctxt "apps tab"
+msgid "Installed"
+msgstr "Instaladas"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Search Flathub"
+msgstr "Buscar en Flathub"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Search needs Flathub"
+msgstr "La búsqueda necesita Flathub"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Downloading Flathub's catalog… The first time takes a minute."
+msgstr "Descargando el catálogo de Flathub… La primera vez tarda un minuto."
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "The first %d, verified apps first. Search to find the others."
+msgstr "Las primeras %d, primero las verificadas. Busque para encontrar las demás."
+
+#: cmd/isotope-system/page_apps.go
+msgid "ISOTOPE PICKS"
+msgstr "SELECCIÓN DE ISOTOPE"
+
+#: cmd/isotope-system/page_apps.go
+msgid "None of Isotope's picks is in the catalog."
+msgstr "Ninguna de la selección de Isotope está en el catálogo."
+
+#: cmd/isotope-system/page_apps.go
+msgid "The picks are Isotope Welcome's list. Search reaches all of Flathub."
+msgstr "La selección es la lista de Isotope Welcome. La búsqueda abarca todo Flathub."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Refreshing Flathub's catalog…"
+msgstr "Actualizando el catálogo de Flathub…"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "%d APP"
+msgid_plural "%d APPS"
+msgstr[0] "%d APLICACIÓN"
+msgstr[1] "%d APLICACIONES"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Open"
+msgstr "Abrir"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Verified"
+msgstr "Verificada"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "FLATHUB · %d RESULT"
+msgid_plural "FLATHUB · %d RESULTS"
+msgstr[0] "FLATHUB · %d RESULTADO"
+msgstr[1] "FLATHUB · %d RESULTADOS"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "No app on Flathub matches “%s”."
+msgstr "Ninguna aplicación de Flathub coincide con «%s»."
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "The first %d. Type more to narrow the search."
+msgstr "Las primeras %d. Escriba más para afinar la búsqueda."
+
+#: cmd/isotope-system/page_apps.go
+msgid "SYSTEM EXTENSIONS"
+msgstr "EXTENSIONES DEL SISTEMA"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Open in Extensions"
+msgstr "Abrir en Extensiones"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Installing %s"
+msgstr "Instalando %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Updating %s"
+msgstr "Actualizando %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "Removing %s"
+msgstr "Quitando %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "step %[1]d of %[2]d"
+msgstr "paso %[1]d de %[2]d"
+
+#: cmd/isotope-system/page_apps.go
+msgid "IN PROGRESS"
+msgstr "EN CURSO"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "INSTALLED · %s"
+msgstr "INSTALADAS · %s"
+
+#: cmd/isotope-system/page_apps.go
+msgid "No app yet. Browse or search Flathub to install one."
+msgstr "Aún no hay aplicaciones. Explore o busque en Flathub para instalar una."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Manage them in Extensions"
+msgstr "Gestionarlas en Extensiones"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Update apps automatically"
+msgstr "Actualizar las aplicaciones automáticamente"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Looking for updates…"
+msgstr "Buscando actualizaciones…"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Your apps are up to date."
+msgstr "Sus aplicaciones están actualizadas."
+
+#: cmd/isotope-system/page_apps.go
+msgid "Update all"
+msgstr "Actualizar todas"
+
+#: cmd/isotope-system/page_apps.go
+msgid "NEEDS YOUR OK"
+msgstr "NECESITA SU APROBACIÓN"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Review…"
+msgstr "Revisar…"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Asks for more:"
+msgstr "Pide más:"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Back to results"
+msgstr "Volver a los resultados"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Back"
+msgstr "Atrás"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "WHAT'S NEW IN %s"
+msgstr "NOVEDADES DE %s"
+
+#: cmd/isotope-system/page_apps.go
+msgid "WHAT IT CAN REACH"
+msgstr "A QUÉ PUEDE ACCEDER"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Reading its permissions…"
+msgstr "Leyendo sus permisos…"
+
+#: cmd/isotope-system/page_apps.go
+msgid "From the app's metadata on Flathub, before you install it. Flatseal changes them later."
+msgstr "De los metadatos de la aplicación en Flathub, antes de instalarla. Flatseal los cambia después."
+
+#: cmd/isotope-system/page_apps.go
+msgid "From the installed app's metadata. Flatseal changes them."
+msgstr "De los metadatos de la aplicación instalada. Flatseal los cambia."
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "This app is no longer maintained on Flathub: %s"
+msgstr "Esta aplicación ya no se mantiene en Flathub: %s"
+
+#: cmd/isotope-system/page_apps.go
+#, go-format
+msgid "%d other permission"
+msgid_plural "%d other permissions"
+msgstr[0] "%d permiso más"
+msgstr[1] "%d permisos más"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Folders, services and devices it names one by one"
+msgstr "Carpetas, servicios y dispositivos que nombra uno a uno"
+
+#: cmd/isotope-system/page_apps.go
+msgid "Nothing outside its sandbox"
+msgstr "Nada fuera de su espacio aislado"
+
+#: cmd/isotope-system/page_apps.go
+msgid "It asks for no files, network, display or devices"
+msgstr "No pide archivos, red, pantalla ni dispositivos"
+
+#: cmd/isotope-system/page_backup.go
+#: cmd/isotope-system/page_network.go
+msgid "Off"
+msgstr "Desactivado"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Only when you click Back up now"
+msgstr "Solo al pulsar Hacer una copia de seguridad ahora"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Daily"
+msgstr "Diaria"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Once a day, when the disk is there"
+msgstr "Una vez al día, cuando el disco esté conectado"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Weekly"
+msgstr "Semanal"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Once a week, when the disk is there"
+msgstr "Una vez a la semana, cuando el disco esté conectado"
+
+#: cmd/isotope-system/page_backup.go
+#, go-format
+msgid "Could not read the backup settings: %s"
+msgstr "No se pudo leer la configuración de las copias de seguridad: %s"
+
+#: cmd/isotope-system/page_backup.go
+#, go-format
+msgid "Could not list the backups: %s"
+msgstr "No se pudieron listar las copias de seguridad: %s"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Backed up"
+msgstr "Copia de seguridad hecha"
+
+#: cmd/isotope-system/page_backup.go
+msgid "This machine is backed up."
+msgstr "Se hizo la copia de seguridad de este equipo."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Backed up, with gaps"
+msgstr "Copia de seguridad hecha, con omisiones"
+
+#: cmd/isotope-system/page_backup.go
+msgid "The backup failed"
+msgstr "La copia de seguridad falló"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Exported"
+msgstr "Exportada"
+
+#: cmd/isotope-system/page_backup.go
+#, go-format
+msgid "The backup is in %s."
+msgstr "La copia de seguridad está en %s."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Exported, with gaps"
+msgstr "Exportada, con omisiones"
+
+#: cmd/isotope-system/page_backup.go
+msgid "The export failed"
+msgstr "La exportación falló"
+
+#: cmd/isotope-system/page_backup.go
+msgid "The restore failed"
+msgstr "La restauración falló"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Could not cancel"
+msgstr "No se pudo cancelar"
+
+#: cmd/isotope-system/page_backup.go
+msgid "The backup did not start"
+msgstr "La copia de seguridad no se inició"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Could not change the schedule"
+msgstr "No se pudo cambiar la programación"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Back up now"
+msgstr "Hacer una copia de seguridad ahora"
+
+#: cmd/isotope-system/page_backup.go
+msgid "A backup keeps what survives a restart: your home folders, the system settings, the list of your apps and extensions. It is encrypted with its own password."
+msgstr "Una copia de seguridad guarda lo que sobrevive a un reinicio: sus carpetas personales, la configuración del sistema, la lista de sus aplicaciones y extensiones. Está cifrada con su propia contraseña."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Reading the backup settings…"
+msgstr "Leyendo la configuración de las copias de seguridad…"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Only an administrator (a member of the admin group) can back up this machine."
+msgstr "Solo un administrador (un miembro del grupo admin) puede hacer copias de seguridad de este equipo."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Exporting the backup…"
+msgstr "Exportando la copia de seguridad…"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Restoring this machine…"
+msgstr "Restaurando este equipo…"
+
+#: cmd/isotope-system/page_backup.go
+msgid "RESTORE"
+msgstr "RESTAURACIÓN"
+
+#: cmd/isotope-system/page_backup.go
+msgid "This machine is new, so it can become the machine of a backup. Choose where the backup is above, then:"
+msgstr "Este equipo es nuevo, así que puede convertirse en el equipo de una copia de seguridad. Elija arriba dónde está la copia y luego:"
+
+#: cmd/isotope-system/page_backup.go
+msgid "Restore this machine from a backup…"
+msgstr "Restaurar este equipo desde una copia de seguridad…"
+
+#: cmd/isotope-system/page_backup.go
+msgid "AUTOMATIC BACKUPS"
+msgstr "COPIAS DE SEGURIDAD AUTOMÁTICAS"
+
+#: cmd/isotope-system/page_backup.go
+msgid "BACKUPS"
+msgstr "COPIAS DE SEGURIDAD"
+
+#: cmd/isotope-system/page_backup.go
+#, go-format
+msgid "Plug in %s to see its backups."
+msgstr "Conecte %s para ver sus copias de seguridad."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Reading the backups…"
+msgstr "Leyendo las copias de seguridad…"
+
+#: cmd/isotope-system/page_backup.go
+msgid "No backups yet."
+msgstr "Aún no hay copias de seguridad."
+
+#: cmd/isotope-system/page_backup.go
+msgid "Export to a file…"
+msgstr "Exportar a un archivo…"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Waiting for the device to accept…"
+msgstr "Esperando a que el dispositivo acepte…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Sending… %d%%"
+msgstr "Enviando… %d%%"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Sending… %s sent"
+msgstr "Enviando… %s enviados"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Headset"
+msgstr "Auriculares con micrófono"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Headphones"
+msgstr "Auriculares"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Speaker"
+msgstr "Altavoz"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Keyboard"
+msgstr "Teclado"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Mouse"
+msgstr "Ratón"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Game controller"
+msgstr "Mando de juegos"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Tablet"
+msgstr "Tableta gráfica"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Phone"
+msgstr "Teléfono"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Computer"
+msgstr "Equipo"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Printer"
+msgstr "Impresora"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Paired"
+msgstr "Emparejado"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Not paired"
+msgstr "No emparejado"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Battery %d%%"
+msgstr "Batería %d%%"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Send file…"
+msgstr "Enviar archivo…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/shares.go
+msgid "Forget"
+msgstr "Olvidar"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Pair"
+msgstr "Emparejar"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "No Bluetooth adapter"
+msgstr "No hay adaptador Bluetooth"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Bluetooth is off"
+msgstr "El Bluetooth está desactivado"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Bluetooth is on"
+msgstr "El Bluetooth está activado"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "searching for devices"
+msgstr "buscando dispositivos"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Bluetooth is not available: %s"
+msgstr "El Bluetooth no está disponible: %s"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Pairing with %s…"
+msgstr "Emparejando con %s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Forget %s?"
+msgstr "¿Olvidar %s?"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "This computer no longer knows the device. To use it again, pair it again."
+msgstr "Este equipo dejará de conocer el dispositivo. Para volver a usarlo, emparéjelo de nuevo."
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Forgetting %s…"
+msgstr "Olvidando %s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Sending %[1]s to %[2]s…"
+msgstr "Enviando %[1]s a %[2]s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Send a file to %s"
+msgstr "Enviar un archivo a %s"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+msgid "File"
+msgstr "Archivo"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "The path of a file, for example ~/Pictures/photo.jpg."
+msgstr "La ruta de un archivo, por ejemplo ~/Pictures/photo.jpg."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Send"
+msgstr "Enviar"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Turning Bluetooth on…"
+msgstr "Activando el Bluetooth…"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Turning Bluetooth off…"
+msgstr "Desactivando el Bluetooth…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Connecting to %s…"
+msgstr "Conectando con %s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Disconnecting from %s…"
+msgstr "Desconectando de %s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Switching %[1]s to %[2]s…"
+msgstr "Cambiando %[1]s a %[2]s…"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Sound quality"
+msgstr "Calidad de sonido"
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_extensions.go
+#: cmd/isotope-system/page_network.go
+msgid "Refresh"
+msgstr "Recargar"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Pair and connect headphones, speakers, keyboards and other devices."
+msgstr "Empareje y conecte auriculares, altavoces, teclados y otros dispositivos."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Looking for the adapter…"
+msgstr "Buscando el adaptador…"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Search for devices"
+msgstr "Buscar dispositivos"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "This computer has no Bluetooth adapter, or it is switched off by a key or by rfkill."
+msgstr "Este equipo no tiene adaptador Bluetooth, o está apagado mediante una tecla o rfkill."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Files sent to this computer are saved in Downloads."
+msgstr "Los archivos enviados a este equipo se guardan en Descargas."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "No device yet. Put the device in pairing mode, then choose Search for devices."
+msgstr "Todavía no hay dispositivos. Ponga el dispositivo en modo de emparejamiento y elija Buscar dispositivos."
+
+#: cmd/isotope-system/page_bluetooth.go
+#: cmd/isotope-system/page_network.go
+msgid "DEVICES"
+msgstr "DISPOSITIVOS"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "A higher quality uses more battery and needs a good signal."
+msgstr "Una calidad más alta gasta más batería y necesita buena señal."
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Pair with %s?"
+msgstr "¿Emparejar con %s?"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Check that %s shows this code: %03d %03d"
+msgstr "Compruebe que %s muestra este código: %03d %03d"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "%s wants to pair with this computer."
+msgstr "%s quiere emparejarse con este equipo."
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Pair with %s"
+msgstr "Emparejar con %s"
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Type the PIN of %s. It is often 0000 or 1234."
+msgstr "Escriba el PIN de %s. Suele ser 0000 o 1234."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Up to 16 characters."
+msgstr "Hasta 16 caracteres."
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Type the 6-digit code that %s shows."
+msgstr "Escriba el código de 6 dígitos que muestra %s."
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Code"
+msgstr "Código"
+
+#: cmd/isotope-system/page_bluetooth.go
+msgid "Up to 6 digits."
+msgstr "Hasta 6 dígitos."
+
+#: cmd/isotope-system/page_bluetooth.go
+#, go-format
+msgid "Type this code on %[1]s, then press Enter: %[2]s"
+msgstr "Escriba este código en %[1]s y pulse Enter: %[2]s"
+
+#: cmd/isotope-system/page_compat.go
+msgid "The isotope command cannot be reached, so this page cannot show the glibc environment."
+msgstr "No se puede acceder al comando isotope, así que esta página no puede mostrar el entorno glibc."
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "Could not read the glibc environment: %s"
+msgstr "No se pudo leer el entorno glibc: %s"
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "Could not change the setting: %s"
+msgstr "No se pudo cambiar la configuración: %s"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Reset the glibc environment?"
+msgstr "¿Restablecer el entorno glibc?"
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "Isotope removes the container isotope-glibc and creates it again from %s. What you installed in it is lost, and so are the unpacked AppImages; your home folder is not touched. This can take a few minutes."
+msgstr "Isotope quita el contenedor isotope-glibc y lo vuelve a crear desde %s. Lo que instaló en él se pierde, igual que las AppImage desempaquetadas; su carpeta personal no se toca. Puede tardar unos minutos."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Not available"
+msgstr "No disponible"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Being set up"
+msgstr "Configurándose"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Another window or a program's first run is setting up or resetting it. Open this page again to see the result."
+msgstr "Otra ventana o la primera ejecución de un programa lo está configurando o restableciendo. Vuelva a abrir esta página para ver el resultado."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Not set up yet"
+msgstr "Aún sin configurar"
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "Isotope sets it up the first time you start such a program, or now. It downloads %s and can take a few minutes."
+msgstr "Isotope lo configura la primera vez que inicie un programa así, o ahora. Descarga %s y puede tardar unos minutos."
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "%s on disk"
+msgstr "%s en disco"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Ready"
+msgstr "Listo"
+
+#: cmd/isotope-system/page_compat.go
+#, go-format
+msgid "The %s image is not on this computer. The container works without it; downloading it now means a reset does not have to."
+msgstr "La imagen %s no está en este equipo. El contenedor funciona sin ella; descargarla ahora evita que tenga que hacerlo un restablecimiento."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Run programs made for other Linux systems on Isotope."
+msgstr "Ejecute en Isotope programas hechos para otros sistemas Linux."
+
+#: cmd/isotope-system/page_compat.go
+msgid "GLIBC COMPATIBILITY"
+msgstr "COMPATIBILIDAD CON GLIBC"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Isotope is built on musl. Most Linux programs you download, and AppImages, are built for glibc instead; Isotope runs them in a container for your user, an Ubuntu system that shares your home folder."
+msgstr "Isotope está basado en musl. La mayoría de los programas de Linux que descarga, y las AppImage, están compilados para glibc; Isotope los ejecuta en un contenedor para su usuario, un sistema Ubuntu que comparte su carpeta personal."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Reading the glibc environment…"
+msgstr "Leyendo el entorno glibc…"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Run programs built for other Linux systems automatically"
+msgstr "Ejecutar automáticamente programas compilados para otros sistemas Linux"
+
+#: cmd/isotope-system/page_compat.go
+msgid "When you start a program built for glibc, it runs in the container. Turned off, it does not start; `isotope glibc run` still runs it."
+msgstr "Cuando inicia un programa compilado para glibc, se ejecuta en el contenedor. Si está desactivado, no se inicia; `isotope glibc run` lo sigue ejecutando."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Set up now"
+msgstr "Configurar ahora"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Reset…"
+msgstr "Restablecer…"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Download now"
+msgstr "Descargar ahora"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Glibc environment"
+msgstr "Entorno glibc"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Setting up the glibc environment… This can take a few minutes; it goes on if you close this window."
+msgstr "Configurando el entorno glibc… Puede tardar unos minutos; continúa aunque cierre esta ventana."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Downloading the image… This can take a few minutes; it goes on if you close this window."
+msgstr "Descargando la imagen… Puede tardar unos minutos; continúa aunque cierre esta ventana."
+
+#: cmd/isotope-system/page_compat.go
+msgid "Resetting the glibc environment… This can take a few minutes; it goes on if you close this window."
+msgstr "Restableciendo el entorno glibc… Puede tardar unos minutos; continúa aunque cierre esta ventana."
+
+#: cmd/isotope-system/page_desktop.go
+#, go-format
+msgid "the %s desktop"
+msgstr "el escritorio %s"
+
+#: cmd/isotope-system/page_desktop.go
+#, go-format
+msgid "the %s image"
+msgstr "la imagen %s"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Cannot switch"
+msgstr "No se puede cambiar"
+
+#: cmd/isotope-system/page_desktop.go
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Could not list the releases: %s"
+msgstr "No se pudieron listar las versiones: %s"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "No release was found."
+msgstr "No se encontró ninguna versión."
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Isotope comes with four desktops, each in a hardware and a virtual machine image. Switching installs the newest release of the other one, like an update: your files and apps stay, the new desktop starts at the next boot."
+msgstr "Isotope incluye cuatro escritorios, cada uno en una imagen para hardware y otra para máquina virtual. Cambiar instala la versión más reciente del otro, como una actualización: sus archivos y aplicaciones se conservan y el nuevo escritorio se inicia en el próximo arranque."
+
+#: cmd/isotope-system/page_desktop.go
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "This system has no Isotope release file: %s"
+msgstr "Este sistema no tiene un archivo de versión de Isotope: %s"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "This edition has no desktop to switch."
+msgstr "Esta edición no tiene un escritorio que cambiar."
+
+#: cmd/isotope-system/page_desktop.go
+#, go-format
+msgid "Running %[1]s · %[2]s"
+msgstr "En uso: %[1]s · %[2]s"
+
+#: cmd/isotope-system/page_desktop.go
+#, go-format
+msgid "Switching waits until the current job ends or the pending restart is done: %s."
+msgstr "El cambio espera a que termine la tarea en curso o se haga el reinicio pendiente: %s."
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Only an administrator (a member of the admin group) can switch the desktop."
+msgstr "Solo un administrador (un miembro del grupo admin) puede cambiar el escritorio."
+
+#: cmd/isotope-system/page_desktop.go
+msgid "DESKTOP"
+msgstr "ESCRITORIO"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Switch…"
+msgstr "Cambiar…"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Running"
+msgstr "En uso"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "IMAGE"
+msgstr "IMAGEN"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Switch to the virtual machine image"
+msgstr "Cambiar a la imagen para máquina virtual"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "Switch to the hardware image"
+msgstr "Cambiar a la imagen para hardware"
+
+#: cmd/isotope-system/page_desktop.go
+msgid "This system boots with Trusted Boot: it has one image, the signed UKI. Another desktop stays on it."
+msgstr "Este sistema arranca con Trusted Boot: tiene una sola imagen, la UKI firmada. Otro escritorio se queda en ella."
+
+#: cmd/isotope-system/page_disks.go
+msgid "Only an administrator can format a disk."
+msgstr "Solo un administrador puede formatear un disco."
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "Could not read the disks: %s"
+msgstr "No se pudieron leer los discos: %s"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Isotope's system disk"
+msgstr "Disco del sistema de Isotope"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Internal disk"
+msgstr "Disco interno"
+
+#: cmd/isotope-system/page_disks.go
+msgid "cannot unmount %s: %w"
+msgstr "no se puede desmontar %s: %w"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Mounting…"
+msgstr "Montando…"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Could not mount the disk"
+msgstr "No se pudo montar el disco"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Unmounting…"
+msgstr "Desmontando…"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Could not unmount the disk"
+msgstr "No se pudo desmontar el disco"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Ejecting…"
+msgstr "Expulsando…"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Could not eject the disk"
+msgstr "No se pudo expulsar el disco"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Powering off…"
+msgstr "Apagando…"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Could not power off the disk"
+msgstr "No se pudo apagar el disco"
+
+#: cmd/isotope-system/page_disks.go
+msgid "An ext4 label has at most 16 bytes (fewer with accented letters)."
+msgstr "Una etiqueta ext4 tiene como máximo 16 bytes (menos con letras acentuadas)."
+
+#: cmd/isotope-system/page_disks.go
+msgid "An exFAT label has at most 11 characters."
+msgstr "Una etiqueta exFAT tiene como máximo 11 caracteres."
+
+#: cmd/isotope-system/page_disks.go
+msgid "Disk"
+msgstr "Disco"
+
+#: cmd/isotope-system/page_disks.go
+msgid "no filesystem"
+msgstr "sin sistema de archivos"
+
+#: cmd/isotope-system/page_disks.go
+msgid "No label"
+msgstr "Sin etiqueta"
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "%[1]s used of %[2]s"
+msgstr "%[1]s usados de %[2]s"
+
+#: cmd/isotope-system/page_disks.go
+msgid "It is unmounted first."
+msgstr "Primero se desmonta."
+
+#: cmd/isotope-system/page_disks.go
+msgid "Everything on this disk will be erased. This cannot be undone."
+msgstr "Se borrará todo lo que hay en este disco. No se puede deshacer."
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "Erase and format %s?"
+msgstr "¿Borrar y formatear %s?"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Erase and format"
+msgstr "Borrar y formatear"
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "Formatting %s…"
+msgstr "Formateando %s…"
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "Could not format %s"
+msgstr "No se pudo formatear %s"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Works on Windows, macOS and Linux"
+msgstr "Funciona en Windows, macOS y Linux"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Linux only"
+msgstr "Solo Linux"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Label"
+msgstr "Etiqueta"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Eject"
+msgstr "Expulsar"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Power off"
+msgstr "Apagar"
+
+#: cmd/isotope-system/page_disks.go
+msgid "Format…"
+msgstr "Formatear…"
+
+#: cmd/isotope-system/page_disks.go
+#: cmd/isotope-system/shares.go
+msgid "Unmount"
+msgstr "Desmontar"
+
+#: cmd/isotope-system/page_disks.go
+#: cmd/isotope-system/shares.go
+msgid "Mount"
+msgstr "Montar"
+
+#: cmd/isotope-system/page_disks.go
+msgid "The disks of this computer, the ones plugged in, and network shares: space used, mount, eject and format USB disks, connect to a server."
+msgstr "Los discos de este equipo, los conectados y los recursos compartidos de red: espacio usado, montar, expulsar y formatear discos USB, conectar con un servidor."
+
+#: cmd/isotope-system/page_disks.go
+msgid "The disk service (udisks2) is not available."
+msgstr "El servicio de discos (udisks2) no está disponible."
+
+#: cmd/isotope-system/page_disks.go
+msgid "Reading the disks…"
+msgstr "Leyendo los discos…"
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "%s. Every disk is shown read-only."
+msgstr "%s. Todos los discos se muestran en solo lectura."
+
+#: cmd/isotope-system/page_disks.go
+msgid "No disks."
+msgstr "No hay discos."
+
+#: cmd/isotope-system/page_disks.go
+msgid "Removable"
+msgstr "Extraíble"
+
+#: cmd/isotope-system/page_disks.go
+#, go-format
+msgid "%d bytes"
+msgstr "%d bytes"
+
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Could not list the installed extensions: %s"
+msgstr "No se pudieron listar las extensiones instaladas: %s"
+
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Could not read the catalogs (is the network up?): %s"
+msgstr "No se pudieron leer los catálogos (¿hay conexión de red?): %s"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Replace system files?"
+msgstr "¿Reemplazar archivos del sistema?"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Installing it anyway replaces those files of the running system while it is enabled."
+msgstr "Instalarla de todos modos reemplaza esos archivos del sistema en ejecución mientras esté activada."
+
+#: cmd/isotope-system/page_extensions.go
+msgid "The extension is turned off and deleted. You can install it again from the catalog."
+msgstr "La extensión se desactiva y se elimina. Puede volver a instalarla desde el catálogo."
+
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Could not turn on %s"
+msgstr "No se pudo activar %s"
+
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Could not turn off %s"
+msgstr "No se pudo desactivar %s"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "System extensions add programs to the read-only system: drivers, tools and services that are not in the image. They are checked against the running system before they are turned on."
+msgstr "Las extensiones del sistema añaden programas al sistema de solo lectura: controladores, herramientas y servicios que no están en la imagen. Se comprueban con el sistema en ejecución antes de activarse."
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Only an administrator (a member of the admin group) can change extensions."
+msgstr "Solo un administrador (un miembro del grupo admin) puede cambiar las extensiones."
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Search"
+msgstr "Buscar"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "INSTALLED"
+msgstr "INSTALADAS"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "No extension is installed."
+msgstr "No hay ninguna extensión instalada."
+
+#: cmd/isotope-system/page_extensions.go
+#, go-format
+msgid "Off. %s"
+msgstr "Desactivada. %s"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "AVAILABLE"
+msgstr "DISPONIBLES"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Reading the catalogs…"
+msgstr "Leyendo los catálogos…"
+
+#: cmd/isotope-system/page_extensions.go
+msgid "Nothing more in the catalogs."
+msgstr "No hay nada más en los catálogos."
+
+#: cmd/isotope-system/page_network.go
+msgid "Mobile broadband"
+msgstr "Banda ancha móvil"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Mobile broadband (%s)"
+msgstr "Banda ancha móvil (%s)"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "network %s"
+msgstr "red %s"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "APN %s"
+msgstr "APN %s"
+
+#: cmd/isotope-system/page_network.go
+msgid "APN automatic"
+msgstr "APN automático"
+
+#: cmd/isotope-system/page_network.go
+msgid "Mobile broadband APN"
+msgstr "APN de la banda ancha móvil"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "The access point name of %s. Your operator gives it; most connections work without one."
+msgstr "El nombre del punto de acceso de %s. Lo proporciona su operador; la mayoría de las conexiones funcionan sin él."
+
+#: cmd/isotope-system/page_network.go
+msgid "Leave it empty to look it up for the network the modem is on."
+msgstr "Déjelo vacío para buscarlo según la red en la que está el módem."
+
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/remote.go
+msgid "Save"
+msgstr "Guardar"
+
+#: cmd/isotope-system/page_network.go
+msgid "Saving the APN…"
+msgstr "Guardando el APN…"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "NetworkManager is not available: %s"
+msgstr "NetworkManager no está disponible: %s"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Disconnecting %s…"
+msgstr "Desconectando %s…"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Connecting %s…"
+msgstr "Conectando %s…"
+
+#: cmd/isotope-system/page_network.go
+msgid "The VPN connection and its keys are deleted from this computer."
+msgstr "La conexión VPN y sus claves se eliminan de este equipo."
+
+#: cmd/isotope-system/page_network.go
+msgid "Disconnecting the modem…"
+msgstr "Desconectando el módem…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Connecting the modem…"
+msgstr "Conectando el módem…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Turning Wi-Fi on…"
+msgstr "Activando el Wi-Fi…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Turning Wi-Fi off…"
+msgstr "Desactivando el Wi-Fi…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Disconnecting…"
+msgstr "Desconectando…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Its password is deleted, and this computer no longer joins it by itself."
+msgstr "Su contraseña se elimina y este equipo ya no se conecta a ella por sí solo."
+
+#: cmd/isotope-system/page_network.go
+msgid "A Wi-Fi password has at least 8 characters."
+msgstr "Una contraseña de Wi-Fi tiene al menos 8 caracteres."
+
+#: cmd/isotope-system/page_network.go
+msgid "%s is too big for a WireGuard file (the limit is 64 KiB)"
+msgstr "%s es demasiado grande para un archivo de WireGuard (el límite es 64 KiB)"
+
+#: cmd/isotope-system/page_network.go
+msgid "Import a WireGuard file"
+msgstr "Importar un archivo de WireGuard"
+
+#: cmd/isotope-system/page_network.go
+msgid "Import"
+msgstr "Importar"
+
+#: cmd/isotope-system/page_network.go
+msgid "WireGuard files"
+msgstr "Archivos de WireGuard"
+
+#: cmd/isotope-system/page_network.go
+msgid "The path of a .conf file, for example ~/Downloads/work.conf."
+msgstr "La ruta de un archivo .conf, por ejemplo ~/Downloads/work.conf."
+
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_users.go
+msgid "Name"
+msgstr "Nombre"
+
+#: cmd/isotope-system/page_network.go
+msgid "Optional. The file name is the default."
+msgstr "Opcional. El nombre del archivo es el valor predeterminado."
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Importing %s…"
+msgstr "Importando %s…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Add a company VPN"
+msgstr "Añadir una VPN de empresa"
+
+#: cmd/isotope-system/page_network.go
+msgid "Your password is asked for each time you connect."
+msgstr "La contraseña se pide cada vez que se conecta."
+
+#: cmd/isotope-system/page_network.go
+msgid "Server"
+msgstr "Servidor"
+
+#: cmd/isotope-system/page_network.go
+msgid "The address your company gave you, for example vpn.example.com."
+msgstr "La dirección que le dio su empresa, por ejemplo vpn.example.com."
+
+#: cmd/isotope-system/page_network.go
+msgid "Type"
+msgstr "Tipo"
+
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/remote.go
+msgid "User name"
+msgstr "Nombre de usuario"
+
+#: cmd/isotope-system/page_network.go
+msgid "Optional. The server is the default."
+msgstr "Opcional. El servidor es el valor predeterminado."
+
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_users.go
+msgid "Add"
+msgstr "Añadir"
+
+#: cmd/isotope-system/page_network.go
+#: cmd/isotope-system/page_printers.go
+#, go-format
+msgid "Adding %s…"
+msgstr "Añadiendo %s…"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Open %s"
+msgstr "Abrir %s"
+
+#: cmd/isotope-system/page_network.go
+msgid "Wired and Wi-Fi connections, through NetworkManager. The same connections the panel's network menu shows."
+msgstr "Conexiones cableadas y Wi-Fi, a través de NetworkManager. Las mismas conexiones que muestra el menú de red del panel."
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Connected to %s"
+msgstr "Conectado a %s"
+
+#: cmd/isotope-system/page_network.go
+msgid "Not connected"
+msgstr "No conectado"
+
+#: cmd/isotope-system/page_network.go
+msgid "MOBILE BROADBAND"
+msgstr "BANDA ANCHA MÓVIL"
+
+#: cmd/isotope-system/page_network.go
+msgid "APN…"
+msgstr "APN…"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "%s · connected"
+msgstr "%s · conectada"
+
+#: cmd/isotope-system/page_network.go
+msgid "No VPN is set up."
+msgstr "No hay ninguna VPN configurada."
+
+#: cmd/isotope-system/page_network.go
+msgid "Import WireGuard…"
+msgstr "Importar WireGuard…"
+
+#: cmd/isotope-system/page_network.go
+msgid "Add company VPN…"
+msgstr "Añadir VPN de empresa…"
+
+#: cmd/isotope-system/page_network.go
+msgid "On"
+msgstr "Activado"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Password for %s"
+msgstr "Contraseña de %s"
+
+#: cmd/isotope-system/page_network.go
+msgid "NETWORKS IN RANGE"
+msgstr "REDES AL ALCANCE"
+
+#: cmd/isotope-system/page_network.go
+msgid "Looking for networks…"
+msgstr "Buscando redes…"
+
+#: cmd/isotope-system/page_network.go
+msgid "No network in range."
+msgstr "No hay ninguna red al alcance."
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "Signal %d%%"
+msgstr "Señal %d%%"
+
+#: cmd/isotope-system/page_network.go
+msgid "secured"
+msgstr "protegida"
+
+#: cmd/isotope-system/page_network.go
+msgid "saved"
+msgstr "guardada"
+
+#: cmd/isotope-system/page_network.go
+#, go-format
+msgid "%s (connected)"
+msgstr "%s (conectada)"
+
+#: cmd/isotope-system/page_network.go
+msgid "SAVED NETWORKS"
+msgstr "REDES GUARDADAS"
+
+#: cmd/isotope-system/page_other.go
+msgid "Software (no driver for this GPU)"
+msgstr "Software (no hay controlador para esta GPU)"
+
+#: cmd/isotope-system/page_other.go
+msgid "Software (this image has no GPU drivers)"
+msgstr "Software (esta imagen no tiene controladores de GPU)"
+
+#: cmd/isotope-system/page_other.go
+msgid "Software (virtual GPU without 3D)"
+msgstr "Software (GPU virtual sin 3D)"
+
+#: cmd/isotope-system/page_other.go
+msgid "Software (graphics driver off)"
+msgstr "Software (controlador gráfico desactivado)"
+
+#: cmd/isotope-system/page_other.go
+msgid "Cannot open the release notes"
+msgstr "No se pueden abrir las notas de la versión"
+
+#: cmd/isotope-system/page_other.go
+msgid "Cannot open the user guide"
+msgstr "No se puede abrir la guía del usuario"
+
+#: cmd/isotope-system/page_other.go
+msgid "User guide"
+msgstr "Guía del usuario"
+
+#: cmd/isotope-system/page_other.go
+msgid "What's new in this release"
+msgstr "Novedades de esta versión"
+
+#: cmd/isotope-system/page_other.go
+msgid "Built on Hadron"
+msgstr "Basado en Hadron"
+
+#: cmd/isotope-system/page_other.go
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: cmd/isotope-system/page_other.go
+msgid "Image"
+msgstr "Imagen"
+
+#: cmd/isotope-system/page_other.go
+msgid "Edition"
+msgstr "Edición"
+
+#: cmd/isotope-system/page_other.go
+msgid "Kernel"
+msgstr "Kernel"
+
+#: cmd/isotope-system/page_other.go
+msgid "Computer name"
+msgstr "Nombre del equipo"
+
+#: cmd/isotope-system/page_other.go
+msgid "Graphics"
+msgstr "Gráficos"
+
+#: cmd/isotope-system/page_other.go
+msgid "Isotope, built on Hadron. An immutable desktop from the Kairos project."
+msgstr "Isotope, basado en Hadron. Un escritorio inmutable del proyecto Kairos."
+
+#: cmd/isotope-system/page_other.go
+msgid "Isotope is free software under the Apache License 2.0."
+msgstr "Isotope es software libre bajo la Apache License 2.0."
+
+#: cmd/isotope-system/page_printers.go
+msgid "Only an administrator can add or remove printers or choose the default. Anyone can print a test page."
+msgstr "Solo un administrador puede añadir o quitar impresoras o elegir la predeterminada. Cualquiera puede imprimir una página de prueba."
+
+#: cmd/isotope-system/page_printers.go
+msgctxt "printer"
+msgid "Printing"
+msgstr "Imprimiendo"
+
+#: cmd/isotope-system/page_printers.go
+msgctxt "printer"
+msgid "Stopped"
+msgstr "Detenida"
+
+#: cmd/isotope-system/page_printers.go
+msgctxt "printer"
+msgid "Ready"
+msgstr "Lista"
+
+#: cmd/isotope-system/page_printers.go
+msgid "not accepting jobs"
+msgstr "no acepta trabajos"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Set up automatically while it is plugged in"
+msgstr "Configurada automáticamente mientras está conectada"
+
+#: cmd/isotope-system/page_printers.go
+msgctxt "printer"
+msgid "Default"
+msgstr "Predeterminada"
+
+#: cmd/isotope-system/page_printers.go
+msgid "On the network"
+msgstr "En la red"
+
+#: cmd/isotope-system/page_printers.go
+msgctxt "printer"
+msgid "Added"
+msgstr "Añadida"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Needs a driver"
+msgstr "Necesita un controlador"
+
+#: cmd/isotope-system/page_printers.go
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Could not add %s"
+msgstr "No se pudo añadir a %s"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Could not print a test page"
+msgstr "No se pudo imprimir una página de prueba"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Test page sent"
+msgstr "Página de prueba enviada"
+
+#: cmd/isotope-system/page_printers.go
+#, go-format
+msgid "Job %d is on its way to %s."
+msgstr "El trabajo %d va de camino a %s."
+
+#: cmd/isotope-system/page_printers.go
+#, go-format
+msgid "Making %s the default…"
+msgstr "Estableciendo %s como predeterminada…"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Could not change the default printer"
+msgstr "No se pudo cambiar la impresora predeterminada"
+
+#: cmd/isotope-system/page_printers.go
+msgid "The printer is removed for every user of this computer, with the jobs waiting for it. It can be added again from the printers found below."
+msgstr "La impresora se quita para todos los usuarios de este equipo, junto con los trabajos en espera. Puede volver a añadirla desde las impresoras encontradas abajo."
+
+#: cmd/isotope-system/page_printers.go
+msgid "Printers that work without a driver: on the network (IPP Everywhere, AirPrint, Mopria) or on USB."
+msgstr "Impresoras que funcionan sin controlador: en la red (IPP Everywhere, AirPrint, Mopria) o por USB."
+
+#: cmd/isotope-system/page_printers.go
+msgid "Printing is not available on this system."
+msgstr "La impresión no está disponible en este sistema."
+
+#: cmd/isotope-system/page_printers.go
+msgid "The update service (isotope-updated) is not available: printers cannot be added or removed."
+msgstr "El servicio de actualización (isotope-updated) no está disponible: no se pueden añadir ni quitar impresoras."
+
+#: cmd/isotope-system/page_printers.go
+msgid "PRINTERS"
+msgstr "IMPRESORAS"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Reading the printers…"
+msgstr "Leyendo las impresoras…"
+
+#: cmd/isotope-system/page_printers.go
+msgid "No printer yet. Add one of the printers found below."
+msgstr "Todavía no hay impresoras. Añada una de las impresoras encontradas abajo."
+
+#: cmd/isotope-system/page_printers.go
+msgid "FOUND ON THE NETWORK AND USB"
+msgstr "ENCONTRADAS EN LA RED Y POR USB"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Searching for printers…"
+msgstr "Buscando impresoras…"
+
+#: cmd/isotope-system/page_printers.go
+msgid "No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again."
+msgstr "No se encontró ninguna impresora. Encienda la impresora y conéctela a esta red, o enchúfela por USB, y vuelva a buscar."
+
+#: cmd/isotope-system/page_printers.go
+msgid "Search again"
+msgstr "Volver a buscar"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Print test page"
+msgstr "Imprimir página de prueba"
+
+#: cmd/isotope-system/page_printers.go
+msgid "Make default"
+msgstr "Hacer predeterminada"
+
+#: cmd/isotope-system/page_security.go
+msgid "The TPM unlocks the disk; nothing to reseal"
+msgstr "El TPM desbloquea el disco; no hay nada que volver a sellar"
+
+#: cmd/isotope-system/page_security.go
+msgid "The disk passphrase or the current recovery key"
+msgstr "La frase de contraseña del disco o la clave de recuperación actual"
+
+#: cmd/isotope-system/page_security.go
+msgid "The current recovery key"
+msgstr "La clave de recuperación actual"
+
+#: cmd/isotope-system/page_security.go
+msgid "The TPM does not unlock the disk now."
+msgstr "Ahora el TPM no desbloquea el disco."
+
+#: cmd/isotope-system/page_security.go
+msgid "New recovery key"
+msgstr "Nueva clave de recuperación"
+
+#: cmd/isotope-system/page_security.go
+msgid "The new key replaces the old one, which then stops working."
+msgstr "La clave nueva reemplaza a la antigua, que deja de funcionar."
+
+#: cmd/isotope-system/page_security.go
+msgid "Could not make a recovery key"
+msgstr "No se pudo crear una clave de recuperación"
+
+#: cmd/isotope-system/page_security.go
+msgid "Your new recovery key"
+msgstr "Su nueva clave de recuperación"
+
+#: cmd/isotope-system/page_security.go
+msgid "Write it down and keep it away from this computer. It is shown only now."
+msgstr "Anótela y guárdela lejos de este equipo. Solo se muestra ahora."
+
+#: cmd/isotope-system/page_security.go
+msgid "Replacing the recovery key…"
+msgstr "Reemplazando la clave de recuperación…"
+
+#: cmd/isotope-system/page_security.go
+msgid "The recovery key was not replaced"
+msgstr "No se reemplazó la clave de recuperación"
+
+#: cmd/isotope-system/page_security.go
+msgid "Recovery key replaced"
+msgstr "Clave de recuperación reemplazada"
+
+#: cmd/isotope-system/page_security.go
+msgid "The new recovery key works; the old one does not any more."
+msgstr "La nueva clave de recuperación funciona; la antigua ya no."
+
+#: cmd/isotope-system/page_security.go
+msgid "The key you wrote down does not work; your old key still does."
+msgstr "La clave que anotó no funciona; su clave antigua sigue funcionando."
+
+#: cmd/isotope-system/page_security.go
+msgid "Keep both your old key and the key you wrote down: some parts of the disk may already use the new key."
+msgstr "Conserve tanto la clave antigua como la que anotó: algunas partes del disco quizá ya usen la clave nueva."
+
+#: cmd/isotope-system/page_security.go
+msgid "Seal to this computer's TPM again"
+msgstr "Volver a sellar con el TPM de este equipo"
+
+#: cmd/isotope-system/page_security.go
+msgid "After a firmware update the TPM may no longer unlock the disk. The recovery key opens it, then the disk is sealed to the TPM as it is now."
+msgstr "Tras una actualización del firmware, el TPM puede dejar de desbloquear el disco. La clave de recuperación lo abre y luego el disco se sella con el TPM tal como está ahora."
+
+#: cmd/isotope-system/page_security.go
+msgid "Recovery key"
+msgstr "Clave de recuperación"
+
+#: cmd/isotope-system/page_security.go
+msgid "8 groups of 8 letters; dashes optional."
+msgstr "8 grupos de 8 letras; guiones opcionales."
+
+#: cmd/isotope-system/page_security.go
+msgid "Seal again"
+msgstr "Volver a sellar"
+
+#: cmd/isotope-system/page_security.go
+msgid "Sealing the disk to the TPM…"
+msgstr "Sellando el disco con el TPM…"
+
+#: cmd/isotope-system/page_security.go
+msgid "The disk was not sealed again"
+msgstr "No se volvió a sellar el disco"
+
+#: cmd/isotope-system/page_security.go
+msgid "Sealed again"
+msgstr "Sellado de nuevo"
+
+#: cmd/isotope-system/page_security.go
+msgid "The next start unlocks the disk without the recovery key."
+msgstr "En el próximo arranque el disco se desbloquea sin la clave de recuperación."
+
+#: cmd/isotope-system/page_security.go
+msgid "New recovery key…"
+msgstr "Nueva clave de recuperación…"
+
+#: cmd/isotope-system/page_security.go
+#, go-format
+msgid "Could not read the disk's keys: %s"
+msgstr "No se pudieron leer las claves del disco: %s"
+
+#: cmd/isotope-system/page_security.go
+msgid "Disk encryption keeps your files unreadable without the passphrase, the recovery key or this computer's TPM."
+msgstr "El cifrado del disco hace que sus archivos sean ilegibles sin la frase de contraseña, la clave de recuperación o el TPM de este equipo."
+
+#: cmd/isotope-system/page_security.go
+msgid "The disk is not encrypted"
+msgstr "El disco no está cifrado"
+
+#: cmd/isotope-system/page_security.go
+msgid "Encryption is chosen when Isotope is installed (\"Encrypt your files?\"). To encrypt this machine, back it up, install again with encryption on, and restore the backup."
+msgstr "El cifrado se elige al instalar Isotope (\"¿Cifrar sus archivos?\"). Para cifrar este equipo, haga una copia de seguridad, instale de nuevo con el cifrado activado y restaure la copia."
+
+#: cmd/isotope-system/page_security.go
+msgid "The disk is encrypted"
+msgstr "El disco está cifrado"
+
+#: cmd/isotope-system/page_security.go
+msgid "Only an administrator (a member of the admin group) can see and change the disk's keys."
+msgstr "Solo un administrador (un miembro del grupo admin) puede ver y cambiar las claves del disco."
+
+#: cmd/isotope-system/page_security.go
+msgid "Reading the disk's keys…"
+msgstr "Leyendo las claves del disco…"
+
+#: cmd/isotope-system/page_security.go
+msgid "RECOVERY KEY"
+msgstr "CLAVE DE RECUPERACIÓN"
+
+#: cmd/isotope-system/page_security.go
+msgid "A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working."
+msgstr "Una clave de recuperación abre el disco cuando se pierde la frase de contraseña o el TPM se niega (tras una actualización del firmware). Una nueva reemplaza a la antigua, que deja de funcionar."
+
+#: cmd/isotope-system/page_security.go
+msgid "Only an administrator can create a recovery key or seal the disk to the TPM again."
+msgstr "Solo un administrador puede crear una clave de recuperación o volver a sellar el disco con el TPM."
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "%d app update"
+msgid_plural "%d app updates"
+msgstr[0] "%d actualización de aplicación"
+msgstr[1] "%d actualizaciones de aplicaciones"
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Could not read the automatic update setting: %s"
+msgstr "No se pudo leer la configuración de actualizaciones automáticas: %s"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Turning automatic updates on…"
+msgstr "Activando las actualizaciones automáticas…"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Turning automatic updates off…"
+msgstr "Desactivando las actualizaciones automáticas…"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Automatic updates"
+msgstr "Actualizaciones automáticas"
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Could not check for updates: %s"
+msgstr "No se pudieron buscar actualizaciones: %s"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Cannot cancel"
+msgstr "No se puede cancelar"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Restart into the previous system?"
+msgstr "¿Reiniciar en el sistema anterior?"
+
+#: cmd/isotope-system/page_updates.go
+msgid "The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again."
+msgstr "El equipo se reinicia en el sistema que tenía antes de la última actualización, solo para el próximo arranque. El siguiente vuelve a iniciar este sistema."
+
+#: cmd/isotope-system/page_updates.go
+msgid "Cannot restart into the previous system"
+msgstr "No se puede reiniciar en el sistema anterior"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Check now"
+msgstr "Comprobar ahora"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Checking…"
+msgstr "Comprobando…"
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Install %s"
+msgstr "Instalar %s"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Isotope updates as a whole image: the running system is not touched, the new one starts at the next boot, and the previous one stays in the boot menu."
+msgstr "Isotope se actualiza como una imagen completa: el sistema en ejecución no se toca, el nuevo se inicia en el próximo arranque y el anterior queda en el menú de arranque."
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "Installed: Isotope %[1]s · %[2]s"
+msgstr "Instalado: Isotope %[1]s · %[2]s"
+
+#: cmd/isotope-system/page_updates.go
+#, go-format
+msgid "pinned to %s (installing the latest release removes the pin)"
+msgstr "fijado en %s (instalar la última versión quita la fijación)"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Cancel the update"
+msgstr "Cancelar la actualización"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Only an administrator (a member of the admin group) can install updates. You can still check for them."
+msgstr "Solo un administrador (un miembro del grupo admin) puede instalar actualizaciones. Usted puede seguir buscándolas."
+
+#: cmd/isotope-system/page_updates.go
+msgid "OTHER RELEASES"
+msgstr "OTRAS VERSIONES"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Installing an older release pins the system to it, until you install the latest again."
+msgstr "Instalar una versión anterior fija el sistema en ella, hasta que vuelva a instalar la última."
+
+#: cmd/isotope-system/page_updates.go
+msgid "INSTALL AN IMAGE"
+msgstr "INSTALAR UNA IMAGEN"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first."
+msgstr "El modo avanzado está activado: se puede instalar cualquier imagen OCI. Para una imagen que no es una versión publicada de Isotope se pide confirmación antes."
+
+#: cmd/isotope-system/page_updates.go
+msgid "Install…"
+msgstr "Instalar…"
+
+#: cmd/isotope-system/page_updates.go
+msgid "HISTORY"
+msgstr "HISTORIAL"
+
+#: cmd/isotope-system/page_updates.go
+msgid "PREVIOUS SYSTEM"
+msgstr "SISTEMA ANTERIOR"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Restart into the previous system"
+msgstr "Reiniciar en el sistema anterior"
+
+#: cmd/isotope-system/page_updates.go
+msgid "For the next boot only: the system you had before the last update."
+msgstr "Solo para el próximo arranque: el sistema que tenía antes de la última actualización."
+
+#: cmd/isotope-system/page_updates.go
+msgid "Your apps from Flathub: "
+msgstr "Sus aplicaciones de Flathub: "
+
+#: cmd/isotope-system/page_updates.go
+msgid "AUTOMATIC UPDATES"
+msgstr "ACTUALIZACIONES AUTOMÁTICAS"
+
+#: cmd/isotope-system/page_updates.go
+msgid "Install updates automatically"
+msgstr "Instalar las actualizaciones automáticamente"
+
+#: cmd/isotope-system/page_users.go
+msgid "Only an administrator can add, remove or change other users."
+msgstr "Solo un administrador puede añadir, quitar o cambiar otros usuarios."
+
+#: cmd/isotope-system/page_users.go
+msgid "Use lowercase letters, digits, - and _. Start with a letter or _. At most 32 characters."
+msgstr "Use letras minúsculas, cifras, - y _. Empiece por una letra o por _. Como máximo 32 caracteres."
+
+#: cmd/isotope-system/page_users.go
+msgid "A password has at most 256 bytes."
+msgstr "Una contraseña tiene como máximo 256 bytes."
+
+#: cmd/isotope-system/page_users.go
+msgid "A password cannot have a line break."
+msgstr "Una contraseña no puede contener un salto de línea."
+
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Could not read the users: %s"
+msgstr "No se pudieron leer los usuarios: %s"
+
+#: cmd/isotope-system/page_users.go
+msgid "This name is already used."
+msgstr "Este nombre ya está en uso."
+
+#: cmd/isotope-system/page_users.go
+msgid "The passwords are not the same."
+msgstr "Las contraseñas no coinciden."
+
+#: cmd/isotope-system/page_users.go
+msgid "Add a user"
+msgstr "Añadir un usuario"
+
+#: cmd/isotope-system/page_users.go
+msgid "The name to log in with."
+msgstr "El nombre con el que iniciar la sesión."
+
+#: cmd/isotope-system/page_users.go
+msgid "Full name"
+msgstr "Nombre completo"
+
+#: cmd/isotope-system/page_users.go
+msgid "Password again"
+msgstr "Repita la contraseña"
+
+#: cmd/isotope-system/page_users.go
+msgid "Administrator"
+msgstr "Administrador"
+
+#: cmd/isotope-system/page_users.go
+msgid "Can change the system and the other users."
+msgstr "Puede cambiar el sistema y los demás usuarios."
+
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Change the password of %s"
+msgstr "Cambiar la contraseña de %s"
+
+#: cmd/isotope-system/page_users.go
+msgid "Change your password"
+msgstr "Cambiar su contraseña"
+
+#: cmd/isotope-system/page_users.go
+msgid "Change password"
+msgstr "Cambiar la contraseña"
+
+#: cmd/isotope-system/page_users.go
+msgid "Could not change the password"
+msgstr "No se pudo cambiar la contraseña"
+
+#: cmd/isotope-system/page_users.go
+msgid "Current password"
+msgstr "Contraseña actual"
+
+#: cmd/isotope-system/page_users.go
+msgid "New password"
+msgstr "Contraseña nueva"
+
+#: cmd/isotope-system/page_users.go
+msgid "New password again"
+msgstr "Repita la contraseña nueva"
+
+#: cmd/isotope-system/page_users.go
+msgid "The user can no longer log in."
+msgstr "El usuario ya no podrá iniciar la sesión."
+
+#: cmd/isotope-system/page_users.go
+msgid "Keep the home folder"
+msgstr "Conservar la carpeta personal"
+
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Leave /home/%s and its files on the disk."
+msgstr "Dejar /home/%s y sus archivos en el disco."
+
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Remove %s"
+msgstr "Quitar %s"
+
+#: cmd/isotope-system/page_users.go
+msgid "Could not change the administrators"
+msgstr "No se pudieron cambiar los administradores"
+
+#: cmd/isotope-system/page_users.go
+msgid "They can no longer change the system or the other users."
+msgstr "Ya no podrá cambiar el sistema ni los demás usuarios."
+
+#: cmd/isotope-system/page_users.go
+msgid "You will no longer be able to change this system."
+msgstr "Ya no podrá cambiar este sistema."
+
+#: cmd/isotope-system/page_users.go
+#, go-format
+msgid "Remove %s from the administrators?"
+msgstr "¿Quitar a %s de los administradores?"
+
+#: cmd/isotope-system/page_users.go
+msgid "Remove from administrators"
+msgstr "Quitar de los administradores"
+
+#: cmd/isotope-system/page_users.go
+msgid "Make administrator"
+msgstr "Hacer administrador"
+
+#: cmd/isotope-system/page_users.go
+msgid "Remove administrator"
+msgstr "Quitar administrador"
+
+#: cmd/isotope-system/page_users.go
+msgid "Add user…"
+msgstr "Añadir usuario…"
+
+#: cmd/isotope-system/page_users.go
+msgid "Add and remove the people who use this computer, change their passwords and who is an administrator, and add your fingerprints."
+msgstr "Añada y quite a las personas que usan este equipo, cambie sus contraseñas y quién es administrador, y añada sus huellas digitales."
+
+#: cmd/isotope-system/page_users.go
+msgid "On Isotope, change users here. A change made in COSMIC Settings may not survive a restart."
+msgstr "En Isotope, cambie los usuarios aquí. Un cambio hecho en la Configuración de COSMIC puede no sobrevivir a un reinicio."
+
+#: cmd/isotope-system/page_users.go
+msgid "Reading the users…"
+msgstr "Leyendo los usuarios…"
+
+#: cmd/isotope-system/page_users.go
+msgid "You"
+msgstr "Usted"
+
+#: cmd/isotope-system/polkit_agent.go
+msgid "That was not right. Try again."
+msgstr "No era correcta. Vuelva a intentarlo."
+
+#: cmd/isotope-system/remote.go
+msgid "isotope remote-desktop status gave no status (%v); is isotope up to date?"
+msgstr "isotope remote-desktop status no devolvió ningún estado (%v); ¿está isotope actualizado?"
+
+#: cmd/isotope-system/remote.go
+#, go-format
+msgid "No network address yet · port %d"
+msgstr "Todavía no hay dirección de red · puerto %d"
+
+#: cmd/isotope-system/remote.go
+msgid "Needs the Remote desktop system extension, from the Extensions page."
+msgstr "Necesita la extensión del sistema Escritorio remoto, de la página Extensiones."
+
+#: cmd/isotope-system/remote.go
+msgid "Set password…"
+msgstr "Establecer contraseña…"
+
+#: cmd/isotope-system/remote.go
+msgid "Change password…"
+msgstr "Cambiar contraseña…"
+
+#: cmd/isotope-system/remote.go
+msgid "On · A VNC viewer on another computer can see and control this desktop."
+msgstr "Activado · Un visor VNC en otro equipo puede ver y controlar este escritorio."
+
+#: cmd/isotope-system/remote.go
+msgid "Connect to"
+msgstr "Conectarse a"
+
+#: cmd/isotope-system/remote.go
+#, go-format
+msgid "%s, with the remote desktop password"
+msgstr "%s, con la contraseña del escritorio remoto"
+
+#: cmd/isotope-system/remote.go
+msgid "Certificate (SHA-256)"
+msgstr "Certificado (SHA-256)"
+
+#: cmd/isotope-system/remote.go
+#, go-format
+msgid "The firewall blocks port %d/%s, so other computers cannot connect. Turn remote desktop off and on again as an administrator."
+msgstr "El cortafuegos bloquea el puerto %d/%s, así que otros equipos no se pueden conectar. Desactive y vuelva a activar el escritorio remoto como administrador."
+
+#: cmd/isotope-system/remote.go
+msgid "It stays on until you turn it off or log out. Every connection is encrypted (TLS or RSA-AES)."
+msgstr "Permanece activado hasta que lo desactive o cierre la sesión. Todas las conexiones están cifradas (TLS o RSA-AES)."
+
+#: cmd/isotope-system/remote.go
+msgid "Off · Nothing listens for viewers."
+msgstr "Desactivado · Nada espera conexiones de visores."
+
+#: cmd/isotope-system/remote.go
+#, go-format
+msgid "Turning it on starts a VNC server for this session on port %d and lets connections in through the firewall until you turn it off or log out. A viewer logs in with your user name and the remote desktop password, not your login password."
+msgstr "Al activarlo se inicia un servidor VNC para esta sesión en el puerto %d y el cortafuegos deja pasar las conexiones hasta que lo desactive o cierre la sesión. Un visor inicia sesión con su nombre de usuario y la contraseña del escritorio remoto, no con su contraseña de inicio de sesión."
+
+#: cmd/isotope-system/remote.go
+msgid "While the firewall is on, only an administrator can turn it on."
+msgstr "Mientras el cortafuegos está activado, solo un administrador puede activarlo."
+
+#: cmd/isotope-system/remote.go
+msgid "Remote desktop"
+msgstr "Escritorio remoto"
+
+#: cmd/isotope-system/remote.go
+msgid "Turning remote desktop off…"
+msgstr "Desactivando el escritorio remoto…"
+
+#: cmd/isotope-system/remote.go
+msgid "Turning remote desktop on…"
+msgstr "Activando el escritorio remoto…"
+
+#: cmd/isotope-system/remote.go
+msgid "Save and turn on"
+msgstr "Guardar y activar"
+
+#: cmd/isotope-system/remote.go
+msgid "Remote desktop password"
+msgstr "Contraseña del escritorio remoto"
+
+#: cmd/isotope-system/remote.go
+msgid "A VNC viewer asks for it with your user name. Use a password of its own, not your login password."
+msgstr "Un visor VNC la pide junto con su nombre de usuario. Use una contraseña propia, no su contraseña de inicio de sesión."
+
+#: cmd/isotope-system/remote.go
+msgid "The two passwords are not the same."
+msgstr "Las dos contraseñas no coinciden."
+
+#: cmd/isotope-system/remote.go
+#, go-format
+msgid "%d to %d characters."
+msgstr "De %d a %d caracteres."
+
+#: cmd/isotope-system/remote.go
+msgid "Again"
+msgstr "Repetir"
+
+#: cmd/isotope-system/remote.go
+msgid "Saving the remote desktop password…"
+msgstr "Guardando la contraseña del escritorio remoto…"
+
+#: cmd/isotope-system/remote.go
+msgid "REMOTE DESKTOP"
+msgstr "ESCRITORIO REMOTO"
+
+#: cmd/isotope-system/remote.go
+msgid "Open Extensions"
+msgstr "Abrir Extensiones"
+
+#: cmd/isotope-system/shares.go
+msgid "Only an administrator can mount an NFS share. NFS lets in this computer by its address, not you, so it could show you other people's files on the server. Ask an administrator, or use SMB."
+msgstr "Solo un administrador puede montar un recurso compartido NFS. NFS deja entrar a este equipo por su dirección, no a usted, así que podría mostrarle archivos de otras personas del servidor. Pídaselo a un administrador o use SMB."
+
+#: cmd/isotope-system/shares.go
+msgid "Only the person at this computer's screen can mount a network share."
+msgstr "Solo la persona que está ante la pantalla de este equipo puede montar un recurso compartido de red."
+
+#. TRANSLATORS: %s is the user name the share is mounted as.
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "as %s"
+msgstr "como %s"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Mounted at %s"
+msgstr "Montado en %s"
+
+#: cmd/isotope-system/shares.go
+msgid "Not mounted"
+msgstr "Sin montar"
+
+#: cmd/isotope-system/shares.go
+msgid "Mounts at login"
+msgstr "Se monta al iniciar la sesión"
+
+#: cmd/isotope-system/shares.go
+msgid "Not saved"
+msgstr "Sin guardar"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Could not read the saved shares: %s"
+msgstr "No se pudieron leer los recursos compartidos guardados: %s"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Mounting %s…"
+msgstr "Montando %s…"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Unmounting %s…"
+msgstr "Desmontando %s…"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Could not unmount %s"
+msgstr "No se pudo desmontar %s"
+
+#: cmd/isotope-system/shares.go
+msgid "It is removed from the list, with its saved password. A mounted share stays mounted until you unmount it."
+msgstr "Se quita de la lista, con su contraseña guardada. Un recurso compartido montado sigue montado hasta que lo desmonte."
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Could not forget %s"
+msgstr "No se pudo olvidar %s"
+
+#: cmd/isotope-system/shares.go
+msgid "NETWORK SHARES"
+msgstr "RECURSOS COMPARTIDOS DE RED"
+
+#: cmd/isotope-system/shares.go
+msgid "The update service (isotope-updated), which mounts network shares, is not available."
+msgstr "El servicio de actualizaciones (isotope-updated), que monta los recursos compartidos de red, no está disponible."
+
+#: cmd/isotope-system/shares.go
+msgid "No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server."
+msgstr "No hay recursos compartidos guardados. Conéctese con un servidor SMB (Windows, Samba, un NAS) o NFS."
+
+#: cmd/isotope-system/shares.go
+msgid "Connect to server…"
+msgstr "Conectar con un servidor…"
+
+#: cmd/isotope-system/shares.go
+msgid "a password or a domain needs a user name"
+msgstr "una contraseña o un dominio necesitan un nombre de usuario"
+
+#: cmd/isotope-system/shares.go
+msgid "Connect to server"
+msgstr "Conectar con un servidor"
+
+#: cmd/isotope-system/shares.go
+msgid "Mount a shared folder of another computer. It shows in your files under /run/media."
+msgstr "Monte una carpeta compartida de otro equipo. Aparece en sus archivos en /run/media."
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Mount %s"
+msgstr "Montar %s"
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "Type the password for %s."
+msgstr "Escriba la contraseña de %s."
+
+#: cmd/isotope-system/shares.go
+#, go-format
+msgid "the share is mounted and saved, but its password could not be saved in the keyring: %s"
+msgstr "el recurso compartido está montado y guardado, pero no se pudo guardar su contraseña en el depósito de claves: %s"
+
+#: cmd/isotope-system/shares.go
+msgid "Server address"
+msgstr "Dirección del servidor"
+
+#: cmd/isotope-system/shares.go
+msgid "smb://server/share or nfs://server/export"
+msgstr "smb://servidor/recurso o nfs://servidor/export"
+
+#: cmd/isotope-system/shares.go
+msgid "NFS needs no password. Isotope uses NFS version 4.1 or later. Files show the owners the server has, which may not be you."
+msgstr "NFS no necesita contraseña. Isotope usa NFS versión 4.1 o posterior. Los archivos muestran los propietarios que tiene el servidor, que pueden no ser usted."
+
+#: cmd/isotope-system/shares.go
+msgid "Empty for a guest."
+msgstr "Vacío para un invitado."
+
+#: cmd/isotope-system/shares.go
+msgid "Domain"
+msgstr "Dominio"
+
+#: cmd/isotope-system/shares.go
+msgid "Remember this share on this page"
+msgstr "Recordar este recurso compartido en esta página"
+
+#: cmd/isotope-system/shares.go
+msgid "Mount it at login"
+msgstr "Montarlo al iniciar la sesión"
+
+#: cmd/isotope-system/shares.go
+msgid "Remember the password in your keyring"
+msgstr "Recordar la contraseña en su depósito de claves"
+
+#: cmd/isotope-system/sysinfo.go
+msgid "COSMIC Settings"
+msgstr "Configuración de COSMIC"
+
+#: cmd/isotope-system/sysinfo.go
+msgid "the control center"
+msgstr "el centro de control"
+
+#: cmd/isotope-system/udisks.go
+msgid "listing the disks: %w"
+msgstr "al listar los discos: %w"
+
+#: cmd/isotope-system/udisks.go
+msgid "cannot format as %q, only as exfat or ext4"
+msgstr "no se puede formatear como %q, solo como exfat o ext4"
+
+#: cmd/isotope-system/udisks.go
+msgid "this is Isotope's system disk, it cannot be formatted"
+msgstr "este es el disco del sistema de Isotope, no se puede formatear"
+
+#: cmd/isotope-system/udisks.go
+msgid "this is an internal disk, it cannot be formatted here"
+msgstr "este es un disco interno, no se puede formatear aquí"
+
+#: cmd/isotope-system/udisks.go
+msgid "%s is mounted: unmount it first"
+msgstr "%s está montado: desmóntelo primero"
+
+#: cmd/isotope-system/udisks.go
+msgid "cannot tell what is mounted on the disk: %w"
+msgstr "no se puede saber qué está montado en el disco: %w"
+
+#: cmd/isotope-system/udisks.go
+msgid "the disk has no block device"
+msgstr "el disco no tiene dispositivo de bloques"
+
+#: cmd/isotope-system/udisks.go
+msgid "the disk is not connected"
+msgstr "el disco no está conectado"
+
+#: cmd/isotope-system/udisks.go
+msgid "making the partition table: %w"
+msgstr "al crear la tabla de particiones: %w"
+
+#: cmd/isotope-system/udisks.go
+msgid "making the %[1]s filesystem: %[2]w"
+msgstr "al crear el sistema de archivos %[1]s: %[2]w"
+
+#: cmd/isotope-system/ui.go
+msgid "The update service (isotope-updated) is not available: the system bus cannot be reached."
+msgstr "El servicio de actualizaciones (isotope-updated) no está disponible: no se puede acceder al bus del sistema."
+
+#: cmd/isotope-system/ui.go
+msgid "Waiting for the first lines…"
+msgstr "Esperando las primeras líneas…"
+
+#: cmd/isotope-system/wireguard.go
+msgid "line %d: %s"
+msgstr "línea %d: %s"
+
+#: cmd/isotope-system/wireguard.go
+msgid "not an address"
+msgstr "no es una dirección"
+
+#: cmd/isotope-system/wireguard.go
+msgid "not a valid number"
+msgstr "no es un número válido"
+
+#: cmd/isotope-system/wireguard.go
+msgid "a second [Interface] section"
+msgstr "una segunda sección [Interface]"
+
+#: cmd/isotope-system/wireguard.go
+msgid "unknown section"
+msgstr "sección desconocida"
+
+#: cmd/isotope-system/wireguard.go
+msgid "not a Key = Value line"
+msgstr "no es una línea Clave = Valor"
+
+#: cmd/isotope-system/wireguard.go
+msgid "a setting outside a section"
+msgstr "un ajuste fuera de una sección"
+
+#: cmd/isotope-system/wireguard.go
+msgid "duplicate key"
+msgstr "clave duplicada"
+
+#: cmd/isotope-system/wireguard.go
+msgid "PrivateKey is not a 32-byte base64 key"
+msgstr "PrivateKey no es una clave base64 de 32 bytes"
+
+#: cmd/isotope-system/wireguard.go
+msgid "Address is %v"
+msgstr "Address: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "MTU is %v"
+msgstr "MTU: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "ListenPort is %v"
+msgstr "ListenPort: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "FwMark is %v"
+msgstr "FwMark: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "a Table number is not supported: NetworkManager sets the routes. Use Table = off or auto"
+msgstr "no se admite un número de Table: NetworkManager establece las rutas. Use Table = off o auto"
+
+#. TRANSLATORS: %[1]s is a wg-quick key name followed by a space (PreUp, SaveConfig…), or empty.
+#: cmd/isotope-system/wireguard.go
+msgid "%[1]ssetting is not supported: Isotope runs WireGuard through NetworkManager, which does not run it"
+msgstr "el ajuste %[1]sno se admite: Isotope usa WireGuard a través de NetworkManager, que no lo ejecuta"
+
+#: cmd/isotope-system/wireguard.go
+msgid "unknown key %s in [Interface]"
+msgstr "clave desconocida %s en [Interface]"
+
+#: cmd/isotope-system/wireguard.go
+msgid "PublicKey is not a 32-byte base64 key"
+msgstr "PublicKey no es una clave base64 de 32 bytes"
+
+#: cmd/isotope-system/wireguard.go
+msgid "PresharedKey is not a 32-byte base64 key"
+msgstr "PresharedKey no es una clave base64 de 32 bytes"
+
+#: cmd/isotope-system/wireguard.go
+msgid "AllowedIPs is %v"
+msgstr "AllowedIPs: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "Endpoint is not host:port"
+msgstr "Endpoint no tiene la forma host:puerto"
+
+#: cmd/isotope-system/wireguard.go
+msgid "PersistentKeepalive is %v"
+msgstr "PersistentKeepalive: %v"
+
+#: cmd/isotope-system/wireguard.go
+msgid "unknown key %s in [Peer]"
+msgstr "clave desconocida %s en [Peer]"
+
+#: cmd/isotope-system/wireguard.go
+msgid "no [Interface] section"
+msgstr "no hay ninguna sección [Interface]"
+
+#: cmd/isotope-system/wireguard.go
+msgid "the [Interface] section has no PrivateKey"
+msgstr "la sección [Interface] no tiene PrivateKey"
+
+#: cmd/isotope-system/wireguard.go
+msgid "the [Peer] section has no PublicKey"
+msgstr "la sección [Peer] no tiene PublicKey"
+
+#: cmd/isotope-system/wireguard.go
+msgid "AllowedIPs has 0.0.0.0/0 but the [Interface] has no IPv4 Address: IPv4 traffic would not use the tunnel"
+msgstr "AllowedIPs contiene 0.0.0.0/0 pero [Interface] no tiene ninguna Address IPv4: el tráfico IPv4 no usaría el túnel"
+
+#: cmd/isotope-system/wireguard.go
+msgid "the IPv4 DNS server needs an IPv4 Address in [Interface]"
+msgstr "el servidor DNS IPv4 necesita una Address IPv4 en [Interface]"
+
+#: cmd/isotope-system/wireguard.go
+msgid "the IPv6 DNS server needs an IPv6 Address in [Interface]"
+msgstr "el servidor DNS IPv6 necesita una Address IPv6 en [Interface]"

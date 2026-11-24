@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The page's own polkit authentication agent, registered for this process
@@ -88,7 +90,7 @@ func runHelper(ctx context.Context, helper, user, cookie, action string, retry b
 	}
 	var info []string
 	if retry {
-		info = append(info, "That was not right. Try again.")
+		info = append(info, i18n.T("That was not right. Try again."))
 	}
 	r := bufio.NewScanner(out)
 	for r.Scan() {

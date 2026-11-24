@@ -6685,6 +6685,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/isotope-install-ui/ cmd/isotope-install-ui/
 COPY pkg/installer/ pkg/installer/
+COPY pkg/i18n/ pkg/i18n/
 # The trailing check is a smoke test: the binary must run and reject an unknown
 # flag with exit 2, so a binary that segfaults on startup fails the build here
 # rather than on tty1 during an install. Braced so a FAILED `go build` still
@@ -6824,6 +6825,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY pkg/installer/ pkg/installer/
 COPY pkg/guikit/ pkg/guikit/
+COPY pkg/i18n/ pkg/i18n/
 COPY cmd/isotope-install-gui/ cmd/isotope-install-gui/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-install-gui && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-install-gui ./cmd/isotope-install-gui && \
@@ -6876,6 +6878,7 @@ RUN go mod download
 # The live page takes the keyboard list and checks from pkg/installer.
 COPY pkg/installer/ pkg/installer/
 COPY pkg/guikit/ pkg/guikit/
+COPY pkg/i18n/ pkg/i18n/
 COPY cmd/isotope-welcome/ cmd/isotope-welcome/
 # The tests read the app list and the shortcut sheets from the rootfs trees.
 COPY rootfs/common/usr/share/isotope/first-run-apps.list rootfs/common/usr/share/isotope/
@@ -6971,6 +6974,7 @@ COPY pkg/printing/ pkg/printing/
 COPY pkg/fwupd/ pkg/fwupd/
 COPY pkg/flatpak/ pkg/flatpak/
 COPY pkg/remotedesktop/ pkg/remotedesktop/
+COPY pkg/i18n/ pkg/i18n/
 COPY cmd/isotope/ cmd/isotope/
 RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... ./pkg/remotedesktop/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \

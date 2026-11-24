@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -199,17 +200,17 @@ func (m model) View() string { return clampHeight(m.view(), m.height) }
 
 func (m model) view() string {
 	if !m.ready {
-		return "\n  " + tnDim.Render("waking the machine...")
+		return "\n  " + tnDim.Render(i18n.T("waking the machine..."))
 	}
 	if m.failed {
-		return haltRed.Render("  install halted") + "\n" + m.vp.View() +
+		return haltRed.Render("  "+i18n.T("install halted")) + "\n" + m.vp.View() +
 			// ctrl+c is advertised alongside 's' because it exists for the case
 			// where 's' does not arrive — a real VT that swallows the keypress.
 			// A user who cannot discover the alternative cannot use it.
-			"\n  " + tnDim.Render("press 's' for a rescue shell · ctrl+c to exit")
+			"\n  " + tnDim.Render(i18n.T("press 's' for a rescue shell · ctrl+c to exit"))
 	}
 	if m.showLogs {
-		return m.vp.View() + "\n  " + tnDim.Render("press 'l' to hide logs")
+		return m.vp.View() + "\n  " + tnDim.Render(i18n.T("press 'l' to hide logs"))
 	}
 
 	var b strings.Builder
@@ -219,14 +220,14 @@ func (m model) view() string {
 	}
 	b.WriteString("\n")
 	if m.done {
-		b.WriteString("        " + tnHot.Render("system installed - rebooting...") + "\n")
+		b.WriteString("        " + tnHot.Render(i18n.T("system installed - rebooting...")) + "\n")
 	} else {
 		b.WriteString("        " + tnHot.Render(m.spin.View()) + "  " +
-			tnHot.Render(installer.Steps[m.step].Name) + "...\n")
+			tnHot.Render(i18n.T(installer.Steps[m.step].Name)) + "...\n")
 	}
 	pct := installer.Percent(m.step)
 	b.WriteString("\n        " + progressBar(pct, 20) +
 		tnDim.Render(fmt.Sprintf("  %3d%%", pct)) + "\n")
-	b.WriteString("\n        " + tnDim.Render("press 'l' to show logs · do not power off") + "\n")
+	b.WriteString("\n        " + tnDim.Render(i18n.T("press 'l' to show logs · do not power off")) + "\n")
 	return b.String()
 }

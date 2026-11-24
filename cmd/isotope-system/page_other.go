@@ -14,6 +14,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/isorelease"
 )
 
@@ -58,11 +59,11 @@ var (
 // probe gave (the first word of the marker): a real GPU without a working
 // driver, the same on the vm image line (which has no hardware drivers), a
 // virtual machine's GPU without 3D, or only the firmware's framebuffer.
-const (
-	softwareGraphics         = "Software (no driver for this GPU)"
-	softwareGraphicsVMImage  = "Software (this image has no GPU drivers)"
-	softwareGraphicsVirtual  = "Software (virtual GPU without 3D)"
-	softwareGraphicsFirmware = "Software (graphics driver off)"
+var (
+	softwareGraphics         = i18n.Mark("Software (no driver for this GPU)")
+	softwareGraphicsVMImage  = i18n.Mark("Software (this image has no GPU drivers)")
+	softwareGraphicsVirtual  = i18n.Mark("Software (virtual GPU without 3D)")
+	softwareGraphicsFirmware = i18n.Mark("Software (graphics driver off)")
 )
 
 // graphicsLine is what draws the screen: "Software (...)" when the session
@@ -82,13 +83,13 @@ func graphicsLine(vmImage bool) string {
 	if software {
 		switch {
 		case class == "virtual":
-			return softwareGraphicsVirtual
+			return i18n.T(softwareGraphicsVirtual)
 		case class == "firmware":
-			return softwareGraphicsFirmware
+			return i18n.T(softwareGraphicsFirmware)
 		case vmImage:
-			return softwareGraphicsVMImage
+			return i18n.T(softwareGraphicsVMImage)
 		}
-		return softwareGraphics
+		return i18n.T(softwareGraphics)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -111,21 +112,21 @@ func (p *aboutPage) Update(gtx layout.Context) {
 	if p.notes.Clicked(gtx) {
 		if url := p.notesURL(); url != "" {
 			if err := p.u.hooks.Start("xdg-open", url); err != nil {
-				p.u.tell("Cannot open the release notes", err.Error())
+				p.u.tell(i18n.T("Cannot open the release notes"), err.Error())
 			}
 		}
 	}
 	if p.guide.Clicked(gtx) {
 		if err := p.u.hooks.Start("xdg-open", userGuideURL); err != nil {
-			p.u.tell("Cannot open the user guide", err.Error())
+			p.u.tell(i18n.T("Cannot open the user guide"), err.Error())
 		}
 	}
 }
 
 func (p *aboutPage) Footer() (leading, trailing []guikit.Action) {
-	trailing = []guikit.Action{{Click: &p.guide, Kind: guikit.ButtonSecondary, Label: "User guide"}}
+	trailing = []guikit.Action{{Click: &p.guide, Kind: guikit.ButtonSecondary, Label: i18n.T("User guide")}}
 	if p.notesURL() != "" {
-		trailing = append(trailing, guikit.Action{Click: &p.notes, Kind: guikit.ButtonSecondary, Label: "What's new in this release"})
+		trailing = append(trailing, guikit.Action{Click: &p.notes, Kind: guikit.ButtonSecondary, Label: i18n.T("What's new in this release")})
 	}
 	return nil, trailing
 }
@@ -142,18 +143,18 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 	}
 	rows := [][2]string{
 		{"Isotope", orUnknown(rel.Version)},
-		{"Built on Hadron", orUnknown(rel.HadronVersion)},
-		{"Desktop", flavorName(rel.Flavor)},
-		{"Image", orUnknown(lineLabels[rel.Line()])},
-		{"Edition", edition},
-		{"Kernel", orUnknown(u.sys.Kernel)},
-		{"Computer name", orUnknown(u.sys.Hostname)},
+		{i18n.T("Built on Hadron"), orUnknown(rel.HadronVersion)},
+		{i18n.T("Desktop"), flavorName(rel.Flavor)},
+		{i18n.T("Image"), orUnknown(lineLabel(rel.Line()))},
+		{i18n.T("Edition"), edition},
+		{i18n.T("Kernel"), orUnknown(u.sys.Kernel)},
+		{i18n.T("Computer name"), orUnknown(u.sys.Hostname)},
 	}
 	u.mu.Lock()
 	graphics := p.graphics
 	u.mu.Unlock()
 	if graphics != "" {
-		rows = append(rows, [2]string{"Graphics", graphics})
+		rows = append(rows, [2]string{i18n.T("Graphics"), graphics})
 	}
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -161,7 +162,7 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.Mark(gtx, 56, true, 1, 0) }),
 				layout.Rigid(layout.Spacer{Width: 18}.Layout),
-				layout.Rigid(u.Heading("Isotope", "Isotope, built on Hadron. An immutable desktop from the Kairos project.")),
+				layout.Rigid(u.Heading("Isotope", i18n.T("Isotope, built on Hadron. An immutable desktop from the Kairos project."))),
 			)
 		})
 		c.gap(28)
@@ -178,7 +179,7 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 			return rc.layout(gtx)
 		}))
 		c.gap(16)
-		c.add(u.dim("Isotope is free software under the Apache License 2.0."))
+		c.add(u.dim(i18n.T("Isotope is free software under the Apache License 2.0.")))
 		return c.layout(gtx)
 	})
 }

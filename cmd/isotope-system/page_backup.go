@@ -9,6 +9,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -61,9 +62,9 @@ type backupPage struct {
 }
 
 var schedules = []struct{ ID, Name, Sub string }{
-	{"off", "Off", "Only when you click Back up now"},
-	{"daily", "Daily", "Once a day, when the disk is there"},
-	{"weekly", "Weekly", "Once a week, when the disk is there"},
+	{"off", i18n.Mark("Off"), i18n.Mark("Only when you click Back up now")},
+	{"daily", i18n.Mark("Daily"), i18n.Mark("Once a day, when the disk is there")},
+	{"weekly", i18n.Mark("Weekly"), i18n.Mark("Once a week, when the disk is there")},
 }
 
 func (p *backupPage) Shown() {
@@ -91,7 +92,7 @@ func (p *backupPage) load() {
 		b, err := d.BackupStatus()
 		u.mu.Lock()
 		if err != nil {
-			p.loadErr = "Could not read the backup settings: " + Describe(err)
+			p.loadErr = i18n.Tf("Could not read the backup settings: %s", Describe(err))
 			u.mu.Unlock()
 			return
 		}
@@ -109,7 +110,7 @@ func (p *backupPage) load() {
 		defer u.mu.Unlock()
 		p.snapsLoaded, p.snapsErr = true, ""
 		if err != nil {
-			p.snapsErr = "Could not list the backups: " + Describe(err)
+			p.snapsErr = i18n.Tf("Could not list the backups: %s", Describe(err))
 			return
 		}
 		p.snaps = snaps
@@ -185,24 +186,24 @@ func (p *backupPage) jobEnded(prev string, st Status) {
 	case jobBackup:
 		switch st.BackupResult {
 		case "ok":
-			u.tell("Backed up", "This machine is backed up.")
+			u.tell(i18n.T("Backed up"), i18n.T("This machine is backed up."))
 		case "partial":
-			u.tell("Backed up, with gaps", st.BackupDetail)
+			u.tell(i18n.T("Backed up, with gaps"), st.BackupDetail)
 		case "failed":
-			u.tell("The backup failed", st.BackupDetail)
+			u.tell(i18n.T("The backup failed"), st.BackupDetail)
 		}
 	case jobExport:
 		switch st.BackupResult {
 		case "ok":
-			u.tell("Exported", "The backup is in "+file+".")
+			u.tell(i18n.T("Exported"), i18n.Tf("The backup is in %s.", file))
 		case "partial":
-			u.tell("Exported, with gaps", st.BackupDetail)
+			u.tell(i18n.T("Exported, with gaps"), st.BackupDetail)
 		case "failed":
-			u.tell("The export failed", st.BackupDetail)
+			u.tell(i18n.T("The export failed"), st.BackupDetail)
 		}
 	case jobRestore:
 		if st.BackupResult == "failed" {
-			u.tell("The restore failed", st.BackupDetail)
+			u.tell(i18n.T("The restore failed"), st.BackupDetail)
 		}
 	}
 	p.load()
@@ -216,7 +217,7 @@ func (p *backupPage) cancelJob() {
 	}
 	u.async(func() {
 		if err := d.BackupCancel(); err != nil {
-			u.tell("Could not cancel", Describe(err))
+			u.tell(i18n.T("Could not cancel"), Describe(err))
 		}
 	})
 }
@@ -240,7 +241,7 @@ func (p *backupPage) Update(gtx layout.Context) {
 				u.mu.Lock()
 				p.started = ""
 				u.mu.Unlock()
-				u.tell("The backup did not start", Describe(err))
+				u.tell(i18n.T("The backup did not start"), Describe(err))
 			}
 		})
 	}
@@ -258,7 +259,7 @@ func (p *backupPage) Update(gtx layout.Context) {
 			s := schedules[i].ID
 			u.async(func() {
 				if err := d.SetBackupSchedule(s); err != nil {
-					u.tell("Could not change the schedule", Describe(err))
+					u.tell(i18n.T("Could not change the schedule"), Describe(err))
 				}
 				p.load()
 			})
@@ -287,16 +288,16 @@ func (p *backupPage) Footer() (leading, trailing []guikit.Action) {
 		return nil, nil
 	}
 	if p.mineRunning(st) {
-		leading = []guikit.Action{{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel"}}
+		leading = []guikit.Action{{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")}}
 	}
 	if v.Setup {
 		if !u.sys.Admin {
 			return leading, nil
 		}
-		return leading, []guikit.Action{{Click: &p.contBtn, Kind: guikit.ButtonPrimary, Label: "Continue",
+		return leading, []guikit.Action{{Click: &p.contBtn, Kind: guikit.ButtonPrimary, Label: i18n.T("Continue"),
 			Disabled: !ok || st.Busy() || working != "" || !p.ready()}}
 	}
-	return leading, []guikit.Action{{Click: &p.now, Kind: guikit.ButtonPrimary, Label: "Back up now",
+	return leading, []guikit.Action{{Click: &p.now, Kind: guikit.ButtonPrimary, Label: i18n.T("Back up now"),
 		Disabled: !ok || st.Busy() || !v.CanBackUp || !u.sys.Admin}}
 }
 
@@ -315,7 +316,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 	admin := u.sys.Admin
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Backup", "A backup keeps what survives a restart: your home folders, the system settings, the list of your apps and extensions. It is encrypted with its own password."))
+		c.add(u.Heading(i18n.T("Backup"), i18n.T("A backup keeps what survives a restart: your home folders, the system settings, the list of your apps and extensions. It is encrypted with its own password.")))
 		c.gap(24)
 		if !ok {
 			c.add(u.errorBox(orUnknown(why)))
@@ -326,7 +327,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		if !loaded {
-			c.add(u.spinnerLine("Reading the backup settings…"))
+			c.add(u.spinnerLine(i18n.T("Reading the backup settings…")))
 			return c.layout(gtx)
 		}
 		if v.Warning != "" {
@@ -334,7 +335,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(14)
 		}
 		if !admin {
-			c.add(u.notice("Only an administrator (a member of the admin group) can back up this machine."))
+			c.add(u.notice(i18n.T("Only an administrator (a member of the admin group) can back up this machine.")))
 			c.gap(14)
 		}
 		for i, l := range v.Lines {
@@ -348,9 +349,9 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		switch st.State {
 		case StateBackup:
-			txt := "Backing up this machine…"
+			txt := i18n.T("Backing up this machine…")
 			if mine == jobExport {
-				txt = "Exporting the backup…"
+				txt = i18n.T("Exporting the backup…")
 			}
 			c.gap(16)
 			c.add(u.spinnerLine(txt))
@@ -358,7 +359,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.log(lines, 8))
 		case StateRestore:
 			c.gap(16)
-			c.add(u.spinnerLine("Restoring this machine…"))
+			c.add(u.spinnerLine(i18n.T("Restoring this machine…")))
 			c.gap(10)
 			c.add(u.log(lines, 8))
 		}
@@ -373,18 +374,18 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(func(gtx layout.Context) layout.Dimensions { return p.setupBody(gtx, st.Busy()) })
 			if offered {
 				c.gap(28)
-				c.add(u.caps("RESTORE"))
+				c.add(u.caps(i18n.T("RESTORE")))
 				c.gap(10)
-				c.add(u.para("This machine is new, so it can become the machine of a backup. Choose where the backup is above, then:"))
+				c.add(u.para(i18n.T("This machine is new, so it can become the machine of a backup. Choose where the backup is above, then:")))
 				c.gap(10)
 				c.add(u.buttons(guikit.Action{Click: &p.form.restoreClick, Kind: guikit.ButtonSecondary,
-					Label: "Restore this machine from a backup…", Disabled: st.Busy() || p.busyHere() || !p.ready()}))
+					Label: i18n.T("Restore this machine from a backup…"), Disabled: st.Busy() || p.busyHere() || !p.ready()}))
 			}
 			p.addRestoreHint(&c, restoreHint)
 			return c.layout(gtx)
 		}
 		c.gap(28)
-		c.add(u.caps("AUTOMATIC BACKUPS"))
+		c.add(u.caps(i18n.T("AUTOMATIC BACKUPS")))
 		c.gap(10)
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var kids []layout.FlexChild
@@ -397,7 +398,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 						gtx = gtx.Disabled()
 					}
 					on := b.Schedule == s.ID || (s.ID == "off" && b.Schedule == "")
-					return u.ChoiceCard(gtx, &p.schedule[i], on, s.Name, s.Sub)
+					return u.ChoiceCard(gtx, &p.schedule[i], on, i18n.T(s.Name), i18n.T(s.Sub))
 				}))
 			}
 			return layout.Flex{}.Layout(gtx, kids...)
@@ -408,17 +409,17 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.gap(28)
-		c.add(u.caps("BACKUPS"))
+		c.add(u.caps(i18n.T("BACKUPS")))
 		c.gap(10)
 		switch {
 		case !b.Present:
-			c.add(u.dim("Plug in " + backupDiskName(b) + " to see its backups."))
+			c.add(u.dim(i18n.Tf("Plug in %s to see its backups.", backupDiskName(b))))
 		case snapsErr != "":
 			c.add(u.errorBox(snapsErr))
 		case !snapsLoaded:
-			c.add(u.spinnerLine("Reading the backups…"))
+			c.add(u.spinnerLine(i18n.T("Reading the backups…")))
 		case len(rows) == 0:
-			c.add(u.dim("No backups yet."))
+			c.add(u.dim(i18n.T("No backups yet.")))
 		default:
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rc col
@@ -449,7 +450,7 @@ func (p *backupPage) canExport() bool {
 
 // exportAction is the "Export to a file…" button.
 func (p *backupPage) exportAction(st Status) guikit.Action {
-	return guikit.Action{Click: &p.exportBtn, Kind: guikit.ButtonSecondary, Label: "Export to a file…",
+	return guikit.Action{Click: &p.exportBtn, Kind: guikit.ButtonSecondary, Label: i18n.T("Export to a file…"),
 		Disabled: !p.u.sys.Admin || st.Busy() || !p.canExport()}
 }
 

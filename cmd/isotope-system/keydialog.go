@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"strings"
 
 	"gioui.org/layout"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/recoverykey"
 )
 
@@ -58,11 +58,11 @@ func (u *UI) keyDialog(title, intro, key string, done func()) {
 			return rows.layout(gtx)
 		}))
 		c.gap(8)
-		c.add(u.dim("The letters are only these: " + strings.Join(strings.Split(recoverykey.Alphabet, ""), " ")))
+		c.add(u.dim(i18n.Tf("The letters are only these: %s", strings.Join(strings.Split(recoverykey.Alphabet, ""), " "))))
 		return c.layout(gtx)
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: k.clear},
-		choice{Label: "I saved it", Kind: guikit.ButtonPrimary, Do: func() { u.askKeyGroup(title, k, done) }})
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: k.clear},
+		choice{Label: i18n.T("I saved it"), Kind: guikit.ButtonPrimary, Do: func() { u.askKeyGroup(title, k, done) }})
 	show.key = k
 	u.open(show)
 }
@@ -80,7 +80,7 @@ func (u *UI) askKeyGroup(title string, k *keyCheck, done func()) {
 			done()
 		}
 	}
-	d = newDialog(title, fmt.Sprintf("To check you saved it, type group %d of 8 of the new key.", k.group), func(gtx layout.Context) layout.Dimensions {
+	d = newDialog(title, i18n.Tf("To check you saved it, type group %d of 8 of the new key.", k.group), func(gtx layout.Context) layout.Dimensions {
 		if k.typed.Submitted(gtx) && k.ok() {
 			u.pick(d, len(d.choices)-1)
 		}
@@ -90,14 +90,14 @@ func (u *UI) askKeyGroup(title string, k *keyCheck, done func()) {
 		}
 		k.typed.Err = ""
 		if t := strings.NewReplacer("-", "", " ", "").Replace(k.typed.Editor.Text()); len(t) >= 8 && !k.ok() {
-			k.typed.Err = "That is not it. Check what you wrote down."
+			k.typed.Err = i18n.T("That is not it. Check what you wrote down.")
 		}
-		return u.Labelled(gtx, fmt.Sprintf("Group %d", k.group), k.typed, "8 letters.", func(gtx layout.Context) layout.Dimensions {
+		return u.Labelled(gtx, i18n.Tf("Group %d", k.group), k.typed, i18n.T("8 letters."), func(gtx layout.Context) layout.Dimensions {
 			return u.Input(gtx, k.typed, guikit.StMono, 38, "", nil)
 		})
 	}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: k.clear},
-		choice{Label: "Confirm", Kind: guikit.ButtonPrimary, Enabled: k.ok, Do: confirm})
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: k.clear},
+		choice{Label: i18n.T("Confirm"), Kind: guikit.ButtonPrimary, Enabled: k.ok, Do: confirm})
 	d.key = k
 	u.open(d)
 }

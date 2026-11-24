@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"image"
 	"strings"
 	"time"
@@ -19,6 +19,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -40,7 +41,7 @@ const (
 )
 
 // stepNames is the sidebar's step list.
-var stepNames = []string{"Introduction", "Keyboard and time zone", "Account", "Disk", "Encryption", "Summary", "Installation"}
+var stepNames = []string{i18n.Mark("Introduction"), i18n.Mark("Keyboard and time zone"), i18n.Mark("Account"), i18n.Mark("Disk"), i18n.Mark("Encryption"), i18n.Mark("Summary"), i18n.Mark("Installation")}
 
 func stepOf(p gpage) int {
 	switch p {
@@ -492,7 +493,7 @@ func (u *UI) nextKeyboard() {
 		if len(u.tzShown) == 1 || (len(u.tzShown) > 0 && u.tzField.Editor.Text() != "") {
 			u.pickZone(u.tzShown[0])
 		} else {
-			u.tzField.Err = "Pick a time zone from the list."
+			u.tzField.Err = i18n.T("Pick a time zone from the list.")
 			u.focus = &u.tzField.Editor
 			return
 		}
@@ -509,7 +510,8 @@ func (u *UI) nextKeyboard() {
 // --- account ----------------------------------------------------------------
 
 // sentence is core's error text as a sentence for the window: the words are
-// the text installer's, with a capital and a full stop.
+// the text installer's, with a capital and a full stop. A translation
+// keeps the same shape: no capital, no full stop.
 func sentence(err error) string {
 	s := err.Error()
 	r, n := utf8.DecodeRuneInString(s)
@@ -541,7 +543,7 @@ func (u *UI) nextAccount() {
 	if err := w.SetPassword(u.pw.Editor.Text()); err != nil {
 		fail(u.pw, err)
 	} else if !u.passwordsMatch() {
-		fail(u.pw2, fmt.Errorf("the passwords do not match"))
+		fail(u.pw2, errors.New(i18n.T("the passwords do not match")))
 	}
 	if err := w.SetGithub(u.gh.Editor.Text()); err != nil && len(w.Disks) > 0 {
 		fail(u.gh, err)
@@ -706,7 +708,7 @@ func (u *UI) githubStatus() (string, bool, bool) {
 		txt, ok := installer.GithubKeysText(g.n, g.err)
 		return txt, ok, true
 	case g.asked == name:
-		return "Checking GitHub", false, true
+		return i18n.T("Checking GitHub"), false, true
 	}
 	return "", false, false
 }
@@ -787,7 +789,7 @@ func (u *UI) update(gtx layout.Context) {
 		if where, err := u.hooks.saveLog(); err != nil {
 			u.savedTo = sentence(err)
 		} else {
-			u.savedTo = "Saved to " + where
+			u.savedTo = i18n.Tf("Saved to %s", where)
 		}
 	}
 	if u.terminal.Clicked(gtx) && u.hooks.terminal != nil {

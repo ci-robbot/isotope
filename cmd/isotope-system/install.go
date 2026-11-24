@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The install flow of the Updates and the Desktop & image pages, as the
@@ -26,7 +27,7 @@ type install struct {
 func (u *UI) startInstall(what, ref string, advanced bool, warning string) {
 	d := u.hooks.Daemon
 	if d == nil {
-		u.tell("Cannot install", "The update service (isotope-updated) is not available.")
+		u.tell(i18n.T("Cannot install"), i18n.T("The update service (isotope-updated) is not available."))
 		return
 	}
 	u.mu.Lock()
@@ -34,7 +35,7 @@ func (u *UI) startInstall(what, ref string, advanced bool, warning string) {
 		u.mu.Unlock()
 		return
 	}
-	u.inst.preparing = "Checking " + what + "…"
+	u.inst.preparing = i18n.Tf("Checking %s…", what)
 	u.mu.Unlock()
 	u.async(func() {
 		// Always without the override, so the daemon reports the refusal
@@ -44,12 +45,12 @@ func (u *UI) startInstall(what, ref string, advanced bool, warning string) {
 		u.inst.preparing = ""
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Cannot install "+what, Describe(err))
+			u.tell(i18n.Tf("Cannot install %s", what), Describe(err))
 			return
 		}
 		q := overrideQuestion(info, advanced)
 		if info.Refusal != "" && q == "" {
-			u.tell("Cannot install "+what, info.Refusal)
+			u.tell(i18n.Tf("Cannot install %s", what), info.Refusal)
 			return
 		}
 		var b strings.Builder
@@ -60,15 +61,15 @@ func (u *UI) startInstall(what, ref string, advanced bool, warning string) {
 			b.WriteString(lineWarning(info.GPU) + "\n\n")
 		}
 		b.WriteString(strings.Join(InspectReport(info), "\n"))
-		b.WriteString("\n\nThe running system is not touched; the new one is used from the next boot.")
-		cancel := choice{Label: "Cancel", Kind: guikit.ButtonSecondary}
+		b.WriteString("\n\n" + i18n.T("The running system is not touched; the new one is used from the next boot."))
+		cancel := choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary}
 		if q != "" {
 			u.ask(q, info.Refusal+"\n\n"+b.String(), cancel,
-				choice{Label: "Install anyway", Kind: guikit.ButtonDanger, Do: func() { u.apply(ref, info.Digest, true) }})
+				choice{Label: i18n.T("Install anyway"), Kind: guikit.ButtonDanger, Do: func() { u.apply(ref, info.Digest, true) }})
 			return
 		}
-		u.ask("Install "+what+"?", b.String(), cancel,
-			choice{Label: "Install", Kind: guikit.ButtonPrimary, Do: func() { u.apply(ref, info.Digest, false) }})
+		u.ask(i18n.Tf("Install %s?", what), b.String(), cancel,
+			choice{Label: i18n.T("Install"), Kind: guikit.ButtonPrimary, Do: func() { u.apply(ref, info.Digest, false) }})
 	})
 }
 
@@ -85,7 +86,7 @@ func (u *UI) apply(ref, digest string, override bool) {
 			u.mu.Lock()
 			u.inst.active = false
 			u.mu.Unlock()
-			u.tell("The update did not start", Describe(err))
+			u.tell(i18n.T("The update did not start"), Describe(err))
 		}
 	})
 }
@@ -106,7 +107,7 @@ func (u *UI) installEnded(_ string, st Status) {
 		return
 	}
 	if !end.OK {
-		u.tell("The update did not install", end.Message)
+		u.tell(i18n.T("The update did not install"), end.Message)
 		return
 	}
 	u.askRestart(end.Message)
@@ -114,8 +115,8 @@ func (u *UI) installEnded(_ string, st Status) {
 
 // askRestart offers the restart into an installed update.
 func (u *UI) askRestart(msg string) {
-	u.ask("Restart now?", msg, choice{Label: "Later", Kind: guikit.ButtonSecondary},
-		choice{Label: "Restart now", Kind: guikit.ButtonPrimary, Do: u.reboot})
+	u.ask(i18n.T("Restart now?"), msg, choice{Label: i18n.T("Later"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Restart now"), Kind: guikit.ButtonPrimary, Do: u.reboot})
 }
 
 func (u *UI) reboot() {
@@ -124,19 +125,19 @@ func (u *UI) reboot() {
 		return
 	}
 	if u.writingFirmware() {
-		u.tell("Cannot restart", firmwareWritingText)
+		u.tell(i18n.T("Cannot restart"), i18n.T(firmwareWritingText))
 		return
 	}
 	u.async(func() {
 		if err := d.Reboot(); err != nil {
-			u.tell("Cannot restart", Describe(err))
+			u.tell(i18n.T("Cannot restart"), Describe(err))
 		}
 	})
 }
 
 // firmwareWritingText is why a restart waits for a firmware write; the
 // daemon gives the same sentence when another program's write blocks it.
-const firmwareWritingText = "A firmware update is being written. Restarting now could damage the device. Try again when it is done."
+var firmwareWritingText = i18n.Mark("A firmware update is being written. Restarting now could damage the device. Try again when it is done.")
 
 // writingFirmware says whether this window has fwupd write firmware now.
 func (u *UI) writingFirmware() bool {

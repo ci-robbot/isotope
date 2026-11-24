@@ -8,6 +8,7 @@ import (
 
 	"github.com/kairos-community/isotope/pkg/firewall"
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The Firewall section of the Network page: on or off, and the ports an
@@ -44,13 +45,13 @@ func firewallViewOf(in fwInput) fwView {
 	fw := in.FW
 	switch {
 	case in.Live:
-		v.Sub = "Off on the live system. It is on after the install."
+		v.Sub = i18n.T("Off on the live system. It is on after the install.")
 		return v
 	case in.Err != "":
 		v.Sub = in.Err
 		return v
 	case !in.Loaded:
-		v.Sub = "Loading…"
+		v.Sub = i18n.T("Loading…")
 		return v
 	case fw.Skipped:
 		v.Sub = fw.Summary() + " · " + fw.Reason
@@ -60,42 +61,42 @@ func firewallViewOf(in fwInput) fwView {
 		// still be read, and the reset keeps them.
 		v.Sub = fw.Reason
 		if !strings.HasPrefix(v.Sub, "The firewall settings could not be read") {
-			v.Sub = strings.TrimSpace("The firewall settings could not be read. " + v.Sub)
+			v.Sub = strings.TrimSpace(i18n.T("The firewall settings could not be read.") + " " + v.Sub)
 		}
-		v.Reset, v.Enabled = "Reset to defaults", in.Admin
-		v.Empty = "No port could be read from them: a reset gives the default list, SSH (22/tcp)."
+		v.Reset, v.Enabled = i18n.T("Reset to defaults"), in.Admin
+		v.Empty = i18n.T("No port could be read from them: a reset gives the default list, SSH (22/tcp).")
 		if len(fw.Rules) > 0 {
-			v.Empty = "These ports could still be read; a reset keeps them:"
+			v.Empty = i18n.T("These ports could still be read; a reset keeps them:")
 		}
 		if !in.Admin {
-			v.Hint = "Only an administrator can change the firewall."
+			v.Hint = i18n.T("Only an administrator can change the firewall.")
 		}
 		for _, r := range fw.Rules {
 			v.Rows = append(v.Rows, fwRow{Rule: r, Title: r.String(), Sub: r.Note})
 		}
 		return v
 	case fw.On && fw.Active:
-		v.Sub = "On · Incoming connections are blocked unless their port is allowed."
+		v.Sub = i18n.T("On · Incoming connections are blocked unless their port is allowed.")
 	case fw.On:
-		v.Sub = fw.Summary() + " · Nothing is blocked. " + fw.Reason
+		v.Sub = i18n.Tf("%[1]s · Nothing is blocked. %[2]s", fw.Summary(), fw.Reason)
 	case fw.Active:
 		v.Sub = fw.Summary() + " · " + fw.Reason
 	default:
-		v.Sub = "Off · Every port is open to the network."
+		v.Sub = i18n.T("Off · Every port is open to the network.")
 	}
-	v.Toggle = "Turn on"
+	v.Toggle = i18n.T("Turn on")
 	if fw.On {
-		v.Toggle = "Turn off"
+		v.Toggle = i18n.T("Turn off")
 	}
 	v.CanAdd, v.Enabled = true, in.Admin
 	if !in.Admin {
-		v.Hint = "Only an administrator can change the firewall."
+		v.Hint = i18n.T("Only an administrator can change the firewall.")
 	}
 	for _, r := range in.FW.Rules {
 		v.Rows = append(v.Rows, fwRow{Rule: r, Title: r.String(), Sub: r.Note})
 	}
 	if len(v.Rows) == 0 {
-		v.Empty = "No port is allowed."
+		v.Empty = i18n.T("No port is allowed.")
 	}
 	return v
 }
@@ -155,7 +156,7 @@ func (p *networkPage) fwChange(working string, f func(Daemon) error) {
 		p.working = ""
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Firewall", Describe(err))
+			u.tell(i18n.T("Firewall"), Describe(err))
 		}
 		p.loadFirewall()
 	})
@@ -173,25 +174,24 @@ func (p *networkPage) updateFirewall(gtx layout.Context) {
 	u.mu.Unlock()
 	if p.fwToggle.Clicked(gtx) && v.Enabled && v.Toggle != "" {
 		if on {
-			u.ask("Turn the firewall off?", "Every program that listens on a port can then be reached from the network.",
-				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-				choice{Label: "Turn off", Kind: guikit.ButtonDanger, Do: func() {
-					p.fwChange("Turning the firewall off…", func(d Daemon) error { return d.SetFirewall(false) })
+			u.ask(i18n.T("Turn the firewall off?"), i18n.T("Every program that listens on a port can then be reached from the network."),
+				choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+				choice{Label: i18n.T("Turn off"), Kind: guikit.ButtonDanger, Do: func() {
+					p.fwChange(i18n.T("Turning the firewall off…"), func(d Daemon) error { return d.SetFirewall(false) })
 				}})
 		} else {
-			p.fwChange("Turning the firewall on…", func(d Daemon) error { return d.SetFirewall(true) })
+			p.fwChange(i18n.T("Turning the firewall on…"), func(d Daemon) error { return d.SetFirewall(true) })
 		}
 	}
 	if p.fwReset.Clicked(gtx) && v.Enabled && v.Reset != "" {
-		body := "The firewall is turned on with the ports that could still be read: " + rulesText(rules) +
-			". Everything else in the file is replaced."
+		body := i18n.Tf("The firewall is turned on with the ports that could still be read: %s. Everything else in the file is replaced.", rulesText(rules))
 		if len(rules) == 0 {
-			body = "None of the saved settings could be read. The ports saved in the file are lost: the firewall is turned on with the default list, SSH (22/tcp)."
+			body = i18n.T("None of the saved settings could be read. The ports saved in the file are lost: the firewall is turned on with the default list, SSH (22/tcp).")
 		}
-		u.ask("Reset the firewall settings?", body,
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-			choice{Label: "Reset", Kind: guikit.ButtonDanger, Do: func() {
-				p.fwChange("Resetting the firewall settings…", func(d Daemon) error { return d.ResetFirewall() })
+		u.ask(i18n.T("Reset the firewall settings?"), body,
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+			choice{Label: i18n.T("Reset"), Kind: guikit.ButtonDanger, Do: func() {
+				p.fwChange(i18n.T("Resetting the firewall settings…"), func(d Daemon) error { return d.ResetFirewall() })
 			}})
 	}
 	if p.fwAdd.Clicked(gtx) && v.Enabled && v.CanAdd {
@@ -200,14 +200,14 @@ func (p *networkPage) updateFirewall(gtx layout.Context) {
 	for _, r := range rules {
 		r := r
 		if p.fwClicksFor(r).remove.Clicked(gtx) && v.Enabled && v.CanAdd {
-			body := "Incoming connections on this port are blocked again."
+			body := i18n.T("Incoming connections on this port are blocked again.")
 			if r.Port == 22 && r.Proto == "tcp" {
-				body += " Nobody can then log in to this computer over SSH."
+				body += " " + i18n.T("Nobody can then log in to this computer over SSH.")
 			}
-			u.ask("Stop allowing "+r.String()+"?", body,
-				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-				choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
-					p.fwChange("Removing "+r.String()+"…", func(d Daemon) error { return d.DenyPort(r.Port, r.Proto) })
+			u.ask(i18n.Tf("Stop allowing %s?", r.String()), body,
+				choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+				choice{Label: i18n.T("Remove"), Kind: guikit.ButtonDanger, Do: func() {
+					p.fwChange(i18n.Tf("Removing %s…", r.String()), func(d Daemon) error { return d.DenyPort(r.Port, r.Proto) })
 				}})
 		}
 	}
@@ -219,7 +219,7 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 	v := firewallViewOf(in)
 	off := !v.Enabled || working != ""
 	var c col
-	c.add(u.caps("FIREWALL"))
+	c.add(u.caps(i18n.T("FIREWALL")))
 	c.gap(10)
 	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 		var rows col
@@ -230,7 +230,7 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 		case v.Reset != "":
 			right = u.buttons(guikit.Action{Click: &p.fwReset, Kind: guikit.ButtonSecondary, Label: v.Reset, Disabled: off})
 		}
-		rows.add(u.row("Firewall", v.Sub, right))
+		rows.add(u.row(i18n.T("Firewall"), v.Sub, right))
 		if !v.CanAdd {
 			// Settings that cannot be read: the ports that can still be
 			// read, without buttons.
@@ -252,7 +252,7 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 			rows.gap(8)
 			k := p.fwClicksFor(r.Rule)
 			rows.add(u.row(r.Title, r.Sub, u.buttons(
-				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: "Remove", Disabled: off})))
+				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove"), Disabled: off})))
 		}
 		if v.Empty != "" {
 			rows.gap(8)
@@ -263,7 +263,7 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 			rows.add(u.dim(v.Hint))
 		}
 		rows.gap(8)
-		rows.add(u.buttons(guikit.Action{Click: &p.fwAdd, Kind: guikit.ButtonSecondary, Label: "Allow incoming…", Disabled: off}))
+		rows.add(u.buttons(guikit.Action{Click: &p.fwAdd, Kind: guikit.ButtonSecondary, Label: i18n.T("Allow incoming…"), Disabled: off}))
 		return rows.layout(gtx)
 	}))
 	return c.layout(gtx)
@@ -299,7 +299,7 @@ func (p *networkPage) allowDialog() {
 	focused := false
 	var dlg *dialog
 	ok := func() bool { _, err := f.rule(); return err == nil }
-	dlg = newDialog("Allow incoming connections", "Programs on other computers can then connect to this one on the port.", func(gtx layout.Context) layout.Dimensions {
+	dlg = newDialog(i18n.T("Allow incoming connections"), i18n.T("Programs on other computers can then connect to this one on the port."), func(gtx layout.Context) layout.Dimensions {
 		if f.port.Submitted(gtx) || f.note.Submitted(gtx) {
 			u.pick(dlg, 1) // ignored while Allow is off
 		}
@@ -315,15 +315,15 @@ func (p *networkPage) allowDialog() {
 		f.port.Err, f.note.Err = "", ""
 		if strings.TrimSpace(f.port.Editor.Text()) != "" {
 			if _, err := firewall.ParsePort(f.port.Editor.Text()); err != nil {
-				f.port.Err = "Type a port number from 1 to 65535."
+				f.port.Err = i18n.T("Type a port number from 1 to 65535.")
 			}
 		}
 		if err := firewall.CheckNote(strings.TrimSpace(f.note.Editor.Text())); err != nil {
-			f.note.Err = "Up to 64 characters, with no quotes or backslashes."
+			f.note.Err = i18n.T("Up to 64 characters, with no quotes or backslashes.")
 		}
 		var c col
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return u.Labelled(gtx, "Port", f.port, "For example 8080 for a web server, or 51820 for WireGuard.", func(gtx layout.Context) layout.Dimensions {
+			return u.Labelled(gtx, i18n.T("Port"), f.port, i18n.T("For example 8080 for a web server, or 51820 for WireGuard."), func(gtx layout.Context) layout.Dimensions {
 				return u.Input(gtx, f.port, guikit.StBody, 38, "", nil)
 			})
 		})
@@ -331,7 +331,7 @@ func (p *networkPage) allowDialog() {
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var rows col
 			rows.add(func(gtx layout.Context) layout.Dimensions {
-				return u.Theme.Label(gtx, guikit.StBody, guikit.ColDim, "Protocol")
+				return u.Theme.Label(gtx, guikit.StBody, guikit.ColDim, i18n.T("Protocol"))
 			})
 			for i, pr := range fwProtocols {
 				rows.gap(6)
@@ -352,19 +352,19 @@ func (p *networkPage) allowDialog() {
 		})
 		c.gap(12)
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return u.Labelled(gtx, "Description", f.note, "Optional. What the port is for.", func(gtx layout.Context) layout.Dimensions {
+			return u.Labelled(gtx, i18n.T("Description"), f.note, i18n.T("Optional. What the port is for."), func(gtx layout.Context) layout.Dimensions {
 				return u.Input(gtx, f.note, guikit.StBody, 38, "", nil)
 			})
 		})
 		return c.layout(gtx)
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Allow", Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Allow"), Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
 			r, err := f.rule()
 			if err != nil {
 				return
 			}
-			p.fwChange("Allowing "+r.String()+"…", func(d Daemon) error { return d.AllowPort(r.Port, r.Proto, r.Note) })
+			p.fwChange(i18n.Tf("Allowing %s…", r.String()), func(d Daemon) error { return d.AllowPort(r.Port, r.Proto, r.Note) })
 		}})
 	u.open(dlg)
 }

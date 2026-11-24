@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -154,8 +155,8 @@ func HelpItems(sheet []Shortcut) []HelpItem {
 	var out []HelpItem
 	for _, it := range []HelpItem{
 		{Label: "Wi-Fi", Keys: wifi},
-		{Label: "Apps", Keys: find(func(a string) bool { return a == "Launch an application" })},
-		{Label: "Help", Keys: find(func(a string) bool { return a == "This help" })},
+		{Label: i18n.Mark("Apps"), Keys: find(func(a string) bool { return a == "Launch an application" })},
+		{Label: i18n.Mark("Help"), Keys: find(func(a string) bool { return a == "This help" })},
 	} {
 		if it.Keys != nil {
 			out = append(out, it)
@@ -169,7 +170,7 @@ func HelpItems(sheet []Shortcut) []HelpItem {
 func LiveHelp(d Desktop, sheet []Shortcut) []HelpItem {
 	items := HelpItems(sheet)
 	if d == Cosmic && (len(items) == 0 || items[0].Label != "Wi-Fi") {
-		items = append([]HelpItem{{Label: "Wi-Fi", Where: "top bar"}}, items...)
+		items = append([]HelpItem{{Label: "Wi-Fi", Where: i18n.Mark("top bar")}}, items...)
 	}
 	return items
 }
@@ -179,9 +180,9 @@ func LiveHelp(d Desktop, sheet []Shortcut) []HelpItem {
 // menu and the app list.
 func tryText(d Desktop) string {
 	if d == Cosmic {
-		return "Look around first. You can install at any time from the dock or the app launcher."
+		return i18n.T("Look around first. You can install at any time from the dock or the app launcher.")
 	}
-	return "Look around first. You can install at any time from the Isotope menu (Super+Esc) or the app list."
+	return i18n.T("Look around first. You can install at any time from the Isotope menu (Super+Esc) or the app list.")
 }
 
 // ErrNotLive refuses the live welcome off the live desktop.

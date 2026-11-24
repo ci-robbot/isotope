@@ -17,6 +17,7 @@ import (
 
 	"github.com/kairos-community/isotope/pkg/flatpak"
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -217,7 +218,7 @@ func (p *appsPage) loadCatalog() {
 		case err == nil:
 			s.cat, s.catErr = cat, ""
 		case rerr != nil && s.cat == nil:
-			s.catErr = "Could not download Flathub's catalog: " + rerr.Error()
+			s.catErr = i18n.Tf("Could not download Flathub's catalog: %s", rerr.Error())
 		}
 		u.mu.Unlock()
 	})
@@ -233,7 +234,7 @@ func (p *appsPage) loadInstalled() {
 		s := p.s()
 		s.instLoaded = true
 		if err != nil {
-			s.instErr = "Could not list your apps: " + err.Error()
+			s.instErr = i18n.Tf("Could not list your apps: %s", err.Error())
 			return
 		}
 		s.installed, s.instErr, s.running = list, "", running
@@ -263,7 +264,7 @@ func (p *appsPage) loadUpdates() {
 		s := p.s()
 		s.upLoading, s.upLoaded = false, true
 		if err != nil {
-			s.upErr = "Could not look for updates: " + err.Error()
+			s.upErr = i18n.Tf("Could not look for updates: %s", err.Error())
 			return
 		}
 		s.pending, s.upErr = ps, ""
@@ -341,9 +342,9 @@ func (p *appsPage) openDetail(id string) {
 		d.Loaded = true
 		switch {
 		case merr != nil:
-			d.Err = "Could not read what it can reach: " + merr.Error()
+			d.Err = i18n.Tf("Could not read what it can reach: %s", merr.Error())
 		case inst == nil && !flathub:
-			d.Err = "Flathub is not set up for this user."
+			d.Err = i18n.T("Flathub is not set up for this user.")
 		default:
 			d.Summary = flatpak.Summarize(md.Permissions())
 		}
@@ -435,7 +436,7 @@ func (p *appsPage) install(id string) {
 		return
 	}
 	p.run(&appsJob{Kind: jobInstall, ID: id, Name: name, Icon: icon},
-		func(a Apps) (flatpak.Process, error) { return a.Install(id) }, "Could not install "+name, nil)
+		func(a Apps) (flatpak.Process, error) { return a.Install(id) }, i18n.Tf("Could not install %s", name), nil)
 }
 
 func (p *appsPage) update(name, icon string, refs ...string) {
@@ -446,12 +447,12 @@ func (p *appsPage) update(name, icon string, refs ...string) {
 		}
 	}
 	p.run(&appsJob{Kind: jobUpdate, ID: id, Name: name, Icon: icon},
-		func(a Apps) (flatpak.Process, error) { return a.Update(refs...) }, "Could not update "+name, nil)
+		func(a Apps) (flatpak.Process, error) { return a.Update(refs...) }, i18n.Tf("Could not update %s", name), nil)
 }
 
 func (p *appsPage) open(id string) {
 	if err := p.u.hooks.Apps.Run(id); err != nil {
-		p.u.tell("Could not open the app", capitalize(err.Error()))
+		p.u.tell(i18n.T("Could not open the app"), capitalize(err.Error()))
 	}
 }
 
@@ -477,13 +478,14 @@ func (p *appsPage) askRemove(id string) {
 		if dataSize > 0 {
 			sub += " · " + flatpak.FormatSize(dataSize)
 		} else {
-			sub += " · empty"
+			// TRANSLATORS: the app's data folder has nothing in it.
+			sub += " · " + i18n.X("data folder", "empty")
 		}
-		return u.CheckCard(gtx, &p.removeData, p.removeDataOn, "Also delete its data", sub)
+		return u.CheckCard(gtx, &p.removeData, p.removeDataOn, i18n.T("Also delete its data"), sub)
 	}
-	u.askForm("Remove "+name+"?", removeBody(name, size), form, 0,
-		choice{Label: "Keep", Kind: guikit.ButtonSecondary},
-		choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
+	u.askForm(i18n.Tf("Remove %s?", name), removeBody(name, size), form, 0,
+		choice{Label: i18n.T("Keep"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Remove"), Kind: guikit.ButtonDanger, Do: func() {
 			del := p.removeDataOn
 			u.mu.Lock()
 			if s := p.s(); s.detail != nil && s.detail.ID == id {
@@ -491,21 +493,20 @@ func (p *appsPage) askRemove(id string) {
 			}
 			u.mu.Unlock()
 			p.run(&appsJob{Kind: jobRemove, ID: id, Name: name, Icon: icon},
-				func(a Apps) (flatpak.Process, error) { return a.Uninstall(id, del) }, "Could not remove "+name,
+				func(a Apps) (flatpak.Process, error) { return a.Uninstall(id, del) }, i18n.Tf("Could not remove %s", name),
 				func(a Apps) { _ = a.RemoveUnused() })
 		}})
 }
 
 // askReview shows what a held-back update adds, and updates on an OK.
 func (p *appsPage) askReview(r updateRow) {
-	body := "The new version asks for more than the version you have:\n\n• " + strings.Join(r.Added, "\n• ") +
-		"\n\nAutomatic updates skip it until you update it here. Flatseal can take permissions away later."
+	body := i18n.Tf("The new version asks for more than the version you have:\n\n• %s\n\nAutomatic updates skip it until you update it here. Flatseal can take permissions away later.", strings.Join(r.Added, "\n• "))
 	if len(r.Added) == 0 {
-		body = "Its permissions could not be compared with the version you have. Automatic updates skip it until you update it here."
+		body = i18n.T("Its permissions could not be compared with the version you have. Automatic updates skip it until you update it here.")
 	}
-	p.u.ask("Update "+r.Name+"?", body,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Update", Kind: guikit.ButtonPrimary, Do: func() { p.update(r.Name, r.Icon, r.Ref) }})
+	p.u.ask(i18n.Tf("Update %s?", r.Name), body,
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Update"), Kind: guikit.ButtonPrimary, Do: func() { p.update(r.Name, r.Icon, r.Ref) }})
 }
 
 func (p *appsPage) toggleAuto() {
@@ -516,7 +517,7 @@ func (p *appsPage) toggleAuto() {
 	u.async(func() {
 		err := a.SetAuto(on)
 		if err != nil {
-			u.tell("Could not change the setting", capitalize(err.Error()))
+			u.tell(i18n.T("Could not change the setting"), capitalize(err.Error()))
 		}
 		u.mu.Lock()
 		p.s().auto = a.Auto()
@@ -640,7 +641,7 @@ func (p *appsPage) Update(gtx layout.Context) {
 		for i, r := range uv.Ready {
 			refs[i] = r.Ref
 		}
-		name := "your apps"
+		name := i18n.T("your apps")
 		if len(uv.Ready) == 1 {
 			name = uv.Ready[0].Name
 		}
@@ -689,7 +690,7 @@ func (p *appsPage) searchResults(cat *flatpak.Catalog, q string) []flatpak.App {
 	return p.results
 }
 
-const appsIntro = "Apps from Flathub. They install for you only and update without a restart."
+var appsIntro = i18n.Mark("Apps from Flathub. They install for you only and update without a restart.")
 
 func (p *appsPage) Body(gtx layout.Context) layout.Dimensions {
 	u := p.u
@@ -697,26 +698,26 @@ func (p *appsPage) Body(gtx layout.Context) layout.Dimensions {
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
 		if u.hooks.Apps == nil || (sn.checked && !sn.available) {
-			c.add(u.Heading("Apps", appsIntro))
+			c.add(u.Heading(i18n.T("Apps"), i18n.T(appsIntro)))
 			c.gap(20)
-			c.add(u.errorBox("Flatpak is not on this system, so apps from Flathub cannot be installed here."))
+			c.add(u.errorBox(i18n.T("Flatpak is not on this system, so apps from Flathub cannot be installed here.")))
 			return c.layout(gtx)
 		}
 		if !sn.checked {
-			c.add(u.Heading("Apps", appsIntro))
+			c.add(u.Heading(i18n.T("Apps"), i18n.T(appsIntro)))
 			c.gap(20)
-			c.add(u.spinnerLine("Reading your apps…"))
+			c.add(u.spinnerLine(i18n.T("Reading your apps…")))
 			return c.layout(gtx)
 		}
 		if sn.detail != nil {
 			return p.detailBody(gtx, sn)
 		}
-		c.add(u.Heading("Apps", appsIntro))
+		c.add(u.Heading(i18n.T("Apps"), i18n.T(appsIntro)))
 		c.gap(18)
 		c.add(func(gtx layout.Context) layout.Dimensions { return p.searchRow(gtx, sn) })
 		if !sn.flathub {
 			c.gap(14)
-			c.add(u.notice("Flathub is not set up for this user, so apps cannot be installed or updated here. The apps you have still open and can be removed."))
+			c.add(u.notice(i18n.T("Flathub is not set up for this user, so apps cannot be installed or updated here. The apps you have still open and can be removed.")))
 		}
 		c.gap(16)
 		q := strings.TrimSpace(p.search.Editor.Text())
@@ -741,12 +742,12 @@ func (p *appsPage) searchRow(gtx layout.Context, sn appsSnap) layout.Dimensions 
 	if sn.upLoaded {
 		n = len(sn.pending)
 	}
-	labels := []string{"Browse", "Installed", appsUpdatesTab(n)}
+	labels := []string{i18n.T("Browse"), i18n.X("apps tab", "Installed"), appsUpdatesTab(n)}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			hint := "Search Flathub"
+			hint := i18n.T("Search Flathub")
 			if !sn.flathub {
-				hint = "Search needs Flathub"
+				hint = i18n.T("Search needs Flathub")
 			}
 			return layout.Stack{Alignment: layout.W}.Layout(gtx,
 				layout.Stacked(func(gtx layout.Context) layout.Dimensions {
@@ -851,7 +852,7 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 			c.add(u.errorBox(sn.catErr))
 			return c.layout(gtx)
 		case sn.cat == nil:
-			c.add(u.spinnerLine("Downloading Flathub's catalog… The first time takes a minute."))
+			c.add(u.spinnerLine(i18n.T("Downloading Flathub's catalog… The first time takes a minute.")))
 			return c.layout(gtx)
 		}
 		if sn.chip != "" {
@@ -861,11 +862,11 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 			c.add(p.appList(sn, apps, sn.job != nil))
 			if len(apps) > appsMaxRows {
 				c.gap(10)
-				c.add(u.dim("The first " + itoa(appsMaxRows) + ", verified apps first. Search to find the others."))
+				c.add(u.dim(i18n.Tf("The first %d, verified apps first. Search to find the others.", appsMaxRows)))
 			}
 			return c.layout(gtx)
 		}
-		c.add(u.caps("ISOTOPE PICKS"))
+		c.add(u.caps(i18n.T("ISOTOPE PICKS")))
 		c.gap(10)
 		lines := pickLines(sn.cat, sn.picks, sn.installedIDs)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
@@ -884,25 +885,22 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 				})
 			}
 			if len(lines) == 0 {
-				rows.add(u.dim("None of Isotope's picks is in the catalog."))
+				rows.add(u.dim(i18n.T("None of Isotope's picks is in the catalog.")))
 			}
 			return rows.layout(gtx)
 		}))
 		c.gap(10)
-		c.add(u.dim("The picks are Isotope Welcome's list. Search reaches all of Flathub."))
+		c.add(u.dim(i18n.T("The picks are Isotope Welcome's list. Search reaches all of Flathub.")))
 		if sn.refreshing {
 			c.gap(10)
-			c.add(u.spinnerLine("Refreshing Flathub's catalog…"))
+			c.add(u.spinnerLine(i18n.T("Refreshing Flathub's catalog…")))
 		}
 		return c.layout(gtx)
 	}
 }
 
 func countApps(n int) string {
-	if n == 1 {
-		return "1 APP"
-	}
-	return itoa(n) + " APPS"
+	return i18n.Nf("%d APP", "%d APPS", n, n)
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -966,9 +964,9 @@ func (p *appsPage) appRow(l appLine, busy, flathub, compact bool) layout.Widget 
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		var btn guikit.Action
 		if l.Installed {
-			btn = guikit.Action{Click: &k.open, Kind: guikit.ButtonSecondary, Label: "Open"}
+			btn = guikit.Action{Click: &k.open, Kind: guikit.ButtonSecondary, Label: i18n.T("Open")}
 		} else {
-			btn = guikit.Action{Click: &k.main, Kind: guikit.ButtonPrimary, Label: "Install", Disabled: busy || !flathub}
+			btn = guikit.Action{Click: &k.main, Kind: guikit.ButtonPrimary, Label: i18n.T("Install"), Disabled: busy || !flathub}
 		}
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -1028,7 +1026,7 @@ func (p *appsPage) verified(gtx layout.Context) layout.Dimensions {
 	b := guikit.Box{Radius: 9, Border: guikit.Over(guikit.ColWindow, colVerified, 0.45), BorderWidth: 1}
 	return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Inset{Top: 1, Bottom: 1, Left: 7, Right: 7}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return p.u.Label(gtx, guikit.Style{Face: guikit.StSmall600.Face, Weight: guikit.StSmall600.Weight, Size: 11}, colVerified, "Verified")
+			return p.u.Label(gtx, guikit.Style{Face: guikit.StSmall600.Face, Weight: guikit.StSmall600.Weight, Size: 11}, colVerified, i18n.T("Verified"))
 		})
 	})
 }
@@ -1095,28 +1093,25 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 		case sn.cat == nil && sn.catErr != "":
 			c.add(u.errorBox(sn.catErr))
 		case sn.cat == nil:
-			c.add(u.spinnerLine("Downloading Flathub's catalog… The first time takes a minute."))
+			c.add(u.spinnerLine(i18n.T("Downloading Flathub's catalog… The first time takes a minute.")))
 		default:
 			res := p.searchResults(sn.cat, q)
-			title := "FLATHUB · " + itoa(len(res)) + " RESULTS"
-			if len(res) == 1 {
-				title = "FLATHUB · 1 RESULT"
-			}
+			title := i18n.Nf("FLATHUB · %d RESULT", "FLATHUB · %d RESULTS", len(res), len(res))
 			c.add(u.caps(title))
 			c.gap(10)
 			if len(res) == 0 {
-				c.add(u.panel(u.dim("No app on Flathub matches “" + q + "”.")))
+				c.add(u.panel(u.dim(i18n.Tf("No app on Flathub matches “%s”.", q))))
 			} else {
 				c.add(p.appList(sn, res, sn.job != nil))
 				if len(res) > appsMaxRows {
 					c.gap(10)
-					c.add(u.dim("The first " + itoa(appsMaxRows) + ". Type more to narrow the search."))
+					c.add(u.dim(i18n.Tf("The first %d. Type more to narrow the search.", appsMaxRows)))
 				}
 			}
 		}
 		if exts := extMatches(sn.extCat, sn.exts, q); len(exts) > 0 {
 			c.gap(22)
-			c.add(u.caps("SYSTEM EXTENSIONS"))
+			c.add(u.caps(i18n.T("SYSTEM EXTENSIONS")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -1129,7 +1124,7 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.extTile(gtx) }),
 							layout.Rigid(layout.Spacer{Width: 12}.Layout),
-							layout.Flexed(1, u.row(e.Title, e.Sub, u.buttons(guikit.Action{Click: p.extClick(e.Name), Kind: guikit.ButtonSecondary, Label: "Open in Extensions"}))),
+							layout.Flexed(1, u.row(e.Title, e.Sub, u.buttons(guikit.Action{Click: p.extClick(e.Name), Kind: guikit.ButtonSecondary, Label: i18n.T("Open in Extensions")}))),
 						)
 					})
 				}
@@ -1154,17 +1149,25 @@ func (p *appsPage) extTile(gtx layout.Context) layout.Dimensions {
 // jobPanel is the IN PROGRESS panel: the app, its progress and Cancel.
 func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 	u := p.u
-	verb := map[string]string{jobInstall: "Installing ", jobUpdate: "Updating ", jobRemove: "Removing "}[j.Kind]
-	sub := "Starting…"
+	title := j.Name
+	switch j.Kind {
+	case jobInstall:
+		title = i18n.Tf("Installing %s", j.Name)
+	case jobUpdate:
+		title = i18n.Tf("Updating %s", j.Name)
+	case jobRemove:
+		title = i18n.Tf("Removing %s", j.Name)
+	}
+	sub := i18n.T("Starting…")
 	if j.Progress.Percent >= 0 {
 		sub = itoa(j.Progress.Percent) + "%"
 		if j.Progress.Steps > 1 {
-			sub += " · step " + itoa(j.Progress.Step) + " of " + itoa(j.Progress.Steps)
+			sub += " · " + i18n.Tf("step %[1]d of %[2]d", j.Progress.Step, j.Progress.Steps)
 		}
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps("IN PROGRESS"))
+		c.add(u.caps(i18n.T("IN PROGRESS")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
@@ -1173,7 +1176,7 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					var rows col
 					rows.add(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StBody600, guikit.ColText, verb+j.Name)
+						return u.Label(gtx, guikit.StBody600, guikit.ColText, title)
 					})
 					rows.gap(2)
 					rows.add(u.dim(sub))
@@ -1184,7 +1187,7 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 					return rows.layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Width: 16}.Layout),
-				layout.Rigid(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel"})),
+				layout.Rigid(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")})),
 			)
 		}))
 		return c.layout(gtx)
@@ -1205,12 +1208,12 @@ func (p *appsPage) installedBody(sn appsSnap) layout.Widget {
 		case sn.instErr != "":
 			c.add(u.errorBox(sn.instErr))
 		case !sn.instLoaded:
-			c.add(u.spinnerLine("Reading your apps…"))
+			c.add(u.spinnerLine(i18n.T("Reading your apps…")))
 		default:
-			c.add(u.caps("INSTALLED · " + countApps(len(rows))))
+			c.add(u.caps(i18n.Tf("INSTALLED · %s", countApps(len(rows)))))
 			c.gap(10)
 			if len(rows) == 0 {
-				c.add(u.panel(u.dim("No app yet. Browse or search Flathub to install one.")))
+				c.add(u.panel(u.dim(i18n.T("No app yet. Browse or search Flathub to install one."))))
 			} else {
 				c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 					var list col
@@ -1232,7 +1235,7 @@ func (p *appsPage) installedBody(sn appsSnap) layout.Widget {
 						return u.Label(gtx, guikit.StSmall, guikit.ColDim, l+" ")
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Link(gtx, &p.extLink, "Manage them in Extensions")
+						return u.Link(gtx, &p.extLink, i18n.T("Manage them in Extensions"))
 					}),
 				)
 			})
@@ -1268,8 +1271,8 @@ func (p *appsPage) installedRow(r installedRow, busy bool) layout.Widget {
 			}),
 			layout.Rigid(layout.Spacer{Width: 12}.Layout),
 			layout.Rigid(u.buttons(
-				guikit.Action{Click: &k.open, Kind: guikit.ButtonSecondary, Label: "Open"},
-				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: "Remove…", Disabled: busy},
+				guikit.Action{Click: &k.open, Kind: guikit.ButtonSecondary, Label: i18n.T("Open")},
+				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: busy},
 			)),
 		)
 	}
@@ -1284,7 +1287,7 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 	busy := sn.job != nil
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.panel(u.row("Update apps automatically", av.Sub,
+		c.add(u.panel(u.row(i18n.T("Update apps automatically"), av.Sub,
 			u.buttons(guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: av.Toggle}))))
 		c.gap(18)
 		if sn.job != nil {
@@ -1296,17 +1299,17 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 			c.add(u.errorBox(sn.upErr))
 			return c.layout(gtx)
 		case !sn.upLoaded:
-			c.add(u.spinnerLine("Looking for updates…"))
+			c.add(u.spinnerLine(i18n.T("Looking for updates…")))
 			return c.layout(gtx)
 		}
 		if len(uv.Ready) == 0 && len(uv.Held) == 0 {
-			c.add(u.panel(u.dim("Your apps are up to date.")))
+			c.add(u.panel(u.dim(i18n.T("Your apps are up to date."))))
 		}
 		if len(uv.Ready) > 0 {
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 					layout.Flexed(1, u.caps(uv.ReadyTitle)),
-					layout.Rigid(u.buttons(guikit.Action{Click: &p.updateAll, Kind: guikit.ButtonPrimary, Label: "Update all", Disabled: busy})),
+					layout.Rigid(u.buttons(guikit.Action{Click: &p.updateAll, Kind: guikit.ButtonPrimary, Label: i18n.T("Update all"), Disabled: busy})),
 				)
 			})
 			c.gap(10)
@@ -1314,7 +1317,7 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 		}
 		if len(uv.Held) > 0 {
 			c.gap(20)
-			c.add(u.caps("NEEDS YOUR OK"))
+			c.add(u.caps(i18n.T("NEEDS YOUR OK")))
 			c.gap(10)
 			c.add(p.updateList(uv.Held, busy))
 		}
@@ -1339,9 +1342,9 @@ func (p *appsPage) updateList(rows []updateRow, busy bool) layout.Widget {
 			}
 			r := r
 			k := p.clicks("u:" + r.Ref)
-			btn := guikit.Action{Click: &k.update, Kind: guikit.ButtonSecondary, Label: "Update", Disabled: busy}
+			btn := guikit.Action{Click: &k.update, Kind: guikit.ButtonSecondary, Label: i18n.T("Update"), Disabled: busy}
 			if r.NeedsOK {
-				btn = guikit.Action{Click: &k.review, Kind: guikit.ButtonSecondary, Label: "Review…", Disabled: busy}
+				btn = guikit.Action{Click: &k.review, Kind: guikit.ButtonSecondary, Label: i18n.T("Review…"), Disabled: busy}
 			}
 			list.add(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
@@ -1356,7 +1359,8 @@ func (p *appsPage) updateList(rows []updateRow, busy bool) layout.Widget {
 							notes := r.Notes
 							c.add(func(gtx layout.Context) layout.Dimensions {
 								if r.NeedsOK {
-									return p.warnLead(gtx, "Asks for more:", strings.TrimPrefix(notes, "Asks for more:"))
+									lead := i18n.T("Asks for more:")
+									return p.warnLead(gtx, lead, strings.TrimPrefix(notes, lead))
 								}
 								return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 2, notes)
 							})
@@ -1407,9 +1411,9 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 	}
 	busy := sn.job != nil
 	var c col
-	back := "Back to results"
+	back := i18n.T("Back to results")
 	if strings.TrimSpace(p.search.Editor.Text()) == "" {
-		back = "Back"
+		back = i18n.T("Back")
 	}
 	c.add(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.back, "‹ "+back) })
 	c.gap(16)
@@ -1417,11 +1421,11 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 		var btns []guikit.Action
 		if inst != nil {
 			btns = []guikit.Action{
-				{Click: &p.detailOpen, Kind: guikit.ButtonSecondary, Label: "Open"},
-				{Click: &p.detailRemove, Kind: guikit.ButtonGhost, Label: "Remove…", Disabled: busy},
+				{Click: &p.detailOpen, Kind: guikit.ButtonSecondary, Label: i18n.T("Open")},
+				{Click: &p.detailRemove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: busy},
 			}
 		} else {
-			btns = []guikit.Action{{Click: &p.detailMain, Kind: guikit.ButtonPrimary, Label: "Install", Disabled: busy || !sn.flathub}}
+			btns = []guikit.Action{{Click: &p.detailMain, Kind: guikit.ButtonPrimary, Label: i18n.T("Install"), Disabled: busy || !sn.flathub}}
 		}
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.icon(gtx, d.ID, name, a.Icon, 72) }),
@@ -1484,30 +1488,30 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 	}
 	if a.Release.Description != "" && inst != nil && a.Release.Version != inst.Version {
 		c.gap(18)
-		c.add(u.caps("WHAT'S NEW IN " + strings.ToUpper(a.Release.Version)))
+		c.add(u.caps(i18n.Tf("WHAT'S NEW IN %s", strings.ToUpper(a.Release.Version))))
 		c.gap(6)
 		c.add(u.dim(a.Release.Description))
 	}
 	c.gap(22)
-	c.add(u.caps("WHAT IT CAN REACH"))
+	c.add(u.caps(i18n.T("WHAT IT CAN REACH")))
 	c.gap(10)
 	switch {
 	case !d.Loaded:
-		c.add(u.spinnerLine("Reading its permissions…"))
+		c.add(u.spinnerLine(i18n.T("Reading its permissions…")))
 	case d.Err != "":
 		c.add(u.errorBox(d.Err))
 	default:
 		c.add(p.reachPanel(d.Summary))
 		c.gap(10)
-		note := "From the app's metadata on Flathub, before you install it. Flatseal changes them later."
+		note := i18n.T("From the app's metadata on Flathub, before you install it. Flatseal changes them later.")
 		if d.FromInstalled {
-			note = "From the installed app's metadata. Flatseal changes them."
+			note = i18n.T("From the installed app's metadata. Flatseal changes them.")
 		}
 		c.add(u.dim(note))
 	}
 	if eol := d.Info.EOL; eol != "" {
 		c.gap(14)
-		c.add(u.notice("This app is no longer maintained on Flathub: " + eol))
+		c.add(u.notice(i18n.Tf("This app is no longer maintained on Flathub: %s", eol)))
 	}
 	return c.layout(gtx)
 }
@@ -1517,14 +1521,11 @@ func (p *appsPage) reachPanel(s flatpak.Summary) layout.Widget {
 	u := p.u
 	items := append([]flatpak.Reach(nil), s.Items...)
 	if s.Others > 0 {
-		t := itoa(s.Others) + " other permissions"
-		if s.Others == 1 {
-			t = "1 other permission"
-		}
-		items = append(items, flatpak.Reach{Title: t, Sub: "Folders, services and devices it names one by one"})
+		t := i18n.Nf("%d other permission", "%d other permissions", s.Others, s.Others)
+		items = append(items, flatpak.Reach{Title: t, Sub: i18n.T("Folders, services and devices it names one by one")})
 	}
 	if len(items) == 0 {
-		items = append(items, flatpak.Reach{Title: "Nothing outside its sandbox", Sub: "It asks for no files, network, display or devices"})
+		items = append(items, flatpak.Reach{Title: i18n.T("Nothing outside its sandbox"), Sub: i18n.T("It asks for no files, network, display or devices")})
 	}
 	cell := func(r flatpak.Reach) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {

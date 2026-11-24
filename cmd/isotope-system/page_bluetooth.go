@@ -14,6 +14,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -64,12 +65,12 @@ type btSend struct {
 // when the size is unknown.
 func btSendText(sent, total int64) string {
 	if sent < 0 {
-		return "Waiting for the device to accept…"
+		return i18n.T("Waiting for the device to accept…")
 	}
 	if total > 0 {
-		return fmt.Sprintf("Sending… %d%%", min(sent*100/total, 100))
+		return i18n.Tf("Sending… %d%%", min(sent*100/total, 100))
 	}
-	return "Sending… " + byteSize(sent) + " sent"
+	return i18n.Tf("Sending… %s sent", byteSize(sent))
 }
 
 // byteSize is n as KB, MB or GB, in plain words.
@@ -111,9 +112,9 @@ type btView struct {
 }
 
 var btKinds = map[string]string{
-	"audio-headset": "Headset", "audio-headphones": "Headphones", "audio-card": "Speaker",
-	"input-keyboard": "Keyboard", "input-mouse": "Mouse", "input-gaming": "Game controller",
-	"input-tablet": "Tablet", "phone": "Phone", "computer": "Computer", "printer": "Printer",
+	"audio-headset": i18n.Mark("Headset"), "audio-headphones": i18n.Mark("Headphones"), "audio-card": i18n.Mark("Speaker"),
+	"input-keyboard": i18n.Mark("Keyboard"), "input-mouse": i18n.Mark("Mouse"), "input-gaming": i18n.Mark("Game controller"),
+	"input-tablet": i18n.Mark("Tablet"), "phone": i18n.Mark("Phone"), "computer": i18n.Mark("Computer"), "printer": i18n.Mark("Printer"),
 }
 
 func btKind(icon string) string {
@@ -128,18 +129,18 @@ func isAudio(d BTDevice) bool { return strings.HasPrefix(d.Icon, "audio-") }
 func btSub(d BTDevice) string {
 	var parts []string
 	if k := btKind(d.Icon); k != "" {
-		parts = append(parts, k)
+		parts = append(parts, i18n.T(k))
 	}
 	switch {
 	case d.Connected:
-		parts = append(parts, "Connected")
+		parts = append(parts, i18n.T("Connected"))
 	case d.Paired:
-		parts = append(parts, "Paired")
+		parts = append(parts, i18n.T("Paired"))
 	default:
-		parts = append(parts, "Not paired")
+		parts = append(parts, i18n.T("Not paired"))
 	}
 	if d.Battery >= 0 {
-		parts = append(parts, fmt.Sprintf("Battery %d%%", d.Battery))
+		parts = append(parts, i18n.Tf("Battery %d%%", d.Battery))
 	}
 	return strings.Join(parts, " · ")
 }
@@ -150,23 +151,23 @@ func btSub(d BTDevice) string {
 func btActions(d BTDevice) []string {
 	switch {
 	case d.Connected:
-		return []string{"Send file…", "Disconnect", "Forget"}
+		return []string{i18n.Mark("Send file…"), i18n.Mark("Disconnect"), i18n.Mark("Forget")}
 	case d.Paired:
-		return []string{"Connect", "Send file…", "Forget"}
+		return []string{i18n.Mark("Connect"), i18n.Mark("Send file…"), i18n.Mark("Forget")}
 	}
-	return []string{"Pair"}
+	return []string{i18n.Mark("Pair")}
 }
 
 func btViewOf(have bool, st BTState, profiles map[string][]Profile) btView {
 	switch {
 	case !have || !st.Adapter:
-		return btView{Headline: "No Bluetooth adapter"}
+		return btView{Headline: i18n.T("No Bluetooth adapter")}
 	case !st.Powered:
-		return btView{Headline: "Bluetooth is off"}
+		return btView{Headline: i18n.T("Bluetooth is off")}
 	}
-	v := btView{Headline: "Bluetooth is on"}
+	v := btView{Headline: i18n.T("Bluetooth is on")}
 	if st.Discovering {
-		v.Headline += " · searching for devices"
+		v.Headline += " · " + i18n.T("searching for devices")
 	}
 	for _, d := range st.Devices {
 		r := btRow{Dev: d, Sub: btSub(d), Actions: btActions(d)}
@@ -216,7 +217,7 @@ func (p *btPage) fetch() {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if err != nil {
-		p.err = "Bluetooth is not available: " + err.Error()
+		p.err = i18n.Tf("Bluetooth is not available: %s", err.Error())
 		return
 	}
 	p.st, p.profiles, p.err, p.loaded = st, profiles, "", true
@@ -294,7 +295,7 @@ func (p *btPage) scan() {
 // pair pairs in its own goroutine (do), because Pair blocks until the user
 // has answered the prompts, which open dialogs on this window.
 func (p *btPage) pair(d BTDevice) {
-	p.do("Pairing with "+d.Name+"…", func(bt Bluetooth) error {
+	p.do(i18n.Tf("Pairing with %s…", d.Name), func(bt Bluetooth) error {
 		if err := bt.Pair(d.Path); err != nil {
 			return err
 		}
@@ -308,10 +309,10 @@ func (p *btPage) pair(d BTDevice) {
 }
 
 func (p *btPage) forget(d BTDevice) {
-	p.u.ask("Forget "+d.Name+"?", "This computer no longer knows the device. To use it again, pair it again.",
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Forget", Kind: guikit.ButtonDanger, Do: func() {
-			p.do("Forgetting "+d.Name+"…", func(bt Bluetooth) error { return bt.Forget(d.Path) })
+	p.u.ask(i18n.Tf("Forget %s?", d.Name), i18n.T("This computer no longer knows the device. To use it again, pair it again."),
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Forget"), Kind: guikit.ButtonDanger, Do: func() {
+			p.do(i18n.Tf("Forgetting %s…", d.Name), func(bt Bluetooth) error { return bt.Forget(d.Path) })
 		}})
 }
 
@@ -341,7 +342,7 @@ func sendPath(typed string) string {
 // send sends the file at path to d.
 func (p *btPage) send(d BTDevice, path string) {
 	u := p.u
-	p.do("Sending "+filepath.Base(path)+" to "+d.Name+"…", func(bt Bluetooth) error {
+	p.do(i18n.Tf("Sending %[1]s to %[2]s…", filepath.Base(path), d.Name), func(bt Bluetooth) error {
 		u.mu.Lock()
 		p.sending = btSend{Dev: d.Path}
 		u.mu.Unlock()
@@ -376,7 +377,7 @@ func (p *btPage) sendFile(d BTDevice) {
 			p.send(d, path)
 		}
 	}
-	dlg = newDialog("Send a file to "+d.Name, "", func(gtx layout.Context) layout.Dimensions {
+	dlg = newDialog(i18n.Tf("Send a file to %s", d.Name), "", func(gtx layout.Context) layout.Dimensions {
 		if f.Submitted(gtx) {
 			u.pick(dlg, 1) // ignored while Send is off
 		}
@@ -384,12 +385,12 @@ func (p *btPage) sendFile(d BTDevice) {
 			focused = true
 			gtx.Execute(focus(&f.Editor))
 		}
-		return u.Labelled(gtx, "File", f, "The path of a file, for example ~/Pictures/photo.jpg.", func(gtx layout.Context) layout.Dimensions {
+		return u.Labelled(gtx, i18n.T("File"), f, i18n.T("The path of a file, for example ~/Pictures/photo.jpg."), func(gtx layout.Context) layout.Dimensions {
 			return u.Input(gtx, f, guikit.StBody, 38, "", nil)
 		})
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Send", Kind: guikit.ButtonPrimary, Enabled: func() bool { return path() != "" }, Do: send})
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Send"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return path() != "" }, Do: send})
 	u.open(dlg)
 }
 
@@ -404,7 +405,7 @@ func (p *btPage) Update(gtx layout.Context) {
 	}
 	if p.power.Clicked(gtx) {
 		on := !st.Powered
-		p.do("Turning Bluetooth "+map[bool]string{true: "on", false: "off"}[on]+"…", func(bt Bluetooth) error { return bt.SetPowered(on) })
+		p.do(map[bool]string{true: i18n.T("Turning Bluetooth on…"), false: i18n.T("Turning Bluetooth off…")}[on], func(bt Bluetooth) error { return bt.SetPowered(on) })
 	}
 	if p.search.Clicked(gtx) && !busy {
 		p.scan()
@@ -422,13 +423,13 @@ func (p *btPage) Update(gtx layout.Context) {
 			case "Pair":
 				p.pair(d)
 			case "Connect":
-				p.do("Connecting to "+d.Name+"…", func(bt Bluetooth) error { return bt.Connect(d.Path) })
+				p.do(i18n.Tf("Connecting to %s…", d.Name), func(bt Bluetooth) error { return bt.Connect(d.Path) })
 			case "Disconnect":
-				p.do("Disconnecting from "+d.Name+"…", func(bt Bluetooth) error { return bt.Disconnect(d.Path) })
+				p.do(i18n.Tf("Disconnecting from %s…", d.Name), func(bt Bluetooth) error { return bt.Disconnect(d.Path) })
 			case "Forget":
 				p.forget(d)
 			case "Send file…":
-				u.chooseFile(FileRequest{Title: "Send a file to " + d.Name, Accept: "Send"},
+				u.chooseFile(FileRequest{Title: i18n.Tf("Send a file to %s", d.Name), Accept: i18n.T("Send")},
 					func(path string) { p.send(d, path) }, func() { p.sendFile(d) })
 			}
 		}
@@ -443,7 +444,7 @@ func (p *btPage) Update(gtx layout.Context) {
 func (p *btPage) setCodec(d BTDevice, c Profile) {
 	u := p.u
 	u.mu.Lock()
-	p.working = "Switching " + d.Name + " to " + c.Label + "…"
+	p.working = i18n.Tf("Switching %[1]s to %[2]s…", d.Name, c.Label)
 	u.mu.Unlock()
 	u.async(func() {
 		err := SetProfile(d.Address, c.Name)
@@ -451,7 +452,7 @@ func (p *btPage) setCodec(d BTDevice, c Profile) {
 		p.working = ""
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Sound quality", err.Error())
+			u.tell(i18n.T("Sound quality"), err.Error())
 		}
 		p.load()
 	})
@@ -461,7 +462,7 @@ func (p *btPage) Footer() (leading, trailing []guikit.Action) {
 	p.u.mu.Lock()
 	loading := p.loading
 	p.u.mu.Unlock()
-	return nil, []guikit.Action{{Click: &p.refresh, Kind: guikit.ButtonSecondary, Label: "Refresh", Disabled: loading || p.u.hooks.Bluetooth == nil}}
+	return nil, []guikit.Action{{Click: &p.refresh, Kind: guikit.ButtonSecondary, Label: i18n.T("Refresh"), Disabled: loading || p.u.hooks.Bluetooth == nil}}
 }
 
 func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
@@ -472,34 +473,34 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Bluetooth", "Pair and connect headphones, speakers, keyboards and other devices."))
+		c.add(u.Heading("Bluetooth", i18n.T("Pair and connect headphones, speakers, keyboards and other devices.")))
 		c.gap(24)
 		if err != "" {
 			c.add(u.errorBox(err))
 			return c.layout(gtx)
 		}
 		if u.hooks.Bluetooth != nil && !loaded {
-			c.add(u.spinnerLine("Looking for the adapter…"))
+			c.add(u.spinnerLine(i18n.T("Looking for the adapter…")))
 			return c.layout(gtx)
 		}
-		power := "Turn off"
+		power := i18n.T("Turn off")
 		if !st.Powered {
-			power = "Turn on"
+			power = i18n.T("Turn on")
 		}
 		busy := working != ""
 		acts := []guikit.Action{{Click: &p.power, Kind: guikit.ButtonSecondary, Label: power, Disabled: busy}}
 		if st.Powered {
-			acts = append(acts, guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: "Search for devices", Disabled: busy || st.Discovering})
+			acts = append(acts, guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: i18n.T("Search for devices"), Disabled: busy || st.Discovering})
 		}
 		if !st.Adapter || u.hooks.Bluetooth == nil {
 			c.add(u.lead(view.Headline))
 			c.gap(6)
-			c.add(u.dim("This computer has no Bluetooth adapter, or it is switched off by a key or by rfkill."))
+			c.add(u.dim(i18n.T("This computer has no Bluetooth adapter, or it is switched off by a key or by rfkill.")))
 			return c.layout(gtx)
 		}
 		c.add(u.row(view.Headline, "", u.buttons(acts...)))
 		c.gap(6)
-		c.add(u.dim("Files sent to this computer are saved in Downloads."))
+		c.add(u.dim(i18n.T("Files sent to this computer are saved in Downloads.")))
 		if busy {
 			c.gap(12)
 			c.add(u.spinnerLine(working))
@@ -507,12 +508,12 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 		if len(view.Rows) == 0 {
 			if st.Powered {
 				c.gap(18)
-				c.add(u.dim("No device yet. Put the device in pairing mode, then choose Search for devices."))
+				c.add(u.dim(i18n.T("No device yet. Put the device in pairing mode, then choose Search for devices.")))
 			}
 			return c.layout(gtx)
 		}
 		c.gap(24)
-		c.add(u.caps("DEVICES"))
+		c.add(u.caps(i18n.T("DEVICES")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col
@@ -526,12 +527,12 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 					if a == "Forget" {
 						k = guikit.ButtonGhost
 					}
-					as = append(as, guikit.Action{Click: p.click(r.Dev.Path + "|" + a), Kind: k, Label: a, Disabled: busy})
+					as = append(as, guikit.Action{Click: p.click(r.Dev.Path + "|" + a), Kind: k, Label: i18n.T(a), Disabled: busy})
 				}
 				sub := r.Sub
 				if sending.Dev == r.Dev.Path {
 					sub = btSendText(sending.Sent, sending.Total)
-					as = []guikit.Action{{Click: p.click("send|cancel"), Kind: guikit.ButtonSecondary, Label: "Cancel"}}
+					as = []guikit.Action{{Click: p.click("send|cancel"), Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")}}
 				}
 				rows.add(u.row(r.Dev.Name, sub, u.buttons(as...)))
 				if len(r.Codecs) > 0 {
@@ -544,7 +545,7 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 						}
 						cs = append(cs, guikit.Action{Click: p.click(r.Dev.Path + "|codec|" + cd.Name), Kind: k, Label: cd.Label, Disabled: busy})
 					}
-					rows.add(u.row("Sound quality", "A higher quality uses more battery and needs a good signal.", u.buttons(cs...)))
+					rows.add(u.row(i18n.T("Sound quality"), i18n.T("A higher quality uses more battery and needs a good signal."), u.buttons(cs...)))
 				}
 			}
 			return rows.layout(gtx)
@@ -629,12 +630,12 @@ func (b *btPrompt) yesNo(title, body, no, yes string) bool {
 }
 
 func (b *btPrompt) Confirm(dev BTDevice, passkey uint32) bool {
-	return b.yesNo("Pair with "+dev.Name+"?",
-		fmt.Sprintf("Check that %s shows this code: %03d %03d", dev.Name, passkey/1000, passkey%1000), "No", "Yes")
+	return b.yesNo(i18n.Tf("Pair with %s?", dev.Name),
+		i18n.Tf("Check that %s shows this code: %03d %03d", dev.Name, passkey/1000, passkey%1000), i18n.T("No"), i18n.T("Yes"))
 }
 
 func (b *btPrompt) Authorize(dev BTDevice) bool {
-	return b.yesNo("Pair with "+dev.Name+"?", dev.Name+" wants to pair with this computer.", "No", "Yes")
+	return b.yesNo(i18n.Tf("Pair with %s?", dev.Name), i18n.Tf("%s wants to pair with this computer.", dev.Name), i18n.T("No"), i18n.T("Yes"))
 }
 
 // typed asks for text in a field; valid tells when Pair is allowed.
@@ -644,7 +645,7 @@ func (b *btPrompt) typed(dev BTDevice, body, label, hint string, valid func(stri
 		focused := false
 		var d *dialog
 		text := func() string { return strings.TrimSpace(f.Editor.Text()) }
-		d = newDialog("Pair with "+dev.Name, body, func(gtx layout.Context) layout.Dimensions {
+		d = newDialog(i18n.Tf("Pair with %s", dev.Name), body, func(gtx layout.Context) layout.Dimensions {
 			if f.Submitted(gtx) && valid(text()) {
 				b.u.pick(d, 1)
 			}
@@ -656,8 +657,8 @@ func (b *btPrompt) typed(dev BTDevice, body, label, hint string, valid func(stri
 				return b.u.Input(gtx, f, guikit.StBody, 38, "", nil)
 			})
 		}, 1,
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: func() { answer(nil, false) }},
-			choice{Label: "Pair", Kind: guikit.ButtonPrimary, Enabled: func() bool { return valid(text()) },
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: func() { answer(nil, false) }},
+			choice{Label: i18n.T("Pair"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return valid(text()) },
 				Do: func() { answer(text(), true) }})
 		return d
 	})
@@ -666,12 +667,12 @@ func (b *btPrompt) typed(dev BTDevice, body, label, hint string, valid func(stri
 }
 
 func (b *btPrompt) PinCode(dev BTDevice) (string, bool) {
-	return b.typed(dev, "Type the PIN of "+dev.Name+". It is often 0000 or 1234.", "PIN", "Up to 16 characters.",
+	return b.typed(dev, i18n.Tf("Type the PIN of %s. It is often 0000 or 1234.", dev.Name), "PIN", i18n.T("Up to 16 characters."),
 		func(s string) bool { return s != "" && len(s) <= 16 })
 }
 
 func (b *btPrompt) Passkey(dev BTDevice) (uint32, bool) {
-	s, ok := b.typed(dev, "Type the 6-digit code that "+dev.Name+" shows.", "Code", "Up to 6 digits.", func(s string) bool {
+	s, ok := b.typed(dev, i18n.Tf("Type the 6-digit code that %s shows.", dev.Name), i18n.T("Code"), i18n.T("Up to 6 digits."), func(s string) bool {
 		n, err := strconv.ParseUint(s, 10, 32)
 		return err == nil && n <= 999999
 	})
@@ -689,8 +690,8 @@ func (b *btPrompt) Display(dev BTDevice, code string) {
 	b.mu.Lock()
 	gen := b.gen
 	b.mu.Unlock()
-	d := newDialog("Pair with "+dev.Name, "Type this code on "+dev.Name+", then press Enter: "+code, nil, 0,
-		choice{Label: "OK", Kind: guikit.ButtonPrimary})
+	d := newDialog(i18n.Tf("Pair with %s", dev.Name), i18n.Tf("Type this code on %[1]s, then press Enter: %[2]s", dev.Name, code), nil, 0,
+		choice{Label: i18n.T("OK"), Kind: guikit.ButtonPrimary})
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.gen != gen {

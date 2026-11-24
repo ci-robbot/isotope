@@ -8,6 +8,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -18,15 +19,15 @@ func init() {
 
 // accessNoteI3 is the scale's note on i3: Xft.dpi reaches X11 apps only
 // when they start.
-const accessNoteI3 = "Some X11 apps need a restart. i3 restarts at once to use it; your windows stay open."
+var accessNoteI3 = i18n.Mark("Some X11 apps need a restart. i3 restarts at once to use it; your windows stay open.")
 
 // accessNoteOutputs is the note where the scale is set per screen (niri,
 // COSMIC): a screen plugged in later is not covered.
-const accessNoteOutputs = "Set for every screen connected now. A screen you plug in later keeps its own scale."
+var accessNoteOutputs = i18n.Mark("Set for every screen connected now. A screen you plug in later keeps its own scale.")
 
 // accessNoteCosmicText replaces "Larger text" on COSMIC, where nothing
 // but the scale makes text larger (see SetLargerText).
-const accessNoteCosmicText = "To make text bigger, choose a larger scale."
+var accessNoteCosmicText = i18n.Mark("To make text bigger, choose a larger scale.")
 
 // accessPage is the display scale and larger text. What is set now is read
 // in the background, and Continue applies the choice there too, so the
@@ -135,7 +136,7 @@ func (p *accessPage) Continue() {
 		msg := ""
 		if s != setS {
 			if err := ApplyScale(h.Runner, h.Home, d, s); err != nil {
-				msg = "Could not change the display scale: " + err.Error()
+				msg = i18n.Tf("Could not change the display scale: %v", err)
 			} else {
 				// Set now: a Continue after a text failure must not set it
 				// again (on i3, a second restart).
@@ -146,7 +147,7 @@ func (p *accessPage) Continue() {
 		}
 		if msg == "" {
 			if err := SetLargerText(h.Runner, h.Home, d, lg); err != nil {
-				msg = "Could not change the text size: " + err.Error()
+				msg = i18n.Tf("Could not change the text size: %v", err)
 			}
 		}
 		p.mu.Lock()
@@ -173,15 +174,15 @@ func (p *accessPage) Body(gtx layout.Context) layout.Dimensions {
 	case Niri, Cosmic:
 		note = accessNoteOutputs
 	}
-	textSub := "Text in apps is a quarter larger. Apps follow at once."
+	textSub := i18n.T("Text in apps is a quarter larger. Apps follow at once.")
 	if u.desktop == I3 {
-		textSub = "Text in GTK Flatpak apps is a quarter larger. For every app, choose a larger scale."
+		textSub = i18n.T("Text in GTK Flatpak apps is a quarter larger. For every app, choose a larger scale.")
 	}
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 620))
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Accessibility", "Make the screen easier to read. Your choice applies now and stays for later logins.")),
+			layout.Rigid(u.Heading(i18n.T("Accessibility"), i18n.T("Make the screen easier to read. Your choice applies now and stays for later logins."))),
 			guikit.VGap(22),
 		}
 		switch {
@@ -189,12 +190,12 @@ func (p *accessPage) Body(gtx layout.Context) layout.Dimensions {
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, errText) }), guikit.VGap(14))
 		case busy:
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Applying…")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Applying…"))
 			}), guikit.VGap(14))
 		}
 		kids = append(kids,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StBody600, guikit.ColText, "Display scale")
+				return u.Label(gtx, guikit.StBody600, guikit.ColText, i18n.T("Display scale"))
 			}),
 			guikit.VGap(10),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -205,7 +206,7 @@ func (p *accessPage) Body(gtx layout.Context) layout.Dimensions {
 					}
 					sub := ""
 					if s == 1 {
-						sub = "Default"
+						sub = i18n.T("Default")
 					}
 					row = append(row, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						return u.ChoiceCard(gtx, &p.scaleC[i], scale == s, fmt.Sprintf("%d%%", int(s*100)), sub)
@@ -216,17 +217,17 @@ func (p *accessPage) Body(gtx layout.Context) layout.Dimensions {
 		)
 		if note != "" {
 			kids = append(kids, guikit.VGap(10), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, note)
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T(note))
 			}))
 		}
 		if u.desktop == Cosmic {
 			kids = append(kids, guikit.VGap(4), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, accessNoteCosmicText)
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T(accessNoteCosmicText))
 			}))
 		}
 		if u.desktop != Cosmic { // see SetLargerText
 			kids = append(kids, guikit.VGap(22), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.CheckCard(gtx, &p.largerC, larger, "Larger text", textSub)
+				return u.CheckCard(gtx, &p.largerC, larger, i18n.T("Larger text"), textSub)
 			}))
 		}
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)

@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -75,7 +76,7 @@ func (p *layoutPage) start() {
 		p.mu.Lock()
 		p.cards, p.loaded, p.current = cards, true, cur
 		if err != nil {
-			p.loadErr = "Could not read the panel layouts: " + err.Error()
+			p.loadErr = i18n.Tf("Could not read the panel layouts: %v", err)
 		}
 		if p.selected == "" {
 			p.selected = cur
@@ -153,7 +154,7 @@ func (p *layoutPage) Continue() {
 		p.mu.Lock()
 		p.busy = false
 		if err != nil {
-			p.err = "Could not change the layout: " + err.Error()
+			p.err = i18n.Tf("Could not change the layout: %v", err)
 		} else {
 			p.applied, p.current = true, sel
 		}
@@ -171,7 +172,7 @@ func (p *layoutPage) Body(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 680))
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Layout", "Move the panel or dock to any edge, change their size, and automatically hide them in Settings.")),
+			layout.Rigid(u.Heading(i18n.X("page", "Layout"), i18n.T("Move the panel or dock to any edge, change their size, and automatically hide them in Settings."))),
 			guikit.VGap(22),
 		}
 		switch {
@@ -181,7 +182,7 @@ func (p *layoutPage) Body(gtx layout.Context) layout.Dimensions {
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Warning(gtx, loadErr) }), guikit.VGap(14))
 		case busy:
 			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Applying…")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Applying…"))
 			}), guikit.VGap(14))
 		}
 		if loaded && len(cards) > 0 {
@@ -197,7 +198,7 @@ func (p *layoutPage) Body(gtx layout.Context) layout.Dimensions {
 				}
 				return layout.Flex{}.Layout(gtx, row...)
 			}), guikit.VGap(14), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "The panel restarts when you continue.")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("The panel restarts when you continue."))
 			}))
 		}
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)
@@ -256,27 +257,27 @@ func (p *infoPage) Body(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		if p.id == PWorkflow {
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Workspaces for your workflow", "Float or automatically tile windows per-workspace using the tiling applet.")),
+				layout.Rigid(u.Heading(i18n.T("Workspaces for your workflow"), i18n.T("Float or automatically tile windows per-workspace using the tiling applet."))),
 				guikit.VGap(22),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return p.note(gtx, "Vertical or horizontal", "You can select vertical or horizontal workspaces. You can also pin workspaces to make them static.", nil)
+					return p.note(gtx, i18n.T("Vertical or horizontal"), i18n.T("You can select vertical or horizontal workspaces. You can also pin workspaces to make them static."), nil)
 				}),
 				guikit.VGap(14),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Change these any time in COSMIC Settings. Nothing is set on this page.")
+					return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Change these any time in COSMIC Settings. Nothing is set on this page."))
 				}),
 			)
 		}
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(u.Heading("Fast and efficient", "Press the Super (or Windows) key to activate the Launcher. Search and press Enter to open an app or switch to it.")),
+			layout.Rigid(u.Heading(i18n.T("Fast and efficient"), i18n.T("Press the Super (or Windows) key to activate the Launcher. Search and press Enter to open an app or switch to it."))),
 			guikit.VGap(22),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return p.note(gtx, "Press Super", "You can also jump to settings or system functions like suspend. Type “?” to learn about the Launcher's advanced features.",
+				return p.note(gtx, i18n.T("Press Super"), i18n.T("You can also jump to settings or system functions like suspend. Type “?” to learn about the Launcher's advanced features."),
 					func(gtx layout.Context) layout.Dimensions { return u.KeyCaps(gtx, []string{"Super"}) })
 			}),
 			guikit.VGap(14),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Nothing is set on this page.")
+				return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Nothing is set on this page."))
 			}),
 		)
 	})

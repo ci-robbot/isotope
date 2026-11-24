@@ -8,15 +8,17 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() { pageMakers[PageUsers] = func(u *UI) pageView { return newUsersPage(u) } }
 
-const (
-	onlyAdmin   = "Only an administrator can add, remove or change other users."
-	nameRule    = "Use lowercase letters, digits, - and _. Start with a letter or _. At most 32 characters."
-	maxPassword = 256 // bytes; the daemon refuses more
+var (
+	onlyAdmin = i18n.Mark("Only an administrator can add, remove or change other users.")
+	nameRule  = i18n.Mark("Use lowercase letters, digits, - and _. Start with a letter or _. At most 32 characters.")
 )
+
+const maxPassword = 256 // bytes; the daemon refuses more
 
 var userNameRE = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
 
@@ -24,9 +26,9 @@ var userNameRE = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
 func passwordProblem(pw string) string {
 	switch {
 	case len(pw) > maxPassword:
-		return "A password has at most 256 bytes."
+		return i18n.T("A password has at most 256 bytes.")
 	case strings.ContainsAny(pw, "\r\n"):
-		return "A password cannot have a line break."
+		return i18n.T("A password cannot have a line break.")
 	}
 	return ""
 }
@@ -110,7 +112,7 @@ func (p *usersPage) load() {
 		u.mu.Lock()
 		defer u.mu.Unlock()
 		if err != nil {
-			p.loadErr = "Could not read the users: " + Describe(err)
+			p.loadErr = i18n.Tf("Could not read the users: %s", Describe(err))
 			return
 		}
 		p.users, p.loaded, p.loadErr = list, true, ""
@@ -156,9 +158,9 @@ func (f *addForm) nameErr() string {
 	case n == "":
 		return ""
 	case !userNameRE.MatchString(n):
-		return nameRule
+		return i18n.T(nameRule)
 	case f.taken != nil && f.taken(n):
-		return "This name is already used."
+		return i18n.T("This name is already used.")
 	}
 	return ""
 }
@@ -168,7 +170,7 @@ func (f *addForm) pwErr() string {
 		return e
 	}
 	if f.pw2.Editor.Text() != "" && f.pw.Editor.Text() != f.pw2.Editor.Text() {
-		return "The passwords are not the same."
+		return i18n.T("The passwords are not the same.")
 	}
 	return ""
 }
@@ -192,12 +194,12 @@ func (p *usersPage) openAdd() {
 		return
 	}
 	p.add.clear()
-	u.askForm("Add a user", "", p.addFormView, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: p.add.clear},
-		choice{Label: "Add", Kind: guikit.ButtonPrimary, Enabled: p.add.valid, Do: func() {
+	u.askForm(i18n.T("Add a user"), "", p.addFormView, 0,
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: p.add.clear},
+		choice{Label: i18n.T("Add"), Kind: guikit.ButtonPrimary, Enabled: p.add.valid, Do: func() {
 			name, full, pw, admin := p.add.name.Editor.Text(), strings.TrimSpace(p.add.full.Editor.Text()), p.add.pw.Editor.Text(), p.add.admin
 			p.add.clear()
-			p.change("Could not add "+name, func(d Daemon) error { return d.AddUser(name, full, admin, pw) })
+			p.change(i18n.Tf("Could not add %s", name), func(d Daemon) error { return d.AddUser(name, full, admin, pw) })
 		}})
 }
 
@@ -212,12 +214,12 @@ func (p *usersPage) addFormView(gtx layout.Context) layout.Dimensions {
 	}
 	f.name.Err, f.pw2.Err = f.nameErr(), f.pwErr()
 	return fieldsCol(gtx, u,
-		fieldRow{title: "Name", f: f.name, hint: "The name to log in with."},
-		fieldRow{title: "Full name", f: f.full},
-		fieldRow{title: "Password", f: f.pw},
-		fieldRow{title: "Password again", f: f.pw2},
+		fieldRow{title: i18n.T("Name"), f: f.name, hint: i18n.T("The name to log in with.")},
+		fieldRow{title: i18n.T("Full name"), f: f.full},
+		fieldRow{title: i18n.T("Password"), f: f.pw},
+		fieldRow{title: i18n.T("Password again"), f: f.pw2},
 		fieldRow{check: func(gtx layout.Context) layout.Dimensions {
-			return u.CheckCard(gtx, &f.adminClick, f.admin, "Administrator", "Can change the system and the other users.")
+			return u.CheckCard(gtx, &f.adminClick, f.admin, i18n.T("Administrator"), i18n.T("Can change the system and the other users."))
 		}},
 	)
 }
@@ -274,19 +276,19 @@ func (p *usersPage) openPassword(name string) {
 	}
 	p.pw.clear()
 	p.pw.own = own
-	title := "Change the password of " + name
+	title := i18n.Tf("Change the password of %s", name)
 	if own {
-		title = "Change your password"
+		title = i18n.T("Change your password")
 	}
 	u.askForm(title, "", p.pwFormView, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: p.pw.clear},
-		choice{Label: "Change password", Kind: guikit.ButtonPrimary, Enabled: p.pw.valid, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: p.pw.clear},
+		choice{Label: i18n.T("Change password"), Kind: guikit.ButtonPrimary, Enabled: p.pw.valid, Do: func() {
 			cur, pw := p.pw.cur.Editor.Text(), p.pw.newPw.Editor.Text()
 			if !own {
 				cur = ""
 			}
 			p.pw.clear()
-			p.change("Could not change the password", func(d Daemon) error { return d.SetPassword(name, cur, pw) })
+			p.change(i18n.T("Could not change the password"), func(d Daemon) error { return d.SetPassword(name, cur, pw) })
 		}})
 }
 
@@ -302,13 +304,13 @@ func (p *usersPage) pwFormView(gtx layout.Context) layout.Dimensions {
 	}
 	f.newPw.Err, f.again.Err = passwordProblem(f.newPw.Editor.Text()), ""
 	if f.again.Editor.Text() != "" && f.again.Editor.Text() != f.newPw.Editor.Text() {
-		f.again.Err = "The passwords are not the same."
+		f.again.Err = i18n.T("The passwords are not the same.")
 	}
 	rows := []fieldRow{}
 	if f.own {
-		rows = append(rows, fieldRow{title: "Current password", f: f.cur})
+		rows = append(rows, fieldRow{title: i18n.T("Current password"), f: f.cur})
 	}
-	rows = append(rows, fieldRow{title: "New password", f: f.newPw}, fieldRow{title: "New password again", f: f.again})
+	rows = append(rows, fieldRow{title: i18n.T("New password"), f: f.newPw}, fieldRow{title: i18n.T("New password again"), f: f.again})
 	return fieldsCol(gtx, p.u, rows...)
 }
 
@@ -320,16 +322,16 @@ func (p *usersPage) openRemove(name string) {
 		return
 	}
 	p.rm.keep = true
-	u.askForm("Remove "+name+"?", "The user can no longer log in.", func(gtx layout.Context) layout.Dimensions {
+	u.askForm(i18n.Tf("Remove %s?", name), i18n.T("The user can no longer log in."), func(gtx layout.Context) layout.Dimensions {
 		if p.rm.keepClick.Clicked(gtx) {
 			p.rm.keep = !p.rm.keep
 		}
-		return u.CheckCard(gtx, &p.rm.keepClick, p.rm.keep, "Keep the home folder", "Leave /home/"+name+" and its files on the disk.")
+		return u.CheckCard(gtx, &p.rm.keepClick, p.rm.keep, i18n.T("Keep the home folder"), i18n.Tf("Leave /home/%s and its files on the disk.", name))
 	}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Remove " + name, Kind: guikit.ButtonDanger, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.Tf("Remove %s", name), Kind: guikit.ButtonDanger, Do: func() {
 			keep := p.rm.keep
-			p.change("Could not remove "+name, func(d Daemon) error { return d.RemoveUser(name, keep) })
+			p.change(i18n.Tf("Could not remove %s", name), func(d Daemon) error { return d.RemoveUser(name, keep) })
 		}})
 }
 
@@ -339,19 +341,19 @@ func (p *usersPage) setAdmin(name string, on bool) {
 		return
 	}
 	do := func() {
-		p.change("Could not change the administrators", func(d Daemon) error { return d.SetAdmin(name, on) })
+		p.change(i18n.T("Could not change the administrators"), func(d Daemon) error { return d.SetAdmin(name, on) })
 	}
 	if on {
 		do()
 		return
 	}
-	body := "They can no longer change the system or the other users."
+	body := i18n.T("They can no longer change the system or the other users.")
 	if p.self(name) {
-		body = "You will no longer be able to change this system."
+		body = i18n.T("You will no longer be able to change this system.")
 	}
-	u.askForm("Remove "+name+" from the administrators?", body, nil, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Remove from administrators", Kind: guikit.ButtonDanger, Do: do})
+	u.askForm(i18n.Tf("Remove %s from the administrators?", name), body, nil, 0,
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Remove from administrators"), Kind: guikit.ButtonDanger, Do: do})
 }
 
 // ---- the page ----
@@ -365,18 +367,18 @@ func (p *usersPage) actionsOf(x User) []guikit.Action {
 	var as []guikit.Action
 	switch {
 	case own:
-		as = append(as, guikit.Action{Click: &k.pw, Kind: guikit.ButtonSecondary, Label: "Change your password"})
+		as = append(as, guikit.Action{Click: &k.pw, Kind: guikit.ButtonSecondary, Label: i18n.T("Change your password")})
 	case admin:
-		as = append(as, guikit.Action{Click: &k.pw, Kind: guikit.ButtonSecondary, Label: "Change password"})
+		as = append(as, guikit.Action{Click: &k.pw, Kind: guikit.ButtonSecondary, Label: i18n.T("Change password")})
 	}
 	if admin {
-		label := "Make administrator"
+		label := i18n.T("Make administrator")
 		if x.Admin {
-			label = "Remove administrator"
+			label = i18n.T("Remove administrator")
 		}
 		as = append(as,
 			guikit.Action{Click: &k.admin, Kind: guikit.ButtonSecondary, Label: label},
-			guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: "Remove…", Disabled: own})
+			guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: own})
 	}
 	return as
 }
@@ -401,7 +403,7 @@ func (p *usersPage) rowText(x User) (title, sub string) {
 		title = x.Name
 	}
 	if x.Admin {
-		sub += " · Administrator"
+		sub += " · " + i18n.T("Administrator")
 	}
 	return
 }
@@ -426,7 +428,7 @@ func (p *usersPage) Update(gtx layout.Context) {
 }
 
 func (p *usersPage) Footer() (leading, trailing []guikit.Action) {
-	return nil, []guikit.Action{{Click: &p.addBtn, Kind: guikit.ButtonPrimary, Label: "Add user…", Disabled: !p.u.sys.Admin || p.u.hooks.Daemon == nil}}
+	return nil, []guikit.Action{{Click: &p.addBtn, Kind: guikit.ButtonPrimary, Label: i18n.T("Add user…"), Disabled: !p.u.sys.Admin || p.u.hooks.Daemon == nil}}
 }
 
 func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
@@ -437,23 +439,23 @@ func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
 	users := p.snapshot()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Users", "Add and remove the people who use this computer, change their passwords and who is an administrator, and add your fingerprints."))
+		c.add(u.Heading(i18n.T("Users"), i18n.T("Add and remove the people who use this computer, change their passwords and who is an administrator, and add your fingerprints.")))
 		c.gap(20)
 		if u.sys.Release.Flavor == "cosmic" {
-			c.add(u.notice("On Isotope, change users here. A change made in COSMIC Settings may not survive a restart."))
+			c.add(u.notice(i18n.T("On Isotope, change users here. A change made in COSMIC Settings may not survive a restart.")))
 			c.gap(14)
 		}
 		if !u.sys.Admin {
-			c.add(u.notice(onlyAdmin))
+			c.add(u.notice(i18n.T(onlyAdmin)))
 			c.gap(14)
 		}
 		switch {
 		case u.hooks.Daemon == nil:
-			c.add(u.errorBox("The update service (isotope-updated) is not available."))
+			c.add(u.errorBox(i18n.T("The update service (isotope-updated) is not available.")))
 		case loadErr != "":
 			c.add(u.errorBox(loadErr))
 		case !loaded:
-			c.add(u.spinnerLine("Reading the users…"))
+			c.add(u.spinnerLine(i18n.T("Reading the users…")))
 		default:
 			for i, x := range users {
 				if i > 0 {
@@ -480,7 +482,7 @@ func (p *usersPage) userRow(x User) layout.Widget {
 			if !own {
 				return layout.Dimensions{}
 			}
-			return u.Label(gtx, guikit.StSmall, guikit.ColText2, "You")
+			return u.Label(gtx, guikit.StSmall, guikit.ColText2, i18n.T("You"))
 		}))
 		if len(as) > 0 {
 			c.gap(10)

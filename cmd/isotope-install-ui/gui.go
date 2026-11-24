@@ -2,12 +2,12 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -143,7 +143,7 @@ func runGUI() (fallback bool, note string, err error) {
 			code = ee.ExitCode()
 		default:
 			// cage could not be run at all.
-			return true, "The graphical installer could not start. This is the text installer.", nil
+			return true, i18n.T("The graphical installer could not start. This is the text installer."), nil
 		}
 		if code == installer.GUIRelaunchExit && exists(installer.GUIStatePath()) && i < maxRelaunches {
 			continue
@@ -163,13 +163,13 @@ func runGUI() (fallback bool, note string, err error) {
 		if !exists(installer.GUIStartedPath()) {
 			// No DRM device, no seat, no GL even in software:
 			// nothing was asked yet.
-			return true, "The graphical installer could not start. This is the text installer.", nil
+			return true, i18n.T("The graphical installer could not start. This is the text installer."), nil
 		}
 		if exists(installer.InstallRunningPath()) {
 			return false, "", errInstallRunning
 		}
 		_ = os.Remove(installer.GUIStatePath())
-		return true, fmt.Sprintf("The graphical installer stopped (exit status %d). This is the text installer: start again from the first question.", code), nil
+		return true, i18n.Tf("The graphical installer stopped (exit status %d). This is the text installer: start again from the first question.", code), nil
 	}
 }
 

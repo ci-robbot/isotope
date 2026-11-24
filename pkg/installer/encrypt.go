@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Disk encryption. See docs/superpowers/specs/2026-11-07-encrypt-home-design.md.
@@ -68,14 +70,14 @@ const MinPassphraseLen = 12
 
 func ValidatePassphrase(p string) error {
 	if len([]rune(p)) < MinPassphraseLen {
-		return fmt.Errorf("the passphrase must be at least %d characters", MinPassphraseLen)
+		return errors.New(i18n.Tf("the passphrase must be at least %d characters", MinPassphraseLen))
 	}
 	if strings.TrimSpace(p) != p {
-		return errors.New("the passphrase must not start or end with a space")
+		return errors.New(i18n.T("the passphrase must not start or end with a space"))
 	}
 	for _, r := range p {
 		if unicode.IsControl(r) {
-			return errors.New("the passphrase must not contain control characters")
+			return errors.New(i18n.T("the passphrase must not contain control characters"))
 		}
 	}
 	return nil
@@ -84,13 +86,30 @@ func ValidatePassphrase(p string) error {
 // PassphraseStrength is a rough hint for the person typing, not a policy:
 // length times the bits of the character classes used. Four or five random
 // words in lower case come out "strong" by length alone, which is right.
+// PassphraseLevel is the same hint as a number.
 func PassphraseStrength(p string) string {
+	switch PassphraseLevel(p) {
+	case 0:
+		return ""
+	case 1:
+		return i18n.Tf("too short: %d of %d characters", len([]rune(p)), MinPassphraseLen)
+	case 2:
+		return i18n.T("weak: make it longer")
+	case 3:
+		return i18n.T("fair: a few more words make it strong")
+	}
+	return i18n.T("strong")
+}
+
+// PassphraseLevel is PassphraseStrength as a number, for a meter: 0 for
+// nothing typed, 1 too short, 2 weak, 3 fair, 4 strong.
+func PassphraseLevel(p string) int {
 	n := len([]rune(p))
 	if n == 0 {
-		return ""
+		return 0
 	}
 	if n < MinPassphraseLen {
-		return fmt.Sprintf("too short: %d of %d characters", n, MinPassphraseLen)
+		return 1
 	}
 	var lower, upper, digit, other bool
 	for _, r := range p {
@@ -117,11 +136,11 @@ func PassphraseStrength(p string) string {
 	bits := float64(n) * math.Log2(float64(pool))
 	switch {
 	case bits < 60:
-		return "weak: make it longer"
+		return 2
 	case bits < 80:
-		return "fair: a few more words make it strong"
+		return 3
 	default:
-		return "strong"
+		return 4
 	}
 }
 

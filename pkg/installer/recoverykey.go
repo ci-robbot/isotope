@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strconv"
 	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Recovery key for the Trusted Boot edition. See the Trusted Boot design note
@@ -267,5 +268,17 @@ func Ordinal(n int) string {
 	if n%100 >= 11 && n%100 <= 13 {
 		suffix = "th"
 	}
-	return strconv.Itoa(n) + suffix
+	switch suffix {
+	case "st":
+		// TRANSLATORS: an ordinal number, as in "type the 3rd group".
+		return i18n.Tf("%dst", n)
+	case "nd":
+		// TRANSLATORS: an ordinal number, as in "type the 3rd group".
+		return i18n.Tf("%dnd", n)
+	case "rd":
+		// TRANSLATORS: an ordinal number, as in "type the 3rd group".
+		return i18n.Tf("%drd", n)
+	}
+	// TRANSLATORS: an ordinal number, as in "type the 3rd group".
+	return i18n.Tf("%dth", n)
 }

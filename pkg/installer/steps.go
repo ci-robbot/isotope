@@ -1,6 +1,10 @@
 package installer
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
+)
 
 // Step is one phase of the kairos-agent install, identified by a stable substring
 // that appears in the installer's log output. Index 0 is the initial state (no
@@ -18,38 +22,39 @@ import "strings"
 // in this file so they are easy to retune after a boot test — a stale substring
 // degrades to a stalled progress bar, never to a failed install.
 type Step struct {
+	// Name is marked for translation: show it with i18n.T.
 	Name  string
 	Match string
 }
 
 var Steps = []Step{
-	{"Preparing", ""},
-	{"Partitioning disk", "Partitioning device"},
-	{"Running before-install", "Running stage: before-install"},
-	{"Installing active system", "Creating file system image"},
+	{i18n.Mark("Preparing"), ""},
+	{i18n.Mark("Partitioning disk"), "Partitioning device"},
+	{i18n.Mark("Running before-install"), "Running stage: before-install"},
+	{i18n.Mark("Installing active system"), "Creating file system image"},
 	// kairos-agent v2.29.2 logs "Generating grub files for efi on /dev/..." at
 	// this phase; it emits no "Installing GRUB" line (an earlier revision of this
 	// table guessed that and the step silently never fired). Verified against a
 	// live install log: /var/log/kairos/agent.log on a real install, this is the
 	// only bootloader-install marker between "Creating file system image" and the
 	// recovery-image copy. Retune here if kairos-agent rewords it again.
-	{"Configuring bootloader", "Generating grub files"},
+	{i18n.Mark("Configuring bootloader"), "Generating grub files"},
 	// Anchored on the full "Copying %s source to %s" line emitted by
 	// kairos-agent pkg/elemental/elemental.go. The bare "recovery.img" /
 	// "passive.img" filenames are also plain constants in
 	// kairos-agent/pkg/constants/constants.go and so appear in unrelated
 	// messages; since AdvanceStep never regresses, one incidental early mention
 	// would permanently skip steps 1-4.
-	{"Creating recovery image", "Copying /run/cos/state/cOS/active.img source to /run/cos/recovery/cOS/recovery.img"},
-	{"Creating passive image", "Copying /run/cos/state/cOS/active.img source to /run/cos/state/cOS/passive.img"},
+	{i18n.Mark("Creating recovery image"), "Copying /run/cos/state/cOS/active.img source to /run/cos/recovery/cOS/recovery.img"},
+	{i18n.Mark("Creating passive image"), "Copying /run/cos/state/cOS/active.img source to /run/cos/state/cOS/passive.img"},
 	// The after-install *stage* is emitted by yip's executor as
 	// "Running stage: %s" — kairos-agent itself never logs an
 	// "after-install hook" line.
-	{"Running after-install", "Running stage: after-install"},
+	{i18n.Mark("Running after-install"), "Running stage: after-install"},
 	// Only an encrypted install logs this (encrypt.go), after kairos-agent
 	// exits; any other install jumps from here to Complete on exit.
-	{"Checking the disk passphrase", "isotope: checking the disk passphrase"},
-	{"Complete", "Finish Lifecycle hook"},
+	{i18n.Mark("Checking the disk passphrase"), "isotope: checking the disk passphrase"},
+	{i18n.Mark("Complete"), "Finish Lifecycle hook"},
 }
 
 // NOTE: the parser alone cannot reliably reach the final step, so the caller

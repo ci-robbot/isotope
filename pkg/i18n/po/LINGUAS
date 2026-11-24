@@ -1,0 +1,3 @@
+# Languages every catalog translates completely; `go run ./tools/i18n check` fails on a gap.
+es
+it

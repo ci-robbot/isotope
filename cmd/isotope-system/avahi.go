@@ -17,6 +17,7 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/printing"
 )
 
@@ -37,7 +38,7 @@ var ippTypes = []string{"_ipps._tcp", "_ipp._tcp"}
 const resolveTimeout = 5 * time.Second
 
 // errNoAvahi is the page's "printers cannot be searched for".
-var errNoAvahi = errors.New("the network printer search (Avahi) is not running")
+var errNoAvahi error = nmTextError(i18n.Mark("the network printer search (Avahi) is not running"))
 
 // findWithAvahi browses on the system bus.
 func findWithAvahi(ctx context.Context) ([]FoundPrinter, error) {

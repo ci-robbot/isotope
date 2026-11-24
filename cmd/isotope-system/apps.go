@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"image"
 	_ "image/png" // the catalog's icons
 	"os"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/kairos-community/isotope/pkg/flatpak"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Apps is the user's Flatpak installation, as the Apps page needs it.
@@ -131,9 +131,9 @@ var appTabs = []string{tabBrowse, tabInstalled, tabUpdates}
 // appsUpdatesTab is the Updates tab's label: "Updates · 4" with updates.
 func appsUpdatesTab(n int) string {
 	if n > 0 {
-		return fmt.Sprintf("Updates · %d", n)
+		return i18n.Tf("Updates · %d", n)
 	}
-	return "Updates"
+	return i18n.T("Updates")
 }
 
 // appLine is one app as a row shows it.
@@ -146,7 +146,7 @@ type appLine struct {
 func appSub(a flatpak.App, installed bool) string {
 	parts := []string{a.Summary, a.Developer}
 	if installed {
-		parts = append(parts, "Installed")
+		parts = append(parts, i18n.X("app state", "Installed"))
 	}
 	return joinDots(parts...)
 }
@@ -198,9 +198,9 @@ func extMatches(cat []CatalogEntry, installed []Extension, q string) []extMatch 
 		if title == "" {
 			title = e.Name
 		}
-		state := "in Isotope's extension catalog · needs an administrator"
+		state := i18n.T("in Isotope's extension catalog · needs an administrator")
 		if inst[e.Name] || e.Installed {
-			state = "installed · managed in Extensions"
+			state = i18n.T("installed · managed in Extensions")
 		}
 		out = append(out, extMatch{Name: e.Name, Title: title, Sub: joinDots(e.Description, state)})
 	}
@@ -219,11 +219,7 @@ func installedExtsLine(installed []Extension) string {
 		names[i] = x.Name
 	}
 	sort.Strings(names)
-	what := "1 system extension"
-	if len(names) > 1 {
-		what = fmt.Sprintf("%d system extensions", len(names))
-	}
-	return "Also installed: " + what + " (" + strings.Join(names, ", ") + ")."
+	return i18n.Nf("Also installed: %[1]d system extension (%[2]s).", "Also installed: %[1]d system extensions (%[2]s).", len(names), len(names), strings.Join(names, ", "))
 }
 
 // installedRow is one installed app.
@@ -247,7 +243,7 @@ func installedRows(list []flatpak.Installed, cat *flatpak.Catalog, running map[s
 		}
 		parts := []string{in.Version, sizeText(in.Size)}
 		if running[in.Ref.ID] {
-			parts = append(parts, "running")
+			parts = append(parts, i18n.T("running"))
 		}
 		r.Sub = joinDots(parts...)
 		out = append(out, r)
@@ -335,7 +331,7 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 		in := byRef[p.Ref.String()]
 		r := updateRow{Ref: p.Ref.String(), ID: p.Ref.ID, Name: orUnknownName(p.Name, orUnknownName(in.Name, p.Ref.ID))}
 		if !p.Ref.IsApp() {
-			r.Name = runtimeName(p.Ref.Partial()) + " runtime"
+			r.Name = i18n.Tf("%s runtime", runtimeName(p.Ref.Partial()))
 		}
 		var parts []string
 		if in.Version != "" && p.Version != "" && in.Version != p.Version {
@@ -346,16 +342,17 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 		if p.NeedsOK() {
 			r.NeedsOK, r.Added = true, p.Added
 			if p.Err != nil {
-				r.Notes = "Its permissions could not be compared. Automatic updates skip it until you update it here."
+				r.Notes = i18n.T("Its permissions could not be compared. Automatic updates skip it until you update it here.")
 			} else {
-				r.Notes = "Asks for more: " + strings.Join(p.Added, ", ") + ". Automatic updates skip it until you agree."
+				// TRANSLATORS: start it with the translation of "Asks for more:", which the page shows in amber.
+				r.Notes = i18n.Tf("Asks for more: %s. Automatic updates skip it until you agree.", strings.Join(p.Added, ", "))
 			}
 		} else {
 			parts = append(parts, sizeText(p.Download))
 			total += p.DownloadBytes
 		}
 		if running[p.Ref.ID] {
-			parts = append(parts, "running, restarts later")
+			parts = append(parts, i18n.T("running, restarts later"))
 		}
 		r.Change = joinDots(parts...)
 		if a, ok := cat.Get(p.Ref.ID); ok {
@@ -367,9 +364,9 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 		if !p.Ref.IsApp() && !p.NeedsOK() {
 			if us := users[p.Ref.Partial()]; len(us) > 0 {
 				sort.Strings(us)
-				r.Notes = "Used by " + joinAnd(us) + "."
+				r.Notes = i18n.Tf("Used by %s.", joinAnd(us))
 			} else {
-				r.Notes = "A runtime or extension your apps use."
+				r.Notes = i18n.T("A runtime or extension your apps use.")
 			}
 		}
 		if r.NeedsOK {
@@ -379,7 +376,7 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 		}
 	}
 	if len(v.Ready) > 0 {
-		v.ReadyTitle = fmt.Sprintf("READY TO UPDATE · %d", len(v.Ready))
+		v.ReadyTitle = i18n.Tf("READY TO UPDATE · %d", len(v.Ready))
 		if total > 0 {
 			v.ReadyTitle += ", " + flatpak.FormatSize(total)
 		}
@@ -397,7 +394,8 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 			continue
 		}
 		sort.Strings(us)
-		lines = append(lines, joinAnd(us)+" "+uses(len(us))+" the "+runtimeName(rt)+" runtime, which no longer gets security fixes. Only "+its(len(us))+" developer can move "+them(len(us))+" to a newer one.")
+		lines = append(lines, i18n.Nf("%[1]s uses the %[2]s runtime, which no longer gets security fixes. Only its developer can move it to a newer one.",
+			"%[1]s use the %[2]s runtime, which no longer gets security fixes. Only their developer can move them to a newer one.", len(us), joinAnd(us), runtimeName(rt)))
 	}
 	sort.Strings(lines)
 	v.EOL = lines
@@ -411,28 +409,7 @@ func joinAnd(xs []string) string {
 	case 1:
 		return xs[0]
 	}
-	return strings.Join(xs[:len(xs)-1], ", ") + " and " + xs[len(xs)-1]
-}
-
-func uses(n int) string {
-	if n == 1 {
-		return "uses"
-	}
-	return "use"
-}
-
-func its(n int) string {
-	if n == 1 {
-		return "its"
-	}
-	return "their"
-}
-
-func them(n int) string {
-	if n == 1 {
-		return "it"
-	}
-	return "them"
+	return i18n.Tf("%[1]s and %[2]s", strings.Join(xs[:len(xs)-1], ", "), xs[len(xs)-1])
 }
 
 // autoAppsView is the "Update apps automatically" row.
@@ -441,12 +418,12 @@ type autoAppsView struct {
 }
 
 func autoAppsViewOf(on bool, last flatpak.LastRun, hasLast bool, now time.Time) autoAppsView {
-	v := autoAppsView{Sub: "Off. You are told when updates are ready, and you install them here.", Toggle: "Turn on"}
+	v := autoAppsView{Sub: i18n.T("Off. You are told when updates are ready, and you install them here."), Toggle: i18n.T("Turn on")}
 	if on {
-		v = autoAppsView{Sub: "On. Once a day, not on a metered connection or a low battery. An app that is open updates the next time it starts.", Toggle: "Turn off"}
+		v = autoAppsView{Sub: i18n.T("On. Once a day, not on a metered connection or a low battery. An app that is open updates the next time it starts."), Toggle: i18n.T("Turn off")}
 	}
 	if hasLast {
-		v.Sub += " Last run " + ago(now, time.Unix(last.Time, 0)) + ": " + lastRunShort(last)
+		v.Sub += " " + i18n.Tf("Last run %[1]s: %[2]s", ago(now, time.Unix(last.Time, 0)), lastRunShort(last))
 	}
 	return v
 }
@@ -457,11 +434,11 @@ func lastRunShort(r flatpak.LastRun) string {
 	switch r.Result {
 	case flatpak.RunUpdated:
 		if len(r.Updated) == 1 {
-			return "updated " + r.Updated[0] + "."
+			return i18n.Tf("updated %s.", r.Updated[0])
 		}
-		return fmt.Sprintf("updated %d apps and runtimes.", len(r.Updated))
+		return i18n.Tf("updated %d apps and runtimes.", len(r.Updated))
 	case flatpak.RunUpToDate:
-		return "everything was up to date."
+		return i18n.T("everything was up to date.")
 	}
 	return flatpak.LastRun{Result: r.Result, Detail: r.Detail}.Text()
 }
@@ -476,42 +453,41 @@ func detailFacts(a flatpak.App, ri flatpak.RemoteInfo, inst *flatpak.Installed) 
 	}
 	var fs []detailFact
 	if inst != nil && inst.Version != "" {
-		fs = append(fs, detailFact{"INSTALLED", inst.Version})
+		fs = append(fs, detailFact{i18n.X("installed version", "INSTALLED"), inst.Version})
 		if version != "" && version != inst.Version {
-			fs = append(fs, detailFact{"NEWEST", version})
+			fs = append(fs, detailFact{i18n.T("NEWEST"), version})
 		}
 	} else if version != "" {
-		fs = append(fs, detailFact{"VERSION", version})
+		fs = append(fs, detailFact{i18n.T("VERSION"), version})
 	}
 	if inst != nil && inst.Size != "" {
-		fs = append(fs, detailFact{"SIZE", sizeText(inst.Size)})
+		fs = append(fs, detailFact{i18n.T("SIZE"), sizeText(inst.Size)})
 	} else if ri.Download != "" {
-		fs = append(fs, detailFact{"DOWNLOAD", sizeText(ri.Download)})
+		fs = append(fs, detailFact{i18n.T("DOWNLOAD"), sizeText(ri.Download)})
 	}
 	lic := ri.License
 	if lic == "" {
 		lic = a.License
 	}
 	if lic != "" {
-		fs = append(fs, detailFact{"LICENCE", licenceText(lic)})
+		fs = append(fs, detailFact{i18n.T("LICENCE"), licenceText(lic)})
 	}
-	fs = append(fs, detailFact{"SOURCE", "Flathub"})
+	fs = append(fs, detailFact{i18n.T("SOURCE"), "Flathub"})
 	return fs
 }
 
 // licenceText shortens appstream's proprietary licence reference.
 func licenceText(l string) string {
 	if strings.HasPrefix(l, "LicenseRef-proprietary") {
-		return "Proprietary"
+		return i18n.T("Proprietary")
 	}
 	return l
 }
 
 // removeBody is the Remove dialog's text.
 func removeBody(name, size string) string {
-	what := "The app goes"
 	if size != "" {
-		what += ", and " + size + " comes back"
+		return i18n.Tf("The app goes, and %s comes back. Its settings and files stay, so installing it again picks up where you left off.", size)
 	}
-	return what + ". Its settings and files stay, so installing it again picks up where you left off."
+	return i18n.T("The app goes. Its settings and files stay, so installing it again picks up where you left off.")
 }

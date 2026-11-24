@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // What is on a disk now, for the graphical installer's disk page: the model
@@ -113,7 +115,7 @@ func DiskBus(sysBlock, name string) string {
 	case strings.Contains(t, "/usb"):
 		return "USB"
 	case strings.HasPrefix(name, "mmcblk") || strings.Contains(t, "/mmc_host/"):
-		return "SD card"
+		return i18n.Mark("SD card")
 	case strings.HasPrefix(name, "vd") || strings.Contains(t, "/virtio"):
 		return "Virtio"
 	case strings.Contains(t, "/ata"):
@@ -174,9 +176,9 @@ func (p Partition) Kind() string {
 	case p.FSType == "ext4" || p.FSType == "btrfs" || p.FSType == "xfs" || p.FSType == "f2fs":
 		return "Linux (" + p.FSType + ")"
 	case p.FSType == "swap":
-		return "Swap"
+		return i18n.Mark("Swap")
 	case p.FSType == "crypto_LUKS":
-		return "Encrypted"
+		return i18n.Mark("Encrypted")
 	case p.FSType != "":
 		if label != "" {
 			return label + " (" + p.FSType + ")"
@@ -185,7 +187,7 @@ func (p Partition) Kind() string {
 	case label != "":
 		return label
 	}
-	return "Unknown"
+	return i18n.Mark("Unknown")
 }
 
 // ErasureWarning names what installing on the disk would erase, as far as
@@ -206,17 +208,17 @@ func (d DiskInfo) ErasureWarning() string {
 	}
 	switch {
 	case windows && linux:
-		return "Windows, a Linux system and their files on this disk will be erased."
+		return i18n.T("Windows, a Linux system and their files on this disk will be erased.")
 	case windows:
-		return "Windows and its files on this disk will be erased."
+		return i18n.T("Windows and its files on this disk will be erased.")
 	case kairos:
-		return "The Kairos system on this disk (Isotope or another) and its files will be erased."
+		return i18n.T("The Kairos system on this disk (Isotope or another) and its files will be erased.")
 	case linux:
-		return "The Linux system and its files on this disk will be erased."
+		return i18n.T("The Linux system and its files on this disk will be erased.")
 	case d.Read && len(d.Partitions) == 0 && d.SizeBytes > 0:
-		return "This disk has no partitions. Anything on it will be erased."
+		return i18n.T("This disk has no partitions. Anything on it will be erased.")
 	}
-	return "Everything on this disk will be erased."
+	return i18n.T("Everything on this disk will be erased.")
 }
 
 // Segment is one piece of the disk bar.
@@ -240,7 +242,7 @@ func (d DiskInfo) Segments() []Segment {
 	}
 	// Less than 1% left is alignment and the GPT backup, not free space.
 	if free := d.SizeBytes - used; free > 0 && free*100 >= d.SizeBytes {
-		out = append(out, Segment{Kind: "Free", SizeBytes: free, Free: true})
+		out = append(out, Segment{Kind: i18n.Mark("Free"), SizeBytes: free, Free: true})
 	}
 	return out
 }

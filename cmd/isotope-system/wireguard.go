@@ -10,6 +10,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -17,12 +18,14 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // wgLine is the error for one line of the file. It never quotes the file:
 // a line can hold a private key.
 func wgLine(n int, format string, a ...any) error {
-	return fmt.Errorf("line %d: %s", n, fmt.Sprintf(format, a...))
+	return fmt.Errorf(i18n.T("line %d: %s"), n, fmt.Sprintf(format, a...))
 }
 
 // wgKey checks a WireGuard key: base64 text of 32 bytes.
@@ -38,7 +41,7 @@ func wgPrefix(v string) (netip.Prefix, error) {
 	}
 	a, err := netip.ParseAddr(v)
 	if err != nil {
-		return netip.Prefix{}, fmt.Errorf("not an address")
+		return netip.Prefix{}, errors.New(i18n.T("not an address"))
 	}
 	return netip.PrefixFrom(a, a.BitLen()), nil
 }
@@ -50,7 +53,7 @@ func wgNumber(v string, bits int) (uint32, error) {
 	}
 	n, err := strconv.ParseUint(v, 0, bits)
 	if err != nil {
-		return 0, fmt.Errorf("not a valid number")
+		return 0, errors.New(i18n.T("not a valid number"))
 	}
 	return uint32(n), nil
 }
@@ -136,7 +139,7 @@ func ParseWireGuard(conf []byte) (settings, error) {
 			switch strings.ToLower(line) {
 			case "[interface]":
 				if sawIface {
-					return nil, wgLine(n, "a second [Interface] section")
+					return nil, wgLine(n, "%s", i18n.T("a second [Interface] section"))
 				}
 				sawIface, ifaceLine, section, cur = true, n, "interface", nil
 			case "[peer]":
@@ -144,17 +147,17 @@ func ParseWireGuard(conf []byte) (settings, error) {
 				peers = append(peers, cur)
 				section = "peer"
 			default:
-				return nil, wgLine(n, "unknown section")
+				return nil, wgLine(n, "%s", i18n.T("unknown section"))
 			}
 			continue
 		}
 		k, v, ok := strings.Cut(line, "=")
 		if !ok {
-			return nil, wgLine(n, "not a Key = Value line")
+			return nil, wgLine(n, "%s", i18n.T("not a Key = Value line"))
 		}
 		k, v = strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v)
 		if section == "" {
-			return nil, wgLine(n, "a setting outside a section")
+			return nil, wgLine(n, "%s", i18n.T("a setting outside a section"))
 		}
 		// Keys that may repeat add up, as in wg(8); the others may not.
 		multi := k == "address" || k == "dns" || k == "allowedips"
@@ -164,7 +167,7 @@ func ParseWireGuard(conf []byte) (settings, error) {
 		}
 		if !multi {
 			if dup[k] {
-				return nil, wgLine(n, "duplicate key")
+				return nil, wgLine(n, "%s", i18n.T("duplicate key"))
 			}
 			dup[k] = true
 		}
@@ -173,14 +176,14 @@ func ParseWireGuard(conf []byte) (settings, error) {
 			switch {
 			case k == "privatekey":
 				if !wgKey(v) {
-					return nil, wgLine(n, "PrivateKey is not a 32-byte base64 key")
+					return nil, wgLine(n, "%s", i18n.T("PrivateKey is not a 32-byte base64 key"))
 				}
 				priv = v
 			case k == "address":
 				for _, a := range wgList(v) {
 					p, err := wgPrefix(a)
 					if err != nil {
-						return nil, wgLine(n, "Address is %v", err)
+						return nil, wgLine(n, i18n.T("Address is %v"), err)
 					}
 					e := map[string]dbus.Variant{
 						"address": dbus.MakeVariant(p.Addr().String()),
@@ -207,19 +210,19 @@ func ParseWireGuard(conf []byte) (settings, error) {
 			case k == "mtu":
 				x, err := wgNumber(v, 32)
 				if err != nil {
-					return nil, wgLine(n, "MTU is %v", err)
+					return nil, wgLine(n, i18n.T("MTU is %v"), err)
 				}
 				mtu, hasMTU = x, true
 			case k == "listenport":
 				x, err := wgNumber(v, 16)
 				if err != nil {
-					return nil, wgLine(n, "ListenPort is %v", err)
+					return nil, wgLine(n, i18n.T("ListenPort is %v"), err)
 				}
 				listen, hasListen = x, true
 			case k == "fwmark":
 				x, err := wgNumber(v, 32)
 				if err != nil {
-					return nil, wgLine(n, "FwMark is %v", err)
+					return nil, wgLine(n, i18n.T("FwMark is %v"), err)
 				}
 				fwmark, hasMark = x, true
 			case k == "table":
@@ -228,23 +231,24 @@ func ParseWireGuard(conf []byte) (settings, error) {
 					noRoutes = true
 				case "auto":
 				default:
-					return nil, wgLine(n, "a Table number is not supported: NetworkManager sets the routes. Use Table = off or auto")
+					return nil, wgLine(n, "%s", i18n.T("a Table number is not supported: NetworkManager sets the routes. Use Table = off or auto"))
 				}
 			case wgScriptKeys[k]:
-				return nil, wgLine(n, "%s is not supported: Isotope runs WireGuard through NetworkManager, which does not run it", wgKeyName(k)+"setting")
+				// TRANSLATORS: %[1]s is a wg-quick key name followed by a space (PreUp, SaveConfig…), or empty.
+				return nil, wgLine(n, i18n.T("%[1]ssetting is not supported: Isotope runs WireGuard through NetworkManager, which does not run it"), wgKeyName(k))
 			default:
-				return nil, wgLine(n, "unknown key %s in [Interface]", strings.TrimSpace(wgKeyName(k)))
+				return nil, wgLine(n, i18n.T("unknown key %s in [Interface]"), strings.TrimSpace(wgKeyName(k)))
 			}
 		case "peer":
 			switch k {
 			case "publickey":
 				if !wgKey(v) {
-					return nil, wgLine(n, "PublicKey is not a 32-byte base64 key")
+					return nil, wgLine(n, "%s", i18n.T("PublicKey is not a 32-byte base64 key"))
 				}
 				cur.m["public-key"] = dbus.MakeVariant(v)
 			case "presharedkey":
 				if !wgKey(v) {
-					return nil, wgLine(n, "PresharedKey is not a 32-byte base64 key")
+					return nil, wgLine(n, "%s", i18n.T("PresharedKey is not a 32-byte base64 key"))
 				}
 				cur.m["preshared-key"] = dbus.MakeVariant(v)
 				cur.m["preshared-key-flags"] = dbus.MakeVariant(uint32(0)) // saved with the connection
@@ -252,7 +256,7 @@ func ParseWireGuard(conf []byte) (settings, error) {
 				for _, a := range wgList(v) {
 					p, err := wgPrefix(a)
 					if err != nil {
-						return nil, wgLine(n, "AllowedIPs is %v", err)
+						return nil, wgLine(n, i18n.T("AllowedIPs is %v"), err)
 					}
 					cur.ips = append(cur.ips, p.String())
 					if p.Addr().Is6() {
@@ -269,25 +273,25 @@ func ParseWireGuard(conf []byte) (settings, error) {
 			case "endpoint":
 				host, port, err := net.SplitHostPort(v)
 				if _, perr := strconv.ParseUint(port, 10, 16); err != nil || host == "" || perr != nil {
-					return nil, wgLine(n, "Endpoint is not host:port")
+					return nil, wgLine(n, "%s", i18n.T("Endpoint is not host:port"))
 				}
 				cur.m["endpoint"] = dbus.MakeVariant(v)
 			case "persistentkeepalive":
 				x, err := wgNumber(v, 16)
 				if err != nil {
-					return nil, wgLine(n, "PersistentKeepalive is %v", err)
+					return nil, wgLine(n, i18n.T("PersistentKeepalive is %v"), err)
 				}
 				cur.m["persistent-keepalive"] = dbus.MakeVariant(x)
 			default:
-				return nil, wgLine(n, "unknown key %s in [Peer]", strings.TrimSpace(wgKeyName(k)))
+				return nil, wgLine(n, i18n.T("unknown key %s in [Peer]"), strings.TrimSpace(wgKeyName(k)))
 			}
 		}
 	}
 	if !sawIface {
-		return nil, fmt.Errorf("no [Interface] section")
+		return nil, errors.New(i18n.T("no [Interface] section"))
 	}
 	if priv == "" {
-		return nil, wgLine(ifaceLine, "the [Interface] section has no PrivateKey")
+		return nil, wgLine(ifaceLine, "%s", i18n.T("the [Interface] section has no PrivateKey"))
 	}
 	plist := []map[string]dbus.Variant{}
 	full4, has6, full := 0, false, false
@@ -295,7 +299,7 @@ func ParseWireGuard(conf []byte) (settings, error) {
 		has6 = has6 || p.has6
 		full = full || p.full4 != 0 || p.full6
 		if _, ok := p.m["public-key"]; !ok {
-			return nil, wgLine(p.line, "the [Peer] section has no PublicKey")
+			return nil, wgLine(p.line, "%s", i18n.T("the [Peer] section has no PublicKey"))
 		}
 		if p.full4 != 0 {
 			full4 = p.full4
@@ -305,13 +309,13 @@ func ParseWireGuard(conf []byte) (settings, error) {
 	// Without an IPv4 address on the tunnel, IPv4 traffic would leave
 	// outside it.
 	if full4 != 0 && len(addrs4) == 0 && !noRoutes {
-		return nil, wgLine(full4, "AllowedIPs has 0.0.0.0/0 but the [Interface] has no IPv4 Address: IPv4 traffic would not use the tunnel")
+		return nil, wgLine(full4, "%s", i18n.T("AllowedIPs has 0.0.0.0/0 but the [Interface] has no IPv4 Address: IPv4 traffic would not use the tunnel"))
 	}
 	if len(dns4) > 0 && len(addrs4) == 0 {
-		return nil, wgLine(dns4Line, "the IPv4 DNS server needs an IPv4 Address in [Interface]")
+		return nil, wgLine(dns4Line, "%s", i18n.T("the IPv4 DNS server needs an IPv4 Address in [Interface]"))
 	}
 	if len(dns6) > 0 && len(addrs6) == 0 {
-		return nil, wgLine(dns6Line, "the IPv6 DNS server needs an IPv6 Address in [Interface]")
+		return nil, wgLine(dns6Line, "%s", i18n.T("the IPv6 DNS server needs an IPv6 Address in [Interface]"))
 	}
 	wg := map[string]dbus.Variant{
 		"private-key":       dbus.MakeVariant(priv),

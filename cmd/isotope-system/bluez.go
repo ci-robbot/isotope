@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // BTDevice is one Bluetooth device BlueZ knows.
@@ -254,7 +256,7 @@ func adapterOf(c btBus) (dbus.ObjectPath, error) {
 	}
 	adapter := pickAdapter(objs)
 	if adapter == "" {
-		return "", errors.New("no Bluetooth adapter")
+		return "", errors.New(i18n.T("no Bluetooth adapter"))
 	}
 	return adapter, nil
 }

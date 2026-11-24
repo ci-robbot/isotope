@@ -21,10 +21,12 @@ import (
 	"gioui.org/unit"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
 func main() {
+	i18n.Init()
 	opts, err := parseArgs(os.Args[1:])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "isotope-install-gui: %v\n", err)
@@ -36,6 +38,11 @@ func main() {
 	// Window mode (window.go): on COSMIC the window draws its own bar,
 	// with the buttons where the user's COSMIC puts them (read before
 	// rootEnv drops the user's config dir).
+	var live liveChoices
+	if opts.window {
+		live = readLiveChoices(opts.choices)
+		liveLanguage(live)
+	}
 	ownBar := opts.window && onCosmic(os.Getenv)
 	barLeft := ownBar && guikit.ControlsLeftHere()
 	if opts.window {
@@ -55,13 +62,13 @@ func main() {
 			}
 		}
 		ww, wh := windowSize(sw, sh, ss, ownBar)
-		win.Option(app.Title(windowTitle), app.Size(unit.Dp(ww), unit.Dp(wh)),
+		win.Option(app.Title(i18n.T(windowTitle)), app.Size(unit.Dp(ww), unit.Dp(wh)),
 			app.MinSize(unit.Dp(guikit.MinWindowW), unit.Dp(guikit.MinWindowH)), app.Decorated(!ownBar))
 	} else {
 		// cage shows one window over the whole output and draws no
 		// decorations; Decorated(false) keeps Gio from drawing its own
 		// title bar.
-		win.Option(app.Title("Install Isotope"), app.Size(unit.Dp(1440), unit.Dp(900)), app.Decorated(false), app.Fullscreen.Option())
+		win.Option(app.Title(i18n.T("Install Isotope")), app.Size(unit.Dp(1440), unit.Dp(900)), app.Decorated(false), app.Fullscreen.Option())
 	}
 
 	wizards := make(chan installer.Wizard, 1)
@@ -98,9 +105,9 @@ func main() {
 		}
 		u.hooks.keepTrying = func() { win.Perform(system.ActionClose) }
 		u.window = true
-		u.live = readLiveChoices(opts.choices)
+		u.live = live
 		if ownBar {
-			u.bar = &guikit.TitleBar{Title: windowTitle, Left: barLeft}
+			u.bar = &guikit.TitleBar{Title: i18n.T(windowTitle), Left: barLeft}
 		}
 	}
 	u.zoneCoords = installer.ZoneCoords()

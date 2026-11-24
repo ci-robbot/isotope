@@ -24,6 +24,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/recoverykey"
 )
 
@@ -39,9 +40,9 @@ const (
 )
 
 var remoteKinds = []struct{ ID, Name, Sub string }{
-	{remoteREST, "REST server", "restic's rest-server, over HTTP or HTTPS"},
-	{remoteS3, "S3", "Amazon S3, or a service that works like it"},
-	{remoteSFTP, "SFTP", "A server you reach with SSH"},
+	{remoteREST, i18n.Mark("REST server"), i18n.Mark("restic's rest-server, over HTTP or HTTPS")},
+	{remoteS3, "S3", i18n.Mark("Amazon S3, or a service that works like it")},
+	{remoteSFTP, "SFTP", i18n.Mark("A server you reach with SSH")},
 }
 
 // The jobs this window started (backupPage.started).
@@ -128,16 +129,16 @@ func hasControl(s string) bool { return strings.ContainsFunc(s, unicode.IsContro
 func cleanFolder(folder string) (string, error) {
 	f := strings.TrimSpace(folder)
 	if hasControl(f) {
-		return "", errors.New("The folder name has a control character.")
+		return "", errors.New(i18n.T("The folder name has a control character."))
 	}
 	for _, part := range strings.Split(f, "/") {
 		if part == "." || part == ".." {
-			return "", errors.New("The folder cannot have . or .. in it.")
+			return "", errors.New(i18n.T("The folder cannot have . or .. in it."))
 		}
 	}
 	f = strings.Trim(path.Clean("/"+f), "/")
 	if f == "" {
-		return "", errors.New("Type the folder on the disk for the backup.")
+		return "", errors.New(i18n.T("Type the folder on the disk for the backup."))
 	}
 	return f, nil
 }
@@ -156,7 +157,7 @@ func usbTarget(b Block, folder string) (string, error) {
 // the credentials pipe.
 func envLine(name, value string) (string, error) {
 	if strings.ContainsAny(value, "\r\n\x00") {
-		return "", fmt.Errorf("The value of %s has a line break in it.", name)
+		return "", errors.New(i18n.Tf("The value of %s has a line break in it.", name))
 	}
 	return name + "=" + value, nil
 }
@@ -166,10 +167,10 @@ func restTarget(raw, user, password string) (string, []string, error) {
 	u := strings.TrimSpace(raw)
 	pu, err := url.Parse(u)
 	if u == "" || hasControl(u) || err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Host == "" {
-		return "", nil, errors.New("Type the address of the server, starting with http:// or https://.")
+		return "", nil, errors.New(i18n.T("Type the address of the server, starting with http:// or https://."))
 	}
 	if pu.User != nil {
-		return "", nil, errors.New("Put the user and the password in their fields, not in the address.")
+		return "", nil, errors.New(i18n.T("Put the user and the password in their fields, not in the address."))
 	}
 	var env []string
 	for _, kv := range [][2]string{{"RESTIC_REST_USERNAME", user}, {"RESTIC_REST_PASSWORD", password}} {
@@ -193,13 +194,13 @@ func s3Target(endpoint, bucket, folder, keyID, secret, region string) (string, [
 	p := strings.Trim(strings.TrimSpace(folder), "/")
 	switch {
 	case e == "" || hasControl(e) || strings.ContainsAny(e, "@ "):
-		return "", nil, errors.New("Type the endpoint of the service, such as https://s3.amazonaws.com.")
+		return "", nil, errors.New(i18n.T("Type the endpoint of the service, such as https://s3.amazonaws.com."))
 	case b == "" || hasControl(b) || strings.ContainsAny(b, "/ "):
-		return "", nil, errors.New("Type the name of the bucket.")
+		return "", nil, errors.New(i18n.T("Type the name of the bucket."))
 	case hasControl(p):
-		return "", nil, errors.New("The path has a control character.")
+		return "", nil, errors.New(i18n.T("The path has a control character."))
 	case strings.TrimSpace(keyID) == "" || secret == "":
-		return "", nil, errors.New("Type the access key ID and the secret access key.")
+		return "", nil, errors.New(i18n.T("Type the access key ID and the secret access key."))
 	}
 	t := "s3:" + e + "/" + b
 	if p != "" {
@@ -230,22 +231,22 @@ func sftpTarget(userHost, portText, folder string) (target, host string, port ui
 	if i := strings.LastIndex(uh, "@"); i >= 0 {
 		user, host = uh[:i], uh[i+1:]
 		if user == "" || strings.HasPrefix(user, "-") || hasControl(user) || strings.ContainsAny(user, " :/@") {
-			return "", "", 0, errors.New("Type the user and the server as user@server.")
+			return "", "", 0, errors.New(i18n.T("Type the user and the server as user@server."))
 		}
 	}
 	if host == "" || strings.HasPrefix(host, "-") || strings.Trim(host, hostChars) != "" {
-		return "", "", 0, errors.New("Type the user and the server as user@server.")
+		return "", "", 0, errors.New(i18n.T("Type the user and the server as user@server."))
 	}
 	n := uint64(22)
 	if ps := strings.TrimSpace(portText); ps != "" {
 		n, err = strconv.ParseUint(ps, 10, 16)
 		if err != nil || n == 0 {
-			return "", "", 0, errors.New("The port is a number from 1 to 65535.")
+			return "", "", 0, errors.New(i18n.T("The port is a number from 1 to 65535."))
 		}
 	}
 	p := strings.TrimSpace(folder)
 	if p == "" || hasControl(p) {
-		return "", "", 0, errors.New("Type the folder on the server for the backup.")
+		return "", "", 0, errors.New(i18n.T("Type the folder on the server for the backup."))
 	}
 	if n == 22 {
 		return "sftp:" + uh + ":" + p, host, 22, nil
@@ -258,13 +259,13 @@ func sftpTarget(userHost, portText, folder string) (target, host string, port ui
 func exportNameProblem(name string) string {
 	switch {
 	case strings.TrimSpace(name) == "":
-		return "Type a file name."
+		return i18n.T("Type a file name.")
 	case strings.Contains(name, "/"):
-		return "A file name has no /."
+		return i18n.T("A file name has no /.")
 	case strings.HasPrefix(name, "."):
-		return "A file name does not start with a dot."
+		return i18n.T("A file name does not start with a dot.")
 	case hasControl(name):
-		return "The file name has a control character."
+		return i18n.T("The file name has a control character.")
 	}
 	return ""
 }
@@ -272,13 +273,16 @@ func exportNameProblem(name string) string {
 // restoreBody is the restore's last question: what comes back (the
 // Welcome design's restore step 4).
 func restoreBody(s Snapshot, when string) string {
-	from := "The backup of " + when
 	if s.Host != "" {
-		from += " from " + s.Host
+		// TRANSLATORS: %[1]s is when the backup was made ("2 days ago"), %[2]s the hostname of its machine.
+		return i18n.Tf("The backup of %[1]s from %[2]s brings this whole machine back as it was: the users and their passwords, the hostname, "+
+			"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"+
+			"What is on this machine now is replaced. The machine restarts at the end.", when, s.Host)
 	}
-	return from + " brings this whole machine back as it was: the users and their passwords, the hostname, " +
-		"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n" +
-		"What is on this machine now is replaced. The machine restarts at the end."
+	// TRANSLATORS: %s is when the backup was made ("2 days ago").
+	return i18n.Tf("The backup of %s brings this whole machine back as it was: the users and their passwords, the hostname, "+
+		"every home, the SSH keys, the extensions, the settings and the Flatpak apps (installed again after the restart).\n"+
+		"What is on this machine now is replaced. The machine restarts at the end.", when)
 }
 
 // ---- the form on the page ----
@@ -348,13 +352,13 @@ func (p *backupPage) formTarget() (setupTarget, string) {
 	if f.where == whereUSB {
 		b, ok := pick(p.backupDisks(), f.disk)
 		if !ok {
-			return setupTarget{}, "Plug in a USB disk, and choose it."
+			return setupTarget{}, i18n.T("Plug in a USB disk, and choose it.")
 		}
 		t, err := usbTarget(b, f.folder.Editor.Text())
 		if err != nil {
 			return setupTarget{}, err.Error()
 		}
-		return setupTarget{target: t, name: labelOf(b) + " (USB disk)", disk: b,
+		return setupTarget{target: t, name: i18n.Tf("%s (USB disk)", labelOf(b)), disk: b,
 			opt: TargetOptions{Label: b.Label, Containers: f.containers}}, ""
 	}
 	var t setupTarget
@@ -375,12 +379,12 @@ func (p *backupPage) formTarget() (setupTarget, string) {
 			fp, of := f.hostKey, f.hostKeyOf
 			p.u.mu.Unlock()
 			if fp == "" || of != hostPort(host, port) {
-				return setupTarget{}, "Connect to the server and confirm its key."
+				return setupTarget{}, i18n.T("Connect to the server and confirm its key.")
 			}
 			t.opt.HostKey, t.opt.Port = fp, port
 		}
 	default:
-		err = errors.New("Choose the kind of server.")
+		err = errors.New(i18n.T("Choose the kind of server."))
 	}
 	if err != nil {
 		return setupTarget{}, err.Error()
@@ -404,14 +408,14 @@ func (p *backupPage) mountPoint(b Block) (string, error) {
 	}
 	ds := p.u.hooks.Disks
 	if ds == nil {
-		return "", errors.New("udisks2 is not running")
+		return "", errors.New(i18n.T("udisks2 is not running"))
 	}
 	mp, err := ds.Mount(b.ID)
 	if err != nil {
 		return "", err
 	}
 	if mp == "" {
-		return "", errors.New("it was mounted nowhere")
+		return "", errors.New(i18n.T("it was mounted nowhere"))
 	}
 	return mp, nil
 }
@@ -430,14 +434,14 @@ func (p *backupPage) cont() {
 	u.async(func() {
 		if t.disk.ID != "" {
 			if _, err := p.mountPoint(t.disk); err != nil {
-				u.tell("Could not mount "+labelOf(t.disk), err.Error())
+				u.tell(i18n.Tf("Could not mount %s", labelOf(t.disk)), err.Error())
 				return
 			}
 		}
-		u.askForm("Set up the backup", "Backups go to "+t.name+". Create a new backup there, with a new password, or use a backup that is there already, with its password.", nil, 2,
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: p.form.clearSecrets},
-			choice{Label: "Use an existing backup", Kind: guikit.ButtonSecondary, Do: func() { p.openExisting(t) }},
-			choice{Label: "Create a new backup", Kind: guikit.ButtonPrimary, Do: func() { p.createNew(t) }})
+		u.askForm(i18n.T("Set up the backup"), i18n.Tf("Backups go to %s. Create a new backup there, with a new password, or use a backup that is there already, with its password.", t.name), nil, 2,
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: p.form.clearSecrets},
+			choice{Label: i18n.T("Use an existing backup"), Kind: guikit.ButtonSecondary, Do: func() { p.openExisting(t) }},
+			choice{Label: i18n.T("Create a new backup"), Kind: guikit.ButtonPrimary, Do: func() { p.createNew(t) }})
 	})
 }
 
@@ -447,11 +451,11 @@ func (p *backupPage) createNew(t setupTarget) {
 	u := p.u
 	key, err := recoverykey.New()
 	if err != nil {
-		u.tell("Could not make a password", err.Error())
+		u.tell(i18n.T("Could not make a password"), err.Error())
 		return
 	}
-	u.keyDialog("The password of this backup",
-		"Write it down and keep it away from this computer. It is shown only now. Without it, nobody can read the backup, not even you.",
+	u.keyDialog(i18n.T("The password of this backup"),
+		i18n.T("Write it down and keep it away from this computer. It is shown only now. Without it, nobody can read the backup, not even you."),
 		key, func() { p.initTarget(t, Credentials{Password: key, Env: t.env}, false) })
 }
 
@@ -463,7 +467,7 @@ func (p *backupPage) openExisting(t setupTarget) {
 	clearPw := func() { f.existing.Editor.SetText("") }
 	ok := func() bool { pw := f.existing.Editor.Text(); return pw != "" && !strings.ContainsAny(pw, "\r\n\x00") }
 	var dlg *dialog
-	dlg = newDialog("Use an existing backup", "Type the password of the backup in "+t.name+".", func(gtx layout.Context) layout.Dimensions {
+	dlg = newDialog(i18n.T("Use an existing backup"), i18n.Tf("Type the password of the backup in %s.", t.name), func(gtx layout.Context) layout.Dimensions {
 		if f.existing.Submitted(gtx) && ok() {
 			u.pick(dlg, len(dlg.choices)-1)
 		}
@@ -471,10 +475,10 @@ func (p *backupPage) openExisting(t setupTarget) {
 			f.existingFocused = true
 			gtx.Execute(focus(&f.existing.Editor))
 		}
-		return fieldsCol(gtx, u, fieldRow{title: "Password", f: f.existing})
+		return fieldsCol(gtx, u, fieldRow{title: i18n.T("Password"), f: f.existing})
 	}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: f.clearSecrets},
-		choice{Label: "Use this backup", Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: f.clearSecrets},
+		choice{Label: i18n.T("Use this backup"), Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
 			pw := f.existing.Editor.Text()
 			clearPw()
 			p.initTarget(t, Credentials{Password: pw, Env: t.env}, true)
@@ -490,7 +494,7 @@ func (p *backupPage) initTarget(t setupTarget, cred Credentials, existing bool) 
 	}
 	opt := t.opt
 	opt.Existing = existing
-	p.setWorking("Setting up the backup in " + t.name + "…")
+	p.setWorking(i18n.Tf("Setting up the backup in %s…", t.name))
 	u.async(func() {
 		// The deferred setWorking clears the busy flag even on a panic.
 		err := func() error {
@@ -498,10 +502,10 @@ func (p *backupPage) initTarget(t setupTarget, cred Credentials, existing bool) 
 			return d.BackupInit(t.target, opt, cred)
 		}()
 		if err != nil {
-			u.tell("The backup was not set up", Describe(err))
+			u.tell(i18n.T("The backup was not set up"), Describe(err))
 			return
 		}
-		u.tell("The backup is set up", "This machine backs up to "+t.name+". Click Back up now for the first backup, or choose a schedule.")
+		u.tell(i18n.T("The backup is set up"), i18n.Tf("This machine backs up to %s. Click Back up now for the first backup, or choose a schedule.", t.name))
 		p.load()
 	})
 	p.form.clearSecrets()
@@ -542,7 +546,7 @@ func (p *backupPage) loadSSHKey() {
 		p.form.loadingKey = false
 		p.form.sshKey, p.form.sshKeyErr = key, ""
 		if err != nil {
-			p.form.sshKeyErr = "Could not read the backup's SSH key: " + Describe(err)
+			p.form.sshKeyErr = i18n.Tf("Could not read the backup's SSH key: %s", Describe(err))
 		}
 	})
 }
@@ -562,7 +566,7 @@ func (p *backupPage) connect() {
 	}
 	_, host, port, err := sftpTarget(f.sftpUserHost.Editor.Text(), f.sftpPort.Editor.Text(), f.sftpPath.Editor.Text())
 	if err != nil {
-		u.tell("Cannot connect", err.Error())
+		u.tell(i18n.T("Cannot connect"), err.Error())
 		return
 	}
 	u.mu.Lock()
@@ -578,10 +582,10 @@ func (p *backupPage) connect() {
 		f.connecting = false
 		u.mu.Unlock()
 		if err == nil && len(fps) == 0 {
-			err = errors.New("the server sent no key")
+			err = errors.New(i18n.T("the server sent no key"))
 		}
 		if err != nil {
-			u.tell("Could not reach "+host, Describe(err))
+			u.tell(i18n.Tf("Could not reach %s", host), Describe(err))
 			return
 		}
 		keys := hostKeyChoices(fps)
@@ -589,11 +593,11 @@ func (p *backupPage) connect() {
 		f.scanned, f.scannedChosen = keys, 0
 		f.scannedClicks = make([]widget.Clickable, len(keys))
 		u.mu.Unlock()
-		u.askForm("Is this the server's key?",
-			fmt.Sprintf("%s (port %d) sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and say yes only when it is the same.", host, port),
+		u.askForm(i18n.T("Is this the server's key?"),
+			i18n.Tf("%s (port %d) sent these keys. On the server, ssh-keygen -lf /etc/ssh/ssh_host_*_key.pub shows its own, with their type. Choose the key you compared, and say yes only when it is the same.", host, port),
 			p.hostKeyForm, 0,
-			choice{Label: "No", Kind: guikit.ButtonSecondary},
-			choice{Label: "Yes", Kind: guikit.ButtonPrimary, Do: func() {
+			choice{Label: i18n.T("No"), Kind: guikit.ButtonSecondary},
+			choice{Label: i18n.T("Yes"), Kind: guikit.ButtonPrimary, Do: func() {
 				u.mu.Lock()
 				defer u.mu.Unlock()
 				if i := f.scannedChosen; i >= 0 && i < len(f.scanned) {
@@ -616,7 +620,7 @@ func hostKeyChoices(fps []string) []hostKey {
 		case 0:
 			continue
 		case 1:
-			out = append(out, hostKey{typ: "Key", fingerprint: f[0]})
+			out = append(out, hostKey{typ: i18n.T("Key"), fingerprint: f[0]})
 		default:
 			out = append(out, hostKey{typ: f[0], fingerprint: f[len(f)-1]})
 		}
@@ -681,7 +685,7 @@ func (p *backupPage) openExport() {
 		return
 	}
 	if u.hooks.Disks == nil {
-		u.tell("Cannot export", "USB disks cannot be listed: udisks2 is not running.")
+		u.tell(i18n.T("Cannot export"), i18n.T("USB disks cannot be listed: udisks2 is not running."))
 		return
 	}
 	e := &p.export
@@ -690,13 +694,13 @@ func (p *backupPage) openExport() {
 	e.disk, e.focused = "", false
 	chosen := func() (Block, bool) { return pick(p.backupDisks(), e.disk) }
 	ok := func() bool { _, there := chosen(); return there && exportNameProblem(e.name.Editor.Text()) == "" }
-	u.askForm("Export to a file", "The file holds the whole backup, encrypted with its password. isotope restore reads it on any machine.",
+	u.askForm(i18n.T("Export to a file"), i18n.T("The file holds the whole backup, encrypted with its password. isotope restore reads it on any machine."),
 		func(gtx layout.Context) layout.Dimensions {
 			disks := p.backupDisks()
 			on, _ := chosen()
 			var c col
 			if len(disks) == 0 {
-				c.add(u.para("Plug in a USB disk."))
+				c.add(u.para(i18n.T("Plug in a USB disk.")))
 			}
 			for i, b := range disks {
 				k, have := e.clicks[b.ID]
@@ -725,12 +729,12 @@ func (p *backupPage) openExport() {
 				if e.name.Editor.Text() != "" {
 					e.name.Err = exportNameProblem(e.name.Editor.Text())
 				}
-				return fieldsCol(gtx, u, fieldRow{title: "File name", f: e.name, hint: "Written at the top of the disk."})
+				return fieldsCol(gtx, u, fieldRow{title: i18n.T("File name"), f: e.name, hint: i18n.T("Written at the top of the disk.")})
 			})
 			return c.layout(gtx)
 		}, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Export", Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Export"), Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
 			b, there := chosen()
 			name := e.name.Editor.Text()
 			if !there || exportNameProblem(name) != "" {
@@ -745,7 +749,7 @@ func (p *backupPage) startExport(b Block, name string) {
 	u.async(func() {
 		mp, err := p.mountPoint(b)
 		if err != nil {
-			u.tell("Could not mount "+labelOf(b), err.Error())
+			u.tell(i18n.Tf("Could not mount %s", labelOf(b)), err.Error())
 			return
 		}
 		file := strings.TrimRight(mp, "/") + "/" + name
@@ -756,7 +760,7 @@ func (p *backupPage) startExport(b Block, name string) {
 			u.mu.Lock()
 			p.started = ""
 			u.mu.Unlock()
-			u.tell("The export did not start", Describe(err))
+			u.tell(i18n.T("The export did not start"), Describe(err))
 		}
 	})
 }
@@ -780,9 +784,10 @@ func (p *backupPage) restoreLines() []string {
 	if !p.u.sys.Admin || !loaded || !b.Available || b.CanRestore {
 		return nil
 	}
-	lines := []string{"Restoring over a machine in use is done in a terminal: isotope restore --only homes,apps,extensions"}
+	lines := []string{i18n.T("Restoring over a machine in use is done in a terminal: isotope restore --only homes,apps,extensions")}
 	if b.RestoreRefusal != "" {
-		lines = append(lines, "A whole restore is offered only on a new machine, and on this one "+b.RestoreRefusal+".")
+		// TRANSLATORS: %s is the daemon's reason, in English, such as "there are users with a home".
+		lines = append(lines, i18n.Tf("A whole restore is offered only on a new machine, and on this one %s.", b.RestoreRefusal))
 	}
 	return lines
 }
@@ -796,7 +801,7 @@ func (p *backupPage) openRestore() {
 	}
 	t, problem := p.formTarget()
 	if problem != "" {
-		u.tell("Choose where the backup is", problem)
+		u.tell(i18n.T("Choose where the backup is"), problem)
 		return
 	}
 	r := &p.restore
@@ -807,12 +812,12 @@ func (p *backupPage) openRestore() {
 	u.async(func() {
 		if t.disk.ID != "" {
 			if _, err := p.mountPoint(t.disk); err != nil {
-				u.tell("Could not mount "+labelOf(t.disk), err.Error())
+				u.tell(i18n.Tf("Could not mount %s", labelOf(t.disk)), err.Error())
 				return
 			}
 		}
 		var dlg *dialog
-		dlg = newDialog("Restore this machine from a backup", "Type the password of the backup in "+t.name+".", func(gtx layout.Context) layout.Dimensions {
+		dlg = newDialog(i18n.T("Restore this machine from a backup"), i18n.Tf("Type the password of the backup in %s.", t.name), func(gtx layout.Context) layout.Dimensions {
 			if r.pw.Submitted(gtx) && ok() {
 				u.pick(dlg, len(dlg.choices)-1)
 			}
@@ -820,10 +825,10 @@ func (p *backupPage) openRestore() {
 				r.focused = true
 				gtx.Execute(focus(&r.pw.Editor))
 			}
-			return fieldsCol(gtx, u, fieldRow{title: "Password", f: r.pw})
+			return fieldsCol(gtx, u, fieldRow{title: i18n.T("Password"), f: r.pw})
 		}, 0,
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: func() { clearPw(); p.form.clearSecrets() }},
-			choice{Label: "Find the backups", Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: func() { clearPw(); p.form.clearSecrets() }},
+			choice{Label: i18n.T("Find the backups"), Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
 				pw := r.pw.Editor.Text()
 				clearPw()
 				p.form.clearSecrets()
@@ -835,7 +840,7 @@ func (p *backupPage) openRestore() {
 
 func (p *backupPage) listForRestore(t setupTarget, cred Credentials) {
 	u, d := p.u, p.u.hooks.Daemon
-	p.setWorking("Reading the backups in " + t.name + "…")
+	p.setWorking(i18n.Tf("Reading the backups in %s…", t.name))
 	u.async(func() {
 		// The deferred setWorking clears the busy flag even on a panic.
 		snaps, err := func() ([]Snapshot, error) {
@@ -843,11 +848,11 @@ func (p *backupPage) listForRestore(t setupTarget, cred Credentials) {
 			return d.BackupList(t.target, t.listOpt(), cred)
 		}()
 		if err != nil {
-			u.tell("Could not read the backup", Describe(err))
+			u.tell(i18n.T("Could not read the backup"), Describe(err))
 			return
 		}
 		if len(snaps) == 0 {
-			u.tell("There is no backup there", t.name+" holds no backup yet.")
+			u.tell(i18n.T("There is no backup there"), i18n.Tf("%s holds no backup yet.", t.name))
 			return
 		}
 		snaps = newestFirst(snaps)
@@ -855,9 +860,9 @@ func (p *backupPage) listForRestore(t setupTarget, cred Credentials) {
 		p.restore.snaps, p.restore.chosen = snaps, 0
 		p.restore.clicks = make([]widget.Clickable, len(snaps))
 		u.mu.Unlock()
-		u.askForm("Which backup?", "The backups in "+t.name+", the newest first.", p.snapshotChoices, 1,
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-			choice{Label: "Continue", Kind: guikit.ButtonPrimary, Do: func() { p.confirmRestore(t, cred) }})
+		u.askForm(i18n.T("Which backup?"), i18n.Tf("The backups in %s, the newest first.", t.name), p.snapshotChoices, 1,
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+			choice{Label: i18n.T("Continue"), Kind: guikit.ButtonPrimary, Do: func() { p.confirmRestore(t, cred) }})
 	})
 }
 
@@ -878,7 +883,7 @@ func (p *backupPage) snapshotChoices(gtx layout.Context) layout.Dimensions {
 			r.chosen, chosen = i, i
 			u.mu.Unlock()
 		}
-		sub := "Backup " + shortID(s.ID)
+		sub := i18n.Tf("Backup %s", shortID(s.ID))
 		if s.Size > 0 {
 			sub = humanSize(s.Size) + " · " + sub
 		}
@@ -909,9 +914,9 @@ func (p *backupPage) confirmRestore(t setupTarget, cred Credentials) {
 		return
 	}
 	s := snaps[i]
-	u.askForm("Restore this machine?", restoreBody(s, ago(u.now(), time.Unix(s.Time, 0))), nil, 0,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Restore and restart", Kind: guikit.ButtonDanger, Do: func() {
+	u.askForm(i18n.T("Restore this machine?"), restoreBody(s, ago(u.now(), time.Unix(s.Time, 0))), nil, 0,
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Restore and restart"), Kind: guikit.ButtonDanger, Do: func() {
 			u.mu.Lock()
 			p.started = jobRestore
 			u.mu.Unlock()
@@ -920,7 +925,7 @@ func (p *backupPage) confirmRestore(t setupTarget, cred Credentials) {
 					u.mu.Lock()
 					p.started = ""
 					u.mu.Unlock()
-					u.tell("The restore did not start", Describe(err))
+					u.tell(i18n.T("The restore did not start"), Describe(err))
 				}
 			})
 		}})
@@ -932,10 +937,10 @@ func (p *backupPage) confirmRestore(t setupTarget, cred Credentials) {
 func diskSub(b Block) string {
 	s := fsName(b) + " · " + humanSize(b.Size)
 	if len(b.MountPoints) == 0 {
-		return s + " · not mounted"
+		return s + " · " + i18n.T("not mounted")
 	}
 	if b.Used <= b.Size {
-		s += " · " + humanSize(b.Size-b.Used) + " free"
+		s += " · " + i18n.Tf("%s free", humanSize(b.Size-b.Used))
 	}
 	return s
 }
@@ -953,16 +958,16 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 		gtx = gtx.Disabled()
 	}
 	var c col
-	c.add(u.caps("BACK UP THIS MACHINE"))
+	c.add(u.caps(i18n.T("BACK UP THIS MACHINE")))
 	c.gap(10)
 	c.add(func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				return u.ChoiceCard(gtx, &f.usbClick, f.where == whereUSB, "A USB disk", "Plugged in to this computer")
+				return u.ChoiceCard(gtx, &f.usbClick, f.where == whereUSB, i18n.T("A USB disk"), i18n.T("Plugged in to this computer"))
 			}),
 			layout.Rigid(layout.Spacer{Width: 10}.Layout),
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				return u.ChoiceCard(gtx, &f.remoteClick, f.where == whereRemote, "A remote server", "A REST server, S3 or SFTP")
+				return u.ChoiceCard(gtx, &f.remoteClick, f.where == whereRemote, i18n.T("A remote server"), i18n.T("A REST server, S3 or SFTP"))
 			}),
 		)
 	})
@@ -972,11 +977,11 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 		on, _ := pick(disks, f.disk)
 		switch {
 		case u.hooks.Disks == nil:
-			c.add(u.dim("USB disks cannot be listed: udisks2 is not running."))
+			c.add(u.dim(i18n.T("USB disks cannot be listed: udisks2 is not running.")))
 		case len(disks) == 0:
-			c.add(u.para("Plug in a USB disk."))
+			c.add(u.para(i18n.T("Plug in a USB disk.")))
 			c.gap(4)
-			c.add(u.dim("It shows here when it is plugged in. A disk with exFAT, FAT, NTFS, ext4, Btrfs or XFS can hold backups."))
+			c.add(u.dim(i18n.T("It shows here when it is plugged in. A disk with exFAT, FAT, NTFS, ext4, Btrfs or XFS can hold backups.")))
 		}
 		for i, b := range disks {
 			k, have := f.diskClicks[b.ID]
@@ -993,7 +998,7 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 		}
 		c.gap(12)
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return fieldsCol(gtx, u, fieldRow{title: "Folder", f: f.folder, hint: "On the disk. It is made if it is not there."})
+			return fieldsCol(gtx, u, fieldRow{title: i18n.T("Folder"), f: f.folder, hint: i18n.T("On the disk. It is made if it is not there.")})
 		})
 	} else {
 		c.add(func(gtx layout.Context) layout.Dimensions {
@@ -1003,7 +1008,7 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 					kids = append(kids, layout.Rigid(layout.Spacer{Width: 10}.Layout))
 				}
 				kids = append(kids, layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &f.remoteClicks[i], f.remote == k.ID, k.Name, k.Sub)
+					return u.ChoiceCard(gtx, &f.remoteClicks[i], f.remote == k.ID, i18n.T(k.Name), i18n.T(k.Sub))
 				}))
 			}
 			return layout.Flex{}.Layout(gtx, kids...)
@@ -1013,61 +1018,61 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 		case remoteREST:
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return fieldsCol(gtx, u,
-					fieldRow{title: "Address", f: f.restURL, hint: "Such as https://backup.example.com:8000/anna/"},
-					fieldRow{title: "User", f: f.restUser},
-					fieldRow{title: "Password", f: f.restPw})
+					fieldRow{title: i18n.T("Address"), f: f.restURL, hint: i18n.T("Such as https://backup.example.com:8000/anna/")},
+					fieldRow{title: i18n.T("User"), f: f.restUser},
+					fieldRow{title: i18n.T("Password"), f: f.restPw})
 			})
 		case remoteS3:
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return fieldsCol(gtx, u,
-					fieldRow{title: "Endpoint", f: f.s3Endpoint, hint: "Such as https://s3.amazonaws.com"},
-					fieldRow{title: "Bucket", f: f.s3Bucket},
-					fieldRow{title: "Path", f: f.s3Path, hint: "In the bucket. Optional."},
-					fieldRow{title: "Access key ID", f: f.s3Key},
-					fieldRow{title: "Secret access key", f: f.s3Secret},
-					fieldRow{title: "Region", f: f.s3Region, hint: "Optional."})
+					fieldRow{title: i18n.T("Endpoint"), f: f.s3Endpoint, hint: i18n.T("Such as https://s3.amazonaws.com")},
+					fieldRow{title: i18n.T("Bucket"), f: f.s3Bucket},
+					fieldRow{title: i18n.T("Path"), f: f.s3Path, hint: i18n.T("In the bucket. Optional.")},
+					fieldRow{title: i18n.T("Access key ID"), f: f.s3Key},
+					fieldRow{title: i18n.T("Secret access key"), f: f.s3Secret},
+					fieldRow{title: i18n.T("Region"), f: f.s3Region, hint: i18n.T("Optional.")})
 			})
 		case remoteSFTP:
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return fieldsCol(gtx, u,
-					fieldRow{title: "User and server", f: f.sftpUserHost, hint: "Such as anna@nas.local"},
-					fieldRow{title: "Port", f: f.sftpPort},
-					fieldRow{title: "Folder on the server", f: f.sftpPath, hint: "Such as /srv/backup"})
+					fieldRow{title: i18n.T("User and server"), f: f.sftpUserHost, hint: i18n.T("Such as anna@nas.local")},
+					fieldRow{title: i18n.T("Port"), f: f.sftpPort},
+					fieldRow{title: i18n.T("Folder on the server"), f: f.sftpPath, hint: i18n.T("Such as /srv/backup")})
 			})
 			c.gap(14)
 			switch {
 			case sshErr != "":
 				c.add(u.errorBox(sshErr))
 			case sshKey == "" || loadingKey:
-				c.add(u.spinnerLine("Reading the backup's SSH key…"))
+				c.add(u.spinnerLine(i18n.T("Reading the backup's SSH key…")))
 			default:
-				c.add(u.para("Add this key to the server's authorized_keys, then Connect."))
+				c.add(u.para(i18n.T("Add this key to the server's authorized_keys, then Connect.")))
 				c.gap(8)
 				c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 					return u.LabelLines(gtx, guikit.StMono12, guikit.ColText, 1.3, sshKey)
 				}))
 				c.gap(10)
 				c.add(u.buttons(
-					guikit.Action{Click: &f.copyClick, Kind: guikit.ButtonSecondary, Label: "Copy"},
-					guikit.Action{Click: &f.connectClick, Kind: guikit.ButtonSecondary, Label: "Connect", Disabled: connecting}))
+					guikit.Action{Click: &f.copyClick, Kind: guikit.ButtonSecondary, Label: i18n.T("Copy")},
+					guikit.Action{Click: &f.connectClick, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect"), Disabled: connecting}))
 				if copied {
 					c.gap(6)
-					c.add(u.dim("Copied."))
+					c.add(u.dim(i18n.T("Copied.")))
 				}
 			}
 			if connecting {
 				c.gap(8)
-				c.add(u.spinnerLine("Fetching the server's key…"))
+				c.add(u.spinnerLine(i18n.T("Fetching the server's key…")))
 			}
 			if confirmed != "" {
 				c.gap(8)
-				c.add(u.dim("Key of " + confirmedOf + " confirmed: " + confirmed))
+				c.add(u.dim(i18n.Tf("Key of %[1]s confirmed: %[2]s", confirmedOf, confirmed)))
 			}
 		}
 	}
 	c.gap(14)
 	c.add(func(gtx layout.Context) layout.Dimensions {
-		return u.CheckCard(gtx, &f.containersClick, f.containers, "Include Docker and Podman storage", "Images, containers and volumes. They can be large.")
+		return u.CheckCard(gtx, &f.containersClick, f.containers, i18n.T("Include Docker and Podman storage"), i18n.T("Images, containers and volumes. They can be large."))
 	})
 	if problem != "" {
 		c.gap(8)

@@ -6,6 +6,8 @@ import (
 	"io"
 	"slices"
 	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // ShortcutsFile is the variant's shortcut sheet, written by
@@ -83,7 +85,7 @@ func MainShortcuts(all []Shortcut) []Shortcut {
 	for i := range out {
 		// The sheet's words for Super+F1 are about the sheet itself.
 		if out[i].Action == "This help" {
-			out[i].Action = "All keyboard shortcuts"
+			out[i].Action = i18n.T("All keyboard shortcuts")
 		}
 	}
 	return out

@@ -21,6 +21,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/shares"
 )
 
@@ -120,7 +121,7 @@ func (d *busDaemon) MountedShares() ([]MountedShare, error) {
 
 // nfsAdminText says why NFS is for administrators (polkit
 // io.kairos.isotope-update.shares-nfs).
-const nfsAdminText = "Only an administrator can mount an NFS share. NFS lets in this computer by its address, not you, so it could show you other people's files on the server. Ask an administrator, or use SMB."
+var nfsAdminText = i18n.Mark("Only an administrator can mount an NFS share. NFS lets in this computer by its address, not you, so it could show you other people's files on the server. Ask an administrator, or use SMB.")
 
 // describeShareErr is Describe for the share calls: their NotAuthorized
 // is about the session, or about NFS, not the admin group.
@@ -130,9 +131,9 @@ func describeShareErr(err error) string {
 			return err.Error()
 		}
 		if strings.Contains(err.Error(), "NFS") {
-			return nfsAdminText
+			return i18n.T(nfsAdminText)
 		}
-		return "Only the person at this computer's screen can mount a network share."
+		return i18n.T("Only the person at this computer's screen can mount a network share.")
 	}
 	return Describe(err)
 }
@@ -168,15 +169,16 @@ func shareRows(saved []shares.Saved, mounted []MountedShare) []shareRow {
 			if s.Domain != "" {
 				who = s.Domain + "\\" + s.User
 			}
-			parts = append(parts, "as "+who)
+			// TRANSLATORS: %s is the user name the share is mounted as.
+			parts = append(parts, i18n.Tf("as %s", who))
 		}
 		if r.MountPoint != "" {
-			parts = append(parts, "Mounted at "+r.MountPoint)
+			parts = append(parts, i18n.Tf("Mounted at %s", r.MountPoint))
 		} else {
-			parts = append(parts, "Not mounted")
+			parts = append(parts, i18n.T("Not mounted"))
 		}
 		if s.AutoMount {
-			parts = append(parts, "Mounts at login")
+			parts = append(parts, i18n.T("Mounts at login"))
 		}
 		r.Sub = strings.Join(parts, " · ")
 		out = append(out, r)
@@ -190,7 +192,7 @@ func shareRows(saved []shares.Saved, mounted []MountedShare) []shareRow {
 			addr = l.String()
 		}
 		out = append(out, shareRow{Key: "mounted:" + m.MountPoint, Title: filepath.Base(m.MountPoint), Saved: -1,
-			MountPoint: m.MountPoint, Sub: addr + " · Mounted at " + m.MountPoint + " · Not saved"})
+			MountPoint: m.MountPoint, Sub: addr + " · " + i18n.Tf("Mounted at %s", m.MountPoint) + " · " + i18n.T("Not saved")})
 	}
 	return out
 }
@@ -227,7 +229,7 @@ func (p *disksPage) loadShares() {
 		case merr != nil:
 			p.shErr = describeShareErr(merr)
 		case serr != nil:
-			p.shErr = "Could not read the saved shares: " + serr.Error()
+			p.shErr = i18n.Tf("Could not read the saved shares: %s", serr.Error())
 		}
 	})
 }
@@ -266,7 +268,7 @@ func (p *disksPage) sharesNow() ([]shares.Saved, []MountedShare) {
 func (p *disksPage) mountSaved(s shares.Saved) {
 	u, st := p.u, p.u.hooks.Shares
 	if l, err := shares.Parse(s.URL); err == nil && l.Scheme == shares.NFS && !u.sys.Admin {
-		u.tell("Could not mount "+s.Name, nfsAdminText)
+		u.tell(i18n.Tf("Could not mount %s", s.Name), i18n.T(nfsAdminText))
 		return
 	}
 	u.async(func() {
@@ -282,7 +284,7 @@ func (p *disksPage) mountSaved(s shares.Saved) {
 			}
 			c.Password = pw
 		}
-		p.shareDo("Mounting "+s.Name+"…", "Could not mount "+s.Name, func(d Daemon, _ ShareStore) error {
+		p.shareDo(i18n.Tf("Mounting %s…", s.Name), i18n.Tf("Could not mount %s", s.Name), func(d Daemon, _ ShareStore) error {
 			_, err := d.MountShare(s.URL, shares.Options{Name: s.Name}, c)
 			return err
 		})
@@ -290,16 +292,16 @@ func (p *disksPage) mountSaved(s shares.Saved) {
 }
 
 func (p *disksPage) unmountShare(r shareRow) {
-	p.shareDo("Unmounting "+r.Title+"…", "Could not unmount "+r.Title, func(d Daemon, _ ShareStore) error {
+	p.shareDo(i18n.Tf("Unmounting %s…", r.Title), i18n.Tf("Could not unmount %s", r.Title), func(d Daemon, _ ShareStore) error {
 		return d.UnmountShare(r.MountPoint)
 	})
 }
 
 func (p *disksPage) forgetShare(s shares.Saved) {
-	p.u.ask("Forget "+s.Name+"?", "It is removed from the list, with its saved password. A mounted share stays mounted until you unmount it.",
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Forget", Kind: guikit.ButtonDanger, Do: func() {
-			p.shareDo("Forgetting "+s.Name+"…", "Could not forget "+s.Name, func(_ Daemon, st ShareStore) error {
+	p.u.ask(i18n.Tf("Forget %s?", s.Name), i18n.T("It is removed from the list, with its saved password. A mounted share stays mounted until you unmount it."),
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Forget"), Kind: guikit.ButtonDanger, Do: func() {
+			p.shareDo(i18n.Tf("Forgetting %s…", s.Name), i18n.Tf("Could not forget %s", s.Name), func(_ Daemon, st ShareStore) error {
 				if st == nil {
 					return nil
 				}
@@ -353,10 +355,10 @@ func (p *disksPage) sharesSection() layout.Widget {
 	off := working != ""
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps("NETWORK SHARES"))
+		c.add(u.caps(i18n.T("NETWORK SHARES")))
 		c.gap(10)
 		if u.hooks.Daemon == nil {
-			c.add(u.errorBox("The update service (isotope-updated), which mounts network shares, is not available."))
+			c.add(u.errorBox(i18n.T("The update service (isotope-updated), which mounts network shares, is not available.")))
 			return c.layout(gtx)
 		}
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
@@ -366,10 +368,10 @@ func (p *disksPage) sharesSection() layout.Widget {
 				in.add(u.dim(errText))
 				in.gap(10)
 			case !loaded:
-				in.add(u.dim("Loading…"))
+				in.add(u.dim(i18n.T("Loading…")))
 				in.gap(10)
 			case len(rows) == 0:
-				in.add(u.dim("No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server."))
+				in.add(u.dim(i18n.T("No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server.")))
 				in.gap(10)
 			}
 			if working != "" {
@@ -380,17 +382,17 @@ func (p *disksPage) sharesSection() layout.Widget {
 				k := p.shClicks(r.Key)
 				var as []guikit.Action
 				if r.MountPoint != "" {
-					as = append(as, guikit.Action{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: "Unmount", Disabled: off})
+					as = append(as, guikit.Action{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: i18n.T("Unmount"), Disabled: off})
 				} else {
-					as = append(as, guikit.Action{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: "Mount", Disabled: off})
+					as = append(as, guikit.Action{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: i18n.T("Mount"), Disabled: off})
 				}
 				if r.Saved >= 0 {
-					as = append(as, guikit.Action{Click: &k.forget, Kind: guikit.ButtonGhost, Label: "Forget", Disabled: off})
+					as = append(as, guikit.Action{Click: &k.forget, Kind: guikit.ButtonGhost, Label: i18n.T("Forget"), Disabled: off})
 				}
 				in.add(u.row(r.Title, r.Sub, u.buttons(as...)))
 				in.gap(10)
 			}
-			in.add(u.buttons(guikit.Action{Click: &p.connect, Kind: guikit.ButtonSecondary, Label: "Connect to server…", Disabled: off}))
+			in.add(u.buttons(guikit.Action{Click: &p.connect, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect to server…"), Disabled: off}))
 			return in.layout(gtx)
 		}))
 		return c.layout(gtx)
@@ -444,7 +446,7 @@ func (f *connectForm) check() error {
 		return err
 	}
 	if user == "" && (f.password.Editor.Text() != "" || strings.TrimSpace(f.domain.Editor.Text()) != "") {
-		return errors.New("a password or a domain needs a user name")
+		return errors.New(i18n.T("a password or a domain needs a user name"))
 	}
 	return nil
 }
@@ -490,22 +492,22 @@ func (p *disksPage) connectDialog(s *shares.Saved) {
 	p.connForm = f
 	u.mu.Unlock()
 	var dlg *dialog
-	title, body := "Connect to server", "Mount a shared folder of another computer. It shows in your files under /run/media."
+	title, body := i18n.T("Connect to server"), i18n.T("Mount a shared folder of another computer. It shows in your files under /run/media.")
 	if s != nil {
-		title, body = "Mount "+s.Name, "Type the password for "+s.URL+"."
+		title, body = i18n.Tf("Mount %s", s.Name), i18n.Tf("Type the password for %s.", s.URL)
 	}
 	dlg = newDialog(title, body, func(gtx layout.Context) layout.Dimensions {
 		return p.connectFormView(gtx, f, dlg)
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-		choice{Label: "Connect", Kind: guikit.ButtonPrimary, Enabled: func() bool { return f.check() == nil }, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Connect"), Kind: guikit.ButtonPrimary, Enabled: func() bool { return f.check() == nil }, Do: func() {
 			req, pw, err := f.request()
 			if err != nil {
 				return
 			}
 			remember, keepPw := f.save, f.save && f.savePw && pw != ""
 			f.password.Editor.SetText("")
-			p.shareDo("Connecting to "+req.URL+"…", "Could not connect to "+req.URL, func(d Daemon, st ShareStore) error {
+			p.shareDo(i18n.Tf("Connecting to %s…", req.URL), i18n.Tf("Could not connect to %s", req.URL), func(d Daemon, st ShareStore) error {
 				_, err := d.MountShare(req.URL, shares.Options{Name: req.Name}, shares.Credentials{User: req.User, Domain: req.Domain, Password: pw})
 				if err != nil {
 					return err
@@ -522,7 +524,7 @@ func (p *disksPage) connectDialog(s *shares.Saved) {
 				}
 				if keepPw {
 					if err := st.StorePassword(req.URL, req.User, pw); err != nil {
-						return errors.New("the share is mounted and saved, but its password could not be saved in the keyring: " + err.Error())
+						return errors.New(i18n.Tf("the share is mounted and saved, but its password could not be saved in the keyring: %s", err.Error()))
 					}
 				}
 				return nil
@@ -576,34 +578,34 @@ func (p *disksPage) connectFormView(gtx layout.Context, f *connectForm, dlg *dia
 		}
 	}
 	var c col
-	c.add(input("Server address", f.url, "smb://server/share or nfs://server/export"))
+	c.add(input(i18n.T("Server address"), f.url, i18n.T("smb://server/share or nfs://server/export")))
 	switch {
 	case nfs && !f.admin:
 		c.gap(12)
-		c.add(u.notice(nfsAdminText))
+		c.add(u.notice(i18n.T(nfsAdminText)))
 		return c.layout(gtx)
 	case nfs:
 		c.gap(12)
-		c.add(u.dim("NFS needs no password. Isotope uses NFS version 4.1 or later. Files show the owners the server has, which may not be you."))
+		c.add(u.dim(i18n.T("NFS needs no password. Isotope uses NFS version 4.1 or later. Files show the owners the server has, which may not be you.")))
 	default:
 		c.gap(12)
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{}.Layout(gtx,
-				layout.Flexed(0.55, input("User", f.user, "Empty for a guest.")),
+				layout.Flexed(0.55, input(i18n.T("User"), f.user, i18n.T("Empty for a guest."))),
 				layout.Rigid(layout.Spacer{Width: 12}.Layout),
-				layout.Flexed(0.45, input("Domain", f.domain, "Optional.")))
+				layout.Flexed(0.45, input(i18n.T("Domain"), f.domain, i18n.T("Optional."))))
 		})
 		c.gap(12)
-		c.add(input("Password", f.password, ""))
+		c.add(input(i18n.T("Password"), f.password, ""))
 	}
 	c.gap(16)
-	c.add(checkRow(u, &f.saveClick, f.save, "Remember this share on this page"))
+	c.add(checkRow(u, &f.saveClick, f.save, i18n.T("Remember this share on this page")))
 	if f.save {
 		c.gap(10)
-		c.add(checkRow(u, &f.autoClick, f.auto, "Mount it at login"))
+		c.add(checkRow(u, &f.autoClick, f.auto, i18n.T("Mount it at login")))
 		if !nfs {
 			c.gap(10)
-			c.add(checkRow(u, &f.savePwClick, f.savePw, "Remember the password in your keyring"))
+			c.add(checkRow(u, &f.savePwClick, f.savePw, i18n.T("Remember the password in your keyring")))
 		}
 	}
 	return c.layout(gtx)

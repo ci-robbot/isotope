@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/OpenPrinting/goipp"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Printer is one CUPS queue.
@@ -101,7 +103,7 @@ type Printing interface {
 }
 
 // errNoCUPS is the page's "the printing service is not running".
-var errNoCUPS = errors.New("the printing service (CUPS) is not running")
+var errNoCUPS error = nmTextError(i18n.Mark("the printing service (CUPS) is not running"))
 
 // cupsPrinting is Printing over CUPS's socket and the system bus.
 type cupsPrinting struct {
@@ -166,11 +168,11 @@ func (c *cupsPrinting) do(path string, req *goipp.Message, doc io.Reader) (*goip
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("CUPS answered %s", resp.Status)
+		return nil, fmt.Errorf(i18n.T("CUPS answered %s"), resp.Status)
 	}
 	var m goipp.Message
 	if err := m.Decode(resp.Body); err != nil {
-		return nil, fmt.Errorf("CUPS's answer cannot be read: %v", err)
+		return nil, fmt.Errorf(i18n.T("CUPS's answer cannot be read: %v"), err)
 	}
 	return &m, nil
 }
@@ -274,7 +276,7 @@ func (c *cupsPrinting) defaultPrinter() (string, error) {
 func (c *cupsPrinting) PrintTestPage(name string) (int, error) {
 	f, err := os.Open(c.testPage)
 	if err != nil {
-		return 0, fmt.Errorf("CUPS's test page is missing: %v", err)
+		return 0, fmt.Errorf(i18n.T("CUPS's test page is missing: %v"), err)
 	}
 	defer f.Close()
 	req := c.request(goipp.OpPrintJob)
@@ -295,7 +297,7 @@ func (c *cupsPrinting) PrintTestPage(name string) (int, error) {
 
 func (c *cupsPrinting) Find(ctx context.Context) ([]FoundPrinter, error) {
 	if c.find == nil {
-		return nil, errors.New("no printer search on this system")
+		return nil, errors.New(i18n.T("no printer search on this system"))
 	}
 	return c.find(ctx)
 }

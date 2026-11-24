@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Hooks are every side effect the UI triggers. main wires them to the
@@ -262,11 +262,11 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	}
 	if u.confirming {
 		gtx.Constraints = full
-		u.Confirm(gtx, "Skip setup?",
-			"Isotope keeps the settings it has. You can open this window again from the Isotope menu (Super+Esc → Welcome).",
+		u.Confirm(gtx, i18n.T("Skip setup?"),
+			i18n.T("Isotope keeps the settings it has. You can open this window again from the Isotope menu (Super+Esc → Welcome)."),
 			[]guikit.Action{
-				{Click: &u.skipNo, Kind: guikit.ButtonSecondary, Label: "Keep going"},
-				{Click: &u.skipYes, Kind: guikit.ButtonPrimary, Label: "Skip setup"},
+				{Click: &u.skipNo, Kind: guikit.ButtonSecondary, Label: i18n.T("Keep going")},
+				{Click: &u.skipYes, Kind: guikit.ButtonPrimary, Label: i18n.T("Skip setup")},
 			})
 	}
 	if !u.pageAt.IsZero() && u.now().Sub(u.pageAt) < guikit.SlideTime {
@@ -296,7 +296,8 @@ func (u *UI) steps() guikit.Steps {
 		name := PageTitle(p)
 		if p == PApps && u.installing() {
 			done, total, _ := u.installer.Progress()
-			name = fmt.Sprintf("%s %d/%d", name, min(done+1, total), total)
+			// TRANSLATORS: a page name in the sidebar, then the app being installed and the number of apps ("Apps 2/5").
+			name = i18n.Tf("%[1]s %[2]d/%[3]d", name, min(done+1, total), total)
 		}
 		names = append(names, name)
 	}
@@ -311,14 +312,14 @@ func (u *UI) slide(w layout.Widget) layout.Widget {
 // nav are the footer buttons for the current page.
 func (u *UI) nav() nav {
 	n := nav{
-		Skip:     &guikit.Action{Click: &u.skip, Kind: guikit.ButtonGhost, Label: "Skip"},
-		Continue: &guikit.Action{Click: &u.cont, Kind: guikit.ButtonPrimary, Label: "Continue"},
+		Skip:     &guikit.Action{Click: &u.skip, Kind: guikit.ButtonGhost, Label: i18n.T("Skip")},
+		Continue: &guikit.Action{Click: &u.cont, Kind: guikit.ButtonPrimary, Label: i18n.T("Continue")},
 	}
 	if u.flow.Index() == len(u.flow.Pages())-1 {
-		n.Continue.Label = "Done"
+		n.Continue.Label = i18n.T("Done")
 	}
 	if u.flow.Index() > 0 {
-		n.Back = &guikit.Action{Click: &u.back, Kind: guikit.ButtonSecondary, Label: "Go back"}
+		n.Back = &guikit.Action{Click: &u.back, Kind: guikit.ButtonSecondary, Label: i18n.T("Go back")}
 	}
 	return n
 }
@@ -562,5 +563,5 @@ type stubPage struct {
 }
 
 func (s *stubPage) Body(gtx layout.Context) layout.Dimensions {
-	return guikit.Pad(gtx, s.u.Heading(PageTitle(s.id), "This page is not available yet."))
+	return guikit.Pad(gtx, s.u.Heading(PageTitle(s.id), i18n.T("This page is not available yet.")))
 }

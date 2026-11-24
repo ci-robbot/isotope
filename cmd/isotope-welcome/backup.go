@@ -20,6 +20,8 @@ import (
 	"unicode"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // BackupState is what BackupStatus says about restoring. CanRestore is the
@@ -201,7 +203,7 @@ func withSecrets(c Credentials, call func(dbus.UnixFD) error) error {
 	payload := []byte(strings.Join(append([]string{c.Password}, c.Env...), "\n") + "\n")
 	defer clear(payload)
 	if len(payload) > 4096 {
-		return errors.New("the secret is too long")
+		return errors.New(i18n.T("the secret is too long"))
 	}
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -252,9 +254,9 @@ const (
 )
 
 var remoteKinds = []struct{ ID, Name, Sub string }{
-	{remoteREST, "REST server", "restic's rest-server, over HTTP or HTTPS"},
-	{remoteS3, "S3", "Amazon S3, or a service that works like it"},
-	{remoteSFTP, "SFTP", "A server you reach with SSH"},
+	{remoteREST, i18n.Mark("REST server"), i18n.Mark("restic's rest-server, over HTTP or HTTPS")},
+	{remoteS3, "S3", i18n.Mark("Amazon S3, or a service that works like it")},
+	{remoteSFTP, "SFTP", i18n.Mark("A server you reach with SSH")},
 }
 
 func hasControl(s string) bool { return strings.ContainsFunc(s, unicode.IsControl) }
@@ -263,16 +265,16 @@ func hasControl(s string) bool { return strings.ContainsFunc(s, unicode.IsContro
 func cleanFolder(folder string) (string, error) {
 	f := strings.TrimSpace(folder)
 	if hasControl(f) {
-		return "", errors.New("The folder name has a control character.")
+		return "", errors.New(i18n.T("The folder name has a control character."))
 	}
 	for _, part := range strings.Split(f, "/") {
 		if part == "." || part == ".." {
-			return "", errors.New("The folder cannot have . or .. in it.")
+			return "", errors.New(i18n.T("The folder cannot have . or .. in it."))
 		}
 	}
 	f = strings.Trim(path.Clean("/"+f), "/")
 	if f == "" {
-		return "", errors.New("Type the folder on the disk where the backup is.")
+		return "", errors.New(i18n.T("Type the folder on the disk where the backup is."))
 	}
 	return f, nil
 }
@@ -291,7 +293,7 @@ func usbTarget(d USBDisk, folder string) (string, error) {
 // the credentials pipe.
 func envLine(name, value string) (string, error) {
 	if strings.ContainsAny(value, "\r\n\x00") {
-		return "", fmt.Errorf("The value of %s has a line break in it.", name)
+		return "", errors.New(i18n.Tf("The value of %s has a line break in it.", name))
 	}
 	return name + "=" + value, nil
 }
@@ -316,10 +318,10 @@ func restTarget(raw, user, password string) (string, []string, error) {
 	u := strings.TrimSpace(raw)
 	pu, err := url.Parse(u)
 	if u == "" || hasControl(u) || err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Host == "" {
-		return "", nil, errors.New("Type the address of the server, starting with http:// or https://.")
+		return "", nil, errors.New(i18n.T("Type the address of the server, starting with http:// or https://."))
 	}
 	if pu.User != nil {
-		return "", nil, errors.New("Put the user and the password in their fields, not in the address.")
+		return "", nil, errors.New(i18n.T("Put the user and the password in their fields, not in the address."))
 	}
 	env, err := envLines([][2]string{{"RESTIC_REST_USERNAME", user}, {"RESTIC_REST_PASSWORD", password}})
 	if err != nil {
@@ -336,13 +338,13 @@ func s3Target(endpoint, bucket, folder, keyID, secret, region string) (string, [
 	p := strings.Trim(strings.TrimSpace(folder), "/")
 	switch {
 	case e == "" || hasControl(e) || strings.ContainsAny(e, "@ "):
-		return "", nil, errors.New("Type the endpoint of the service, such as https://s3.amazonaws.com.")
+		return "", nil, errors.New(i18n.T("Type the endpoint of the service, such as https://s3.amazonaws.com."))
 	case b == "" || hasControl(b) || strings.ContainsAny(b, "/ "):
-		return "", nil, errors.New("Type the name of the bucket.")
+		return "", nil, errors.New(i18n.T("Type the name of the bucket."))
 	case hasControl(p):
-		return "", nil, errors.New("The path has a control character.")
+		return "", nil, errors.New(i18n.T("The path has a control character."))
 	case strings.TrimSpace(keyID) == "" || secret == "":
-		return "", nil, errors.New("Type the access key ID and the secret access key.")
+		return "", nil, errors.New(i18n.T("Type the access key ID and the secret access key."))
 	}
 	t := "s3:" + e + "/" + b
 	if p != "" {
@@ -366,22 +368,22 @@ func sftpTarget(userHost, portText, folder string) (target, host string, port ui
 	if i := strings.LastIndex(uh, "@"); i >= 0 {
 		user, host = uh[:i], uh[i+1:]
 		if user == "" || strings.HasPrefix(user, "-") || hasControl(user) || strings.ContainsAny(user, " :/@") {
-			return "", "", 0, errors.New("Type the user and the server as user@server.")
+			return "", "", 0, errors.New(i18n.T("Type the user and the server as user@server."))
 		}
 	}
 	if host == "" || strings.HasPrefix(host, "-") || strings.Trim(host, hostChars) != "" {
-		return "", "", 0, errors.New("Type the user and the server as user@server.")
+		return "", "", 0, errors.New(i18n.T("Type the user and the server as user@server."))
 	}
 	n := uint64(22)
 	if ps := strings.TrimSpace(portText); ps != "" {
 		n, err = strconv.ParseUint(ps, 10, 16)
 		if err != nil || n == 0 {
-			return "", "", 0, errors.New("The port is a number from 1 to 65535.")
+			return "", "", 0, errors.New(i18n.T("The port is a number from 1 to 65535."))
 		}
 	}
 	p := strings.TrimSpace(folder)
 	if p == "" || hasControl(p) {
-		return "", "", 0, errors.New("Type the folder on the server where the backup is.")
+		return "", "", 0, errors.New(i18n.T("Type the folder on the server where the backup is."))
 	}
 	if n == 22 {
 		return "sftp:" + uh + ":" + p, host, 22, nil
@@ -404,7 +406,7 @@ func hostKeyChoices(fps []string) []hostKey {
 		case 0:
 			continue
 		case 1:
-			out = append(out, hostKey{typ: "Key", fingerprint: f[0]})
+			out = append(out, hostKey{typ: i18n.T("Key"), fingerprint: f[0]})
 		default:
 			out = append(out, hostKey{typ: f[0], fingerprint: f[len(f)-1]})
 		}
@@ -556,7 +558,7 @@ func USBDisksOnBus() ([]USBDisk, error) {
 func humanSize(n uint64) string {
 	units := []string{"kB", "MB", "GB", "TB", "PB"}
 	if n < 1000 {
-		return fmt.Sprintf("%d bytes", n)
+		return i18n.Tf("%d bytes", n)
 	}
 	v := float64(n) / 1000
 	i := 0
@@ -573,9 +575,9 @@ func ago(now, t time.Time) string {
 	y2, m2, d2 := t.Date()
 	switch {
 	case y1 == y2 && m1 == m2 && d1 == d2:
-		return "today at " + t.Format("15:04")
+		return i18n.Tf("today at %s", t.Format("15:04"))
 	case now.AddDate(0, 0, -1).Format("2006-01-02") == t.Format("2006-01-02"):
-		return "yesterday at " + t.Format("15:04")
+		return i18n.Tf("yesterday at %s", t.Format("15:04"))
 	}
 	return t.Format("2 January 2006, 15:04")
 }

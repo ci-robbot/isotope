@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kairos-community/isotope/pkg/fwupd"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // The tray says when a device has a firmware update: fwupd (pkg/fwupd, as
@@ -87,12 +88,11 @@ func (w firmwareWatch) once() {
 		if seen[key] {
 			continue
 		}
-		name := u.Device.Name
-		if name == "" {
-			name = "A device"
+		body := i18n.Tf("%[1]s can be updated to version %[2]s. Isotope System's Updates page installs it.", u.Device.Name, u.Release.Version)
+		if u.Device.Name == "" {
+			body = i18n.Tf("A device can be updated to version %s. Isotope System's Updates page installs it.", u.Release.Version)
 		}
-		body := name + " can be updated to version " + u.Release.Version + ". Isotope System's Updates page installs it."
-		err := w.notify("Firmware update available", body, "Open Isotope System", func() {
+		err := w.notify(i18n.T("Firmware update available"), body, i18n.T("Open Isotope System"), func() {
 			if err := w.open("updates"); err != nil {
 				w.log.Printf("opening Isotope System: %v", err)
 			}

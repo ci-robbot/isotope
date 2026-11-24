@@ -18,6 +18,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -86,8 +87,10 @@ func (p *livePage) load() {
 	for _, k := range p.keyboardList {
 		kbs = append(kbs, chooserEntry{name: k.Description, code: k.Code()})
 	}
-	p.languages = newChooser("Language", "New apps use this language. The installer uses it too.", "Search languages", "Use this language", langs)
-	p.keyboards = newChooser("Keyboard layout", "The layout changes at once. The installer uses it too.", "Search layouts", "Use this layout", kbs)
+	// The chooser's texts are translated where they are shown: the
+	// language may change while the page is open.
+	p.languages = newChooser(i18n.Mark("Language"), i18n.Mark("New apps use this language. The installer uses it too."), i18n.Mark("Search languages"), i18n.Mark("Use this language"), langs)
+	p.keyboards = newChooser(i18n.Mark("Keyboard layout"), i18n.Mark("The layout changes at once. The installer uses it too."), i18n.Mark("Search layouts"), i18n.Mark("Use this layout"), kbs)
 }
 
 // wait blocks until the session hooks have run (tests).
@@ -119,12 +122,12 @@ func (p *livePage) Update(gtx layout.Context) {
 func (p *livePage) startInstall() {
 	r := p.u.hooks.Runner
 	if r == nil {
-		p.err = "The installer is not available."
+		p.err = i18n.T("The installer is not available.")
 		return
 	}
 	proc, err := r.Start(liveInstaller)
 	if err != nil {
-		p.err = "Could not start the installer: " + err.Error()
+		p.err = i18n.Tf("Could not start the installer: %v", err)
 		return
 	}
 	p.err = ""
@@ -170,12 +173,12 @@ func (p *livePage) open(c *chooser, code string, back *widget.Clickable, chosen 
 		u.focus = back
 	}
 	u.ask(&question{
-		title: c.title,
-		body:  c.body,
+		title: i18n.T(c.title),
+		body:  i18n.T(c.body),
 		form:  func(gtx layout.Context) layout.Dimensions { return c.form(gtx, u.Theme) },
 		actions: []guikit.Action{
-			{Click: &c.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel"},
-			{Click: &c.use, Kind: guikit.ButtonPrimary, Label: c.useLabel},
+			{Click: &c.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")},
+			{Click: &c.use, Kind: guikit.ButtonPrimary, Label: i18n.T(c.useLabel)},
 		},
 		update: func(gtx layout.Context) {
 			switch e, act := c.update(gtx); act {
@@ -203,7 +206,7 @@ func (p *livePage) apply(change func(*LiveChoices)) {
 	p.mu.Unlock()
 	if path := p.u.hooks.LiveChoicesFile; path != "" {
 		if err := WriteLiveChoices(path, c); err != nil {
-			p.setApplyErr("Could not save the choice for the installer: " + err.Error())
+			p.setApplyErr(i18n.Tf("Could not save the choice for the installer: %v", err))
 		}
 	}
 	if start {
@@ -237,7 +240,7 @@ func (p *livePage) work() {
 			}
 		}
 		if err != nil {
-			p.setApplyErr("Could not apply it to this session: " + err.Error())
+			p.setApplyErr(i18n.Tf("Could not apply it to this session: %v", err))
 		}
 		if h.Invalidate != nil {
 			h.Invalidate()
@@ -254,7 +257,7 @@ func (p *livePage) setApplyErr(s string) {
 // languageName and keyboardName are what the two buttons show.
 func (p *livePage) languageName(c LiveChoices) string {
 	if c.Lang == "" {
-		return "Not set"
+		return i18n.T("Not set")
 	}
 	return LocaleName(c.Lang)
 }
@@ -316,7 +319,7 @@ func (p *livePage) main(gtx layout.Context) layout.Dimensions {
 				}),
 				guikit.VGap(12),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StHero, guikit.ColText, "Welcome to Isotope")
+					return u.Label(gtx, guikit.StHero, guikit.ColText, i18n.T("Welcome to Isotope"))
 				}),
 				guikit.VGap(8),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -326,7 +329,7 @@ func (p *livePage) main(gtx layout.Context) layout.Dimensions {
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 520))
 					return u.Centered(gtx, guikit.StLead, guikit.ColText2, 1.55,
-						"You are running Isotope from the USB stick. Nothing on this computer changes until you install it.")
+						i18n.T("You are running Isotope from the USB stick. Nothing on this computer changes until you install it."))
 				}),
 				guikit.VGap(30),
 				layout.Rigid(p.cards),
@@ -346,7 +349,7 @@ func (p *livePage) main(gtx layout.Context) layout.Dimensions {
 				}))
 			}
 			kids = append(kids, guikit.VGap(14), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Centered(gtx, guikit.StSmall, guikit.ColDim, 1.4, "Changes in this session are lost when you shut down.")
+				return u.Centered(gtx, guikit.StSmall, guikit.ColDim, 1.4, i18n.T("Changes in this session are lost when you shut down."))
 			}))
 			return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx, kids...)
 		})
@@ -365,8 +368,8 @@ type liveCard struct {
 // above the other in a narrow window.
 func (p *livePage) cards(gtx layout.Context) layout.Dimensions {
 	cs := []liveCard{
-		{&p.install, true, "Install Isotope", "Put Isotope on this computer's disk. It takes a few minutes.", installIcon},
-		{&p.try, false, "Try it out", tryText(p.u.desktop), tryIcon},
+		{&p.install, true, i18n.T("Install Isotope"), i18n.T("Put Isotope on this computer's disk. It takes a few minutes."), installIcon},
+		{&p.try, false, i18n.T("Try it out"), tryText(p.u.desktop), tryIcon},
 	}
 	gap := guikit.Dp(gtx, 16-2*ringRoom)
 	stacked := gtx.Constraints.Max.X < guikit.Dp(gtx, 520)
@@ -520,12 +523,13 @@ func (p *livePage) helpLine(gtx layout.Context, items []HelpItem) layout.Dimensi
 		}
 		kids = append(kids,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StSmall500, guikit.ColText2, it.Label)
+				// Labels are marked in HelpItems; "Wi-Fi" stays as it is.
+				return u.Label(gtx, guikit.StSmall500, guikit.ColText2, i18n.T(it.Label))
 			}),
 			layout.Rigid(layout.Spacer{Width: 8}.Layout),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				if it.Where != "" {
-					return u.Label(gtx, guikit.StSmall, guikit.ColDim, it.Where)
+					return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T(it.Where))
 				}
 				return u.KeyCaps(gtx, it.Keys)
 			}),
@@ -549,9 +553,9 @@ func (p *livePage) sessionBar(gtx layout.Context) layout.Dimensions {
 		}
 	}
 	return u.Footer(gtx, nil, func(gtx layout.Context) layout.Dimensions {
-		kids := field("Language", &p.languageBtn, p.languageName(c))
+		kids := field(i18n.T("Language"), &p.languageBtn, p.languageName(c))
 		kids = append(kids, layout.Rigid(layout.Spacer{Width: 28}.Layout))
-		kids = append(kids, field("Keyboard", &p.keyboardBtn, p.keyboardName(c))...)
+		kids = append(kids, field(i18n.T("Keyboard"), &p.keyboardBtn, p.keyboardName(c))...)
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
 	}, nil)
 }
@@ -691,7 +695,7 @@ func (c *chooser) update(gtx layout.Context) (chooserEntry, int) {
 func (c *chooser) form(gtx layout.Context, th *guikit.Theme) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return th.Labelled(gtx, c.searchLabel, nil, "", func(gtx layout.Context) layout.Dimensions {
+			return th.Labelled(gtx, i18n.T(c.searchLabel), nil, "", func(gtx layout.Context) layout.Dimensions {
 				return th.Input(gtx, c.search, guikit.StBody, 38, "", nil)
 			})
 		}),

@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -57,6 +58,8 @@ func main() {
 	// install. The unattended paths keep the text progress screen.
 	if !progressOnly && guiWanted() {
 		if auto, err := unattended(); err == nil && !auto {
+			// The fallback note below is for the person at the screen.
+			i18n.Init()
 			fallback, note, err := runGUI()
 			if errors.Is(err, errRescueShell) {
 				// As the text installer's failure screen does: the shell

@@ -7,6 +7,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -69,9 +70,9 @@ func (p *extPage) load() {
 		}
 		switch {
 		case ierr != nil:
-			p.loadErr = "Could not list the installed extensions: " + Describe(ierr)
+			p.loadErr = i18n.Tf("Could not list the installed extensions: %s", Describe(ierr))
 		case cerr != nil:
-			p.loadErr = "Could not read the catalogs (is the network up?): " + Describe(cerr)
+			p.loadErr = i18n.Tf("Could not read the catalogs (is the network up?): %s", Describe(cerr))
 		}
 	})
 }
@@ -85,7 +86,8 @@ func (p *extPage) clicksFor(name string) *extClicks {
 	return c
 }
 
-// change starts an extension job; the outcome comes in jobEnded.
+// change starts an extension job; the outcome comes in jobEnded. what is
+// the title of its failure ("Could not install NAME").
 func (p *extPage) change(what string, f func(force bool) error) {
 	u := p.u
 	if u.hooks.Daemon == nil {
@@ -99,7 +101,7 @@ func (p *extPage) change(what string, f func(force bool) error) {
 			u.mu.Lock()
 			p.retry = nil
 			u.mu.Unlock()
-			u.tell("Could not "+what, Describe(err))
+			u.tell(what, Describe(err))
 		}
 	})
 }
@@ -124,20 +126,20 @@ func (p *extPage) jobEnded(prev string, st Status) {
 		if retry == nil {
 			break
 		}
-		u.ask("Replace system files?", st.ExtDetail+"\n\nInstalling it anyway replaces those files of the running system while it is enabled.",
-			choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-			choice{Label: "Install anyway", Kind: guikit.ButtonDanger, Do: func() {
+		u.ask(i18n.T("Replace system files?"), st.ExtDetail+"\n\n"+i18n.T("Installing it anyway replaces those files of the running system while it is enabled."),
+			choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+			choice{Label: i18n.T("Install anyway"), Kind: guikit.ButtonDanger, Do: func() {
 				u.mu.Lock()
 				p.retry, p.what = retry, what
 				u.mu.Unlock()
 				u.async(func() {
 					if err := retry(true); err != nil {
-						u.tell("Could not "+what, Describe(err))
+						u.tell(what, Describe(err))
 					}
 				})
 			}})
 	case "failed":
-		u.tell("Could not "+what, st.ExtDetail)
+		u.tell(what, st.ExtDetail)
 	case "ok":
 		// isotope-updated names the services it started or stopped on
 		// lines of their own after the first; say them.
@@ -157,13 +159,13 @@ func (p *extPage) Update(gtx layout.Context) {
 	for name, c := range p.clicks {
 		name := name
 		if c.install.Clicked(gtx) {
-			p.change("install "+name, func(force bool) error { return d.InstallExtension(name, "", force) })
+			p.change(i18n.Tf("Could not install %s", name), func(force bool) error { return d.InstallExtension(name, "", force) })
 		}
 		if c.remove.Clicked(gtx) {
-			p.u.ask("Remove "+name+"?", "The extension is turned off and deleted. You can install it again from the catalog.",
-				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-				choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
-					p.change("remove "+name, func(bool) error { return d.RemoveExtension(name) })
+			p.u.ask(i18n.Tf("Remove %s?", name), i18n.T("The extension is turned off and deleted. You can install it again from the catalog."),
+				choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+				choice{Label: i18n.T("Remove"), Kind: guikit.ButtonDanger, Do: func() {
+					p.change(i18n.Tf("Could not remove %s", name), func(bool) error { return d.RemoveExtension(name) })
 				}})
 		}
 		if c.toggle.Clicked(gtx) {
@@ -175,11 +177,11 @@ func (p *extPage) Update(gtx layout.Context) {
 				}
 			}
 			p.u.mu.Unlock()
-			verb := "turn on "
+			what := i18n.Tf("Could not turn on %s", name)
 			if !on {
-				verb = "turn off "
+				what = i18n.Tf("Could not turn off %s", name)
 			}
-			p.change(verb+name, func(force bool) error { return d.SetExtensionEnabled(name, on, force) })
+			p.change(what, func(force bool) error { return d.SetExtensionEnabled(name, on, force) })
 		}
 	}
 }
@@ -188,7 +190,7 @@ func (p *extPage) Footer() (leading, trailing []guikit.Action) {
 	p.u.mu.Lock()
 	loading := p.loading
 	p.u.mu.Unlock()
-	return nil, []guikit.Action{{Click: &p.reload, Kind: guikit.ButtonSecondary, Label: "Refresh", Disabled: loading || p.u.hooks.Daemon == nil}}
+	return nil, []guikit.Action{{Click: &p.reload, Kind: guikit.ButtonSecondary, Label: i18n.T("Refresh"), Disabled: loading || p.u.hooks.Daemon == nil}}
 }
 
 func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
@@ -202,14 +204,14 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 	lines := u.progress()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Extensions", "System extensions add programs to the read-only system: drivers, tools and services that are not in the image. They are checked against the running system before they are turned on."))
+		c.add(u.Heading(i18n.T("Extensions"), i18n.T("System extensions add programs to the read-only system: drivers, tools and services that are not in the image. They are checked against the running system before they are turned on.")))
 		c.gap(20)
 		if !ok {
 			c.add(u.errorBox(orUnknown(why)))
 			c.gap(12)
 		}
 		if !u.sys.Admin {
-			c.add(u.notice("Only an administrator (a member of the admin group) can change extensions."))
+			c.add(u.notice(i18n.T("Only an administrator (a member of the admin group) can change extensions.")))
 			c.gap(12)
 		}
 		if loadErr != "" {
@@ -223,13 +225,13 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(16)
 		}
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return u.Input(gtx, p.filter, guikit.StBody, 38, "Search  ", nil)
+			return u.Input(gtx, p.filter, guikit.StBody, 38, i18n.T("Search")+"  ", nil)
 		})
 		c.gap(22)
-		c.add(u.caps("INSTALLED"))
+		c.add(u.caps(i18n.T("INSTALLED")))
 		c.gap(10)
 		if len(inst) == 0 {
-			c.add(u.dim("No extension is installed."))
+			c.add(u.dim(i18n.T("No extension is installed.")))
 		} else {
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -238,30 +240,30 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 						rows.gap(10)
 					}
 					k := p.clicksFor(r.Name)
-					toggle := "Turn on"
+					toggle := i18n.T("Turn on")
 					if r.Enabled {
-						toggle = "Turn off"
+						toggle = i18n.T("Turn off")
 					}
 					sub := r.Description
 					if !r.Enabled {
-						sub = strings.TrimSpace("Off. " + sub)
+						sub = strings.TrimSpace(i18n.Tf("Off. %s", sub))
 					}
 					rows.add(u.row(extTitle(r), sub, u.buttons(
 						guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: toggle, Disabled: busy},
-						guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: "Remove", Disabled: busy},
+						guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove"), Disabled: busy},
 					)))
 				}
 				return rows.layout(gtx)
 			}))
 		}
 		c.gap(26)
-		c.add(u.caps("AVAILABLE"))
+		c.add(u.caps(i18n.T("AVAILABLE")))
 		c.gap(10)
 		switch {
 		case loading && len(avail) == 0:
-			c.add(u.spinnerLine("Reading the catalogs…"))
+			c.add(u.spinnerLine(i18n.T("Reading the catalogs…")))
 		case len(avail) == 0:
-			c.add(u.dim("Nothing more in the catalogs."))
+			c.add(u.dim(i18n.T("Nothing more in the catalogs.")))
 		default:
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -271,7 +273,7 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 					}
 					k := p.clicksFor(r.Name)
 					rows.add(u.row(extTitle(r), r.Description, u.buttons(
-						guikit.Action{Click: &k.install, Kind: guikit.ButtonSecondary, Label: "Install", Disabled: busy},
+						guikit.Action{Click: &k.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install"), Disabled: busy},
 					)))
 				}
 				return rows.layout(gtx)

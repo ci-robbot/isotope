@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Locale is one system locale: Code is what `locale -a` prints and what
@@ -106,7 +108,7 @@ func localeName(base string) string {
 		return n
 	}
 	if base == "C" {
-		return "Default (C.UTF-8)"
+		return i18n.T("Default (C.UTF-8)")
 	}
 	return base
 }

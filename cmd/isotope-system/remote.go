@@ -19,6 +19,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/remotedesktop"
 )
 
@@ -60,7 +61,7 @@ func (c remoteCLI) Status() (remotedesktop.Status, error) {
 	}
 	var st remotedesktop.Status
 	if err := json.Unmarshal(out, &st); err != nil {
-		return st, fmt.Errorf("isotope remote-desktop status gave no status (%v); is isotope up to date?", err)
+		return st, fmt.Errorf(i18n.T("isotope remote-desktop status gave no status (%v); is isotope up to date?"), err)
 	}
 	return st, nil
 }
@@ -106,7 +107,7 @@ func rdConnect(st remotedesktop.Status) string {
 		out = append(out, fmt.Sprintf("%s:%d", a, st.Port))
 	}
 	if len(out) == 0 {
-		return fmt.Sprintf("No network address yet · port %d", st.Port)
+		return i18n.Tf("No network address yet · port %d", st.Port)
 	}
 	return strings.Join(out, " · ")
 }
@@ -116,45 +117,45 @@ func remoteViewOf(in rdInput) rdView {
 	st := in.St
 	switch {
 	case in.Live:
-		v.Sub = "Not available on the live system. Install Isotope first."
+		v.Sub = i18n.T("Not available on the live system. Install Isotope first.")
 		return v
 	case in.Err != "":
 		v.Sub = in.Err
 		return v
 	case !in.Loaded:
-		v.Sub = "Loading…"
+		v.Sub = i18n.T("Loading…")
 		return v
 	case !st.Available:
 		v.Sub = st.Reason
 		v.Extension = st.NeedsExtension
 		if st.NeedsExtension {
-			v.Sub = "Needs the Remote desktop system extension, from the Extensions page."
+			v.Sub = i18n.T("Needs the Remote desktop system extension, from the Extensions page.")
 		}
 		return v
 	}
-	v.Password = "Set password…"
+	v.Password = i18n.T("Set password…")
 	if st.PasswordSet {
-		v.Password = "Change password…"
+		v.Password = i18n.T("Change password…")
 	}
 	if st.Running {
-		v.Sub, v.Toggle = "On · A VNC viewer on another computer can see and control this desktop.", "Turn off"
+		v.Sub, v.Toggle = i18n.T("On · A VNC viewer on another computer can see and control this desktop."), i18n.T("Turn off")
 		v.Rows = append(v.Rows,
-			[2]string{"Connect to", rdConnect(st)},
-			[2]string{"User name", st.User + ", with the remote desktop password"})
+			[2]string{i18n.T("Connect to"), rdConnect(st)},
+			[2]string{i18n.T("User name"), i18n.Tf("%s, with the remote desktop password", st.User)})
 		if st.Fingerprint != "" {
-			v.Rows = append(v.Rows, [2]string{"Certificate (SHA-256)", st.Fingerprint})
+			v.Rows = append(v.Rows, [2]string{i18n.T("Certificate (SHA-256)"), st.Fingerprint})
 		}
 		if st.Firewall == remotedesktop.FirewallClosed {
-			v.Warn = fmt.Sprintf("The firewall blocks port %d/%s, so other computers cannot connect. Turn remote desktop off and on again as an administrator.", st.Port, remotedesktop.Proto)
+			v.Warn = i18n.Tf("The firewall blocks port %d/%s, so other computers cannot connect. Turn remote desktop off and on again as an administrator.", st.Port, remotedesktop.Proto)
 		}
-		v.Hint = "It stays on until you turn it off or log out. Every connection is encrypted (TLS or RSA-AES)."
+		v.Hint = i18n.T("It stays on until you turn it off or log out. Every connection is encrypted (TLS or RSA-AES).")
 		return v
 	}
-	v.Sub, v.Toggle = "Off · Nothing listens for viewers.", "Turn on"
+	v.Sub, v.Toggle = i18n.T("Off · Nothing listens for viewers."), i18n.T("Turn on")
 	v.ToggleNeedPw = !st.PasswordSet
-	v.Hint = fmt.Sprintf("Turning it on starts a VNC server for this session on port %d and lets connections in through the firewall until you turn it off or log out. A viewer logs in with your user name and the remote desktop password, not your login password.", st.Port)
+	v.Hint = i18n.Tf("Turning it on starts a VNC server for this session on port %d and lets connections in through the firewall until you turn it off or log out. A viewer logs in with your user name and the remote desktop password, not your login password.", st.Port)
 	if !in.Admin {
-		v.Hint += " While the firewall is on, only an administrator can turn it on."
+		v.Hint += " " + i18n.T("While the firewall is on, only an administrator can turn it on.")
 	}
 	return v
 }
@@ -202,7 +203,7 @@ func (p *networkPage) rdChange(working string, f func(RemoteDesktop) error) {
 		p.working = ""
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Remote desktop", err.Error())
+			u.tell(i18n.T("Remote desktop"), err.Error())
 		}
 		p.loadRemote()
 		p.loadFirewall()
@@ -218,11 +219,11 @@ func (p *networkPage) updateRemote(gtx layout.Context) {
 	if p.rdk.toggle.Clicked(gtx) && v.Toggle != "" {
 		switch {
 		case running:
-			p.rdChange("Turning remote desktop off…", func(r RemoteDesktop) error { return r.SetOn(false) })
+			p.rdChange(i18n.T("Turning remote desktop off…"), func(r RemoteDesktop) error { return r.SetOn(false) })
 		case v.ToggleNeedPw:
 			p.rdPasswordDialog(true)
 		default:
-			p.rdChange("Turning remote desktop on…", func(r RemoteDesktop) error { return r.SetOn(true) })
+			p.rdChange(i18n.T("Turning remote desktop on…"), func(r RemoteDesktop) error { return r.SetOn(true) })
 		}
 	}
 	if p.rdk.password.Clicked(gtx) && v.Password != "" {
@@ -244,12 +245,12 @@ func (p *networkPage) rdPasswordDialog(thenOn bool) {
 	ok := func() bool {
 		return remotedesktop.CheckPassword(pw.Editor.Text()) == nil && pw.Editor.Text() == again.Editor.Text()
 	}
-	label := "Save"
+	label := i18n.T("Save")
 	if thenOn {
-		label = "Save and turn on"
+		label = i18n.T("Save and turn on")
 	}
-	dlg = newDialog("Remote desktop password",
-		"A VNC viewer asks for it with your user name. Use a password of its own, not your login password.",
+	dlg = newDialog(i18n.T("Remote desktop password"),
+		i18n.T("A VNC viewer asks for it with your user name. Use a password of its own, not your login password."),
 		func(gtx layout.Context) layout.Dimensions {
 			if pw.Submitted(gtx) || again.Submitted(gtx) {
 				u.pick(dlg, 1) // ignored while Save is off
@@ -265,28 +266,28 @@ func (p *networkPage) rdPasswordDialog(thenOn bool) {
 				}
 			}
 			if a := again.Editor.Text(); a != "" && a != pw.Editor.Text() {
-				again.Err = "The two passwords are not the same."
+				again.Err = i18n.T("The two passwords are not the same.")
 			}
 			var c col
 			c.add(func(gtx layout.Context) layout.Dimensions {
-				return u.Labelled(gtx, "Password", pw, fmt.Sprintf("%d to %d characters.", remotedesktop.MinPassword, remotedesktop.MaxPassword), func(gtx layout.Context) layout.Dimensions {
+				return u.Labelled(gtx, i18n.T("Password"), pw, i18n.Tf("%d to %d characters.", remotedesktop.MinPassword, remotedesktop.MaxPassword), func(gtx layout.Context) layout.Dimensions {
 					return u.Input(gtx, pw, guikit.StBody, 38, "", nil)
 				})
 			})
 			c.gap(12)
 			c.add(func(gtx layout.Context) layout.Dimensions {
-				return u.Labelled(gtx, "Again", again, "", func(gtx layout.Context) layout.Dimensions {
+				return u.Labelled(gtx, i18n.T("Again"), again, "", func(gtx layout.Context) layout.Dimensions {
 					return u.Input(gtx, again, guikit.StBody, 38, "", nil)
 				})
 			})
 			return c.layout(gtx)
 		}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
 		choice{Label: label, Kind: guikit.ButtonPrimary, Enabled: ok, Do: func() {
 			secret := pw.Editor.Text()
 			pw.Editor.SetText("")
 			again.Editor.SetText("")
-			p.rdChange("Saving the remote desktop password…", func(r RemoteDesktop) error {
+			p.rdChange(i18n.T("Saving the remote desktop password…"), func(r RemoteDesktop) error {
 				if err := r.SetPassword(secret); err != nil {
 					return err
 				}
@@ -305,7 +306,7 @@ func (p *networkPage) remoteSection(gtx layout.Context, in rdInput, working stri
 	v := remoteViewOf(in)
 	off := working != ""
 	var c col
-	c.add(u.caps("REMOTE DESKTOP"))
+	c.add(u.caps(i18n.T("REMOTE DESKTOP")))
 	c.gap(10)
 	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 		var rows col
@@ -315,9 +316,9 @@ func (p *networkPage) remoteSection(gtx layout.Context, in rdInput, working stri
 			kind := guikit.ButtonSecondary
 			right = u.buttons(guikit.Action{Click: &p.rdk.toggle, Kind: kind, Label: v.Toggle, Disabled: off})
 		case v.Extension:
-			right = u.buttons(guikit.Action{Click: &p.rdk.extensions, Kind: guikit.ButtonSecondary, Label: "Open Extensions"})
+			right = u.buttons(guikit.Action{Click: &p.rdk.extensions, Kind: guikit.ButtonSecondary, Label: i18n.T("Open Extensions")})
 		}
-		rows.add(u.row("Remote desktop", v.Sub, right))
+		rows.add(u.row(i18n.T("Remote desktop"), v.Sub, right))
 		for _, r := range v.Rows {
 			rows.gap(8)
 			rows.add(u.row(r[0], r[1], nil))

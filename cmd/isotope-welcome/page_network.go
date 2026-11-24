@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -8,6 +9,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -73,7 +75,7 @@ func (p *networkPage) load() {
 	if err != nil {
 		// A rescan that fails keeps what the page already shows.
 		if first {
-			p.loadErr = "Could not reach NetworkManager: " + err.Error()
+			p.loadErr = i18n.Tf("Could not reach NetworkManager: %v", err)
 		}
 		return
 	}
@@ -159,11 +161,11 @@ func (p *networkPage) connect() {
 	p.ssid.Err, p.pass.Err = "", ""
 	switch {
 	case hidden && ssid == "":
-		p.ssid.Err = "Enter the network name"
+		p.ssid.Err = i18n.T("Enter the network name")
 	case ssid == "":
 		// nothing picked
 	case !hidden && p.secured(ssid) && password == "":
-		p.pass.Err = "Enter the password"
+		p.pass.Err = i18n.T("Enter the password")
 	default:
 		p.busy = true
 	}
@@ -180,6 +182,9 @@ func (p *networkPage) connect() {
 		p.busy = false
 		if err != nil {
 			p.pass.Err = err.Error()
+			if errors.Is(err, errWrongPassword) {
+				p.pass.Err = i18n.T(errWrongPassword.Error())
+			}
 			return
 		}
 		p.st = NetState{Connected: true, HasWifi: true, Name: ssid}
@@ -259,12 +264,12 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			p.mu.Lock()
 			name := p.st.Name
 			p.mu.Unlock()
-			line := "Connected"
+			line := i18n.T("Connected")
 			if name != "" {
-				line = "Connected to " + name
+				line = i18n.Tf("Connected to %s", name)
 			}
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Network", "You are online. Apps and updates can use the connection.")),
+				layout.Rigid(u.Heading(i18n.T("Network"), i18n.T("You are online. Apps and updates can use the connection."))),
 				guikit.VGap(22),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 580))
@@ -279,7 +284,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 					})
 				}))
 		case netNoDevice:
-			return u.Heading("Network", "Plug in a network cable, or continue without a network.")(gtx)
+			return u.Heading(i18n.T("Network"), i18n.T("Plug in a network cable, or continue without a network."))(gtx)
 		case netList:
 			return p.networks(gtx)
 		case netError:
@@ -287,7 +292,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			msg := p.loadErr
 			p.mu.Unlock()
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(u.Heading("Network", "Isotope could not look for networks.")),
+				layout.Rigid(u.Heading(i18n.T("Network"), i18n.T("Isotope could not look for networks."))),
 				guikit.VGap(22),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 580))
@@ -295,10 +300,10 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 				}),
 				guikit.VGap(16),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Button(gtx, &p.retry, guikit.ButtonSecondary, "Try again", true)
+					return u.Button(gtx, &p.retry, guikit.ButtonSecondary, i18n.T("Try again"), true)
 				}))
 		}
-		return u.Heading("Network", "Looking for networks…")(gtx)
+		return u.Heading(i18n.T("Network"), i18n.T("Looking for networks…"))(gtx)
 	})
 }
 
@@ -309,7 +314,7 @@ func (p *networkPage) networks(gtx layout.Context) layout.Dimensions {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	kids := []layout.FlexChild{
-		layout.Rigid(u.Heading("Network", "Pick a Wi-Fi network. You can also continue without one.")),
+		layout.Rigid(u.Heading(i18n.T("Network"), i18n.T("Pick a Wi-Fi network. You can also continue without one."))),
 		guikit.VGap(20),
 	}
 	col := func(w layout.Widget) layout.Widget {
@@ -321,7 +326,7 @@ func (p *networkPage) networks(gtx layout.Context) layout.Dimensions {
 	if p.hidden {
 		kids = append(kids, layout.Rigid(col(p.hiddenForm)))
 		kids = append(kids, guikit.VGap(14), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Link(gtx, &p.listLink, "Show the list of networks")
+			return u.Link(gtx, &p.listLink, i18n.T("Show the list of networks"))
 		}))
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)
 	}
@@ -330,14 +335,16 @@ func (p *networkPage) networks(gtx layout.Context) layout.Dimensions {
 	}
 	if len(p.aps) == 0 {
 		kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StBody, guikit.ColDim, "No Wi-Fi networks found.")
+			return u.Label(gtx, guikit.StBody, guikit.ColDim, i18n.T("No Wi-Fi networks found."))
 		}), guikit.VGap(8))
 	}
 	kids = append(kids, guikit.VGap(6), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.hiddenLink, "Hidden network…") }),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return u.Link(gtx, &p.hiddenLink, i18n.T("Hidden network…"))
+			}),
 			layout.Rigid(layout.Spacer{Width: 22}.Layout),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.rescan, "Scan again") }))
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.rescan, i18n.T("Scan again")) }))
 	}))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, kids...)
 }
@@ -361,7 +368,7 @@ func (p *networkPage) apRow(gtx layout.Context, a AccessPoint) layout.Dimensions
 						return layout.Dimensions{}
 					}
 					return layout.Inset{Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StTiny, guikit.ColDim, "Secured")
+						return u.Label(gtx, guikit.StTiny, guikit.ColDim, i18n.T("Secured"))
 					})
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -384,7 +391,7 @@ func (p *networkPage) connectBlock(gtx layout.Context, secured bool) layout.Dime
 	var kids []layout.FlexChild
 	if secured {
 		kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Labelled(gtx, "Password", p.pass, "", func(gtx layout.Context) layout.Dimensions {
+			return u.Labelled(gtx, i18n.T("Password"), p.pass, "", func(gtx layout.Context) layout.Dimensions {
 				return u.Input(gtx, p.pass, guikit.StBody, 38, "", nil)
 			})
 		}), guikit.VGap(12))
@@ -399,9 +406,9 @@ func (p *networkPage) connectBlock(gtx layout.Context, secured bool) layout.Dime
 }
 
 func (p *networkPage) connectButton(gtx layout.Context) layout.Dimensions {
-	txt := "Connect"
+	txt := i18n.T("Connect")
 	if p.busy {
-		txt = "Connecting…"
+		txt = i18n.T("Connecting…")
 	}
 	return p.u.Button(gtx, &p.connectBtn, guikit.ButtonPrimary, txt, !p.busy)
 }
@@ -411,13 +418,13 @@ func (p *networkPage) hiddenForm(gtx layout.Context) layout.Dimensions {
 	u := p.u
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Labelled(gtx, "Network name", p.ssid, "", func(gtx layout.Context) layout.Dimensions {
+			return u.Labelled(gtx, i18n.T("Network name"), p.ssid, "", func(gtx layout.Context) layout.Dimensions {
 				return u.Input(gtx, p.ssid, guikit.StBody, 38, "", nil)
 			})
 		}),
 		guikit.VGap(14),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Labelled(gtx, "Password", p.pass, "Leave empty for an open network.", func(gtx layout.Context) layout.Dimensions {
+			return u.Labelled(gtx, i18n.T("Password"), p.pass, i18n.T("Leave empty for an open network."), func(gtx layout.Context) layout.Dimensions {
 				return u.Input(gtx, p.pass, guikit.StBody, 38, "", nil)
 			})
 		}),

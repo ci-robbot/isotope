@@ -1,0 +1,294 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: isotope isotope-tray\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Log in to %[1]s as %[2]s."
+msgstr ""
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Log in to %s."
+msgstr ""
+
+#: cmd/isotope/agents.go
+msgid "The server asks for a second step to log in."
+msgstr ""
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "The server asks for a second step to log in. It asks for: %s"
+msgstr ""
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Could not log in: %s"
+msgstr ""
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "The login failed: %s"
+msgstr ""
+
+#: cmd/isotope/agents.go
+msgid "The server did not answer in time."
+msgstr ""
+
+#: cmd/isotope/apps_tray.go
+#: cmd/isotope/firmware_tray.go
+msgid "Open Isotope System"
+msgstr ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%[1]s and %[2]s"
+msgstr ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%[1]s, %[2]s and %[3]d more"
+msgid_plural "%[1]s, %[2]s and %[3]d more"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "An app update needs your OK"
+msgid_plural "%d app updates need your OK"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%s asks for more permissions. Isotope System's Apps page shows what it asks for."
+msgid_plural "%s ask for more permissions. Isotope System's Apps page shows what they ask for."
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%d app update"
+msgid_plural "%d app updates"
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%s can be updated. Isotope System's Apps page installs it."
+msgid_plural "%s can be updated. Isotope System's Apps page installs them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: cmd/isotope/client.go
+msgid "Only members of the admin group can change this system."
+msgstr ""
+
+#: cmd/isotope/client.go
+msgid "The last update waits for a restart; restart first."
+msgstr ""
+
+#: cmd/isotope/client.go
+msgid "Another update is running."
+msgstr ""
+
+#: cmd/isotope/client.go
+msgid "The last update did not finish; restart before choosing a system."
+msgstr ""
+
+#: cmd/isotope/client.go
+msgid "An update is installed and waits for a reboot; restart into it first. The system you run now is then the previous one."
+msgstr ""
+
+#: cmd/isotope/client.go
+msgid "The system is already restarting."
+msgstr ""
+
+#: cmd/isotope/firmware_tray.go
+#, go-format
+msgid "%[1]s can be updated to version %[2]s. Isotope System's Updates page installs it."
+msgstr ""
+
+#: cmd/isotope/firmware_tray.go
+#, go-format
+msgid "A device can be updated to version %s. Isotope System's Updates page installs it."
+msgstr ""
+
+#: cmd/isotope/firmware_tray.go
+msgid "Firmware update available"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Unmanaged image"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Checking for updates…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s (pinned)"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s is up to date"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s is available"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Checking the image…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Installing the update…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Changing system extensions…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Backing up this machine…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Restoring a backup…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Update failed; restart before trying again"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Update interrupted; restart before trying again"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s is installed: restart to finish"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Update installed; restart to use it"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Error: %s"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Install %s"
+msgstr ""
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Install latest (%s)"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Other releases"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Switch desktop"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Switch to the hardware image"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Switch to the virtual machine image"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Install an image…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Cancel the update"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Restart now"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Extensions…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Recovery key…"
+msgstr ""
+
+#: cmd/isotope/menu.go
+msgid "Restart into the previous system"
+msgstr ""
+
+#: cmd/isotope/tray.go
+msgid "Isotope updates"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "Update service not available"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s was installed in the background. It starts at the next restart."
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s was installed in the background. It starts at the next restart. Run `isotope reboot` to restart now."
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "Restart to finish the update"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "Restart"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "could not open Isotope System: %w"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "the update service is not available"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "Isotope update"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "unknown"
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "You are on %s. Install it from the update icon's menu in the panel."
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "You are on %s. Run `isotope upgrade` in a terminal to install it."
+msgstr ""
+
+#: cmd/isotope/trayapp.go
+msgid "no terminal to open: %s sets no TERMINAL_EXEC, and neither foot nor xterm is installed"
+msgstr ""

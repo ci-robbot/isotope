@@ -6,6 +6,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // choice is one button of a dialog: its label, its look and what it does.
@@ -64,7 +65,7 @@ func (u *UI) open(d *dialog) {
 
 // tell is a message with one OK button.
 func (u *UI) tell(title, body string) {
-	u.ask(title, body, choice{Label: "OK", Kind: guikit.ButtonPrimary})
+	u.ask(title, body, choice{Label: i18n.T("OK"), Kind: guikit.ButtonPrimary})
 }
 
 func (u *UI) closeDialog() {

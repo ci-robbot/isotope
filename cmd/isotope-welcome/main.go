@@ -15,6 +15,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -73,6 +74,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, "isotope-welcome: backup is not available yet")
 		os.Exit(2)
 	}
+	// The language of the session (LANG); the live session's Language
+	// page changes it later with i18n.SetLanguage.
+	i18n.Init()
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "isotope-welcome: %v\n", err)
@@ -125,7 +129,7 @@ func main() {
 	ownBar := d == Cosmic
 	sw, sh, ss := screenSize(ExecRunner{}, d)
 	ww, wh := guikit.WindowSize(sw, sh, ss)
-	win.Option(app.Title("Welcome to Isotope"), app.Size(unit.Dp(ww), unit.Dp(wh)),
+	win.Option(app.Title(i18n.T("Welcome to Isotope")), app.Size(unit.Dp(ww), unit.Dp(wh)),
 		app.MinSize(unit.Dp(guikit.MinWindowW), unit.Dp(guikit.MinWindowH)), app.Decorated(!ownBar))
 	u := newUI(flowFor(page, d, systemLocale()), d, guikit.NewShaper(), Hooks{
 		Invalidate:        win.Invalidate,
@@ -158,7 +162,19 @@ func main() {
 		// at once and written for the installer.
 		Live:            liveChoicesNow(os.Getenv, systemLocale()),
 		LiveChoicesFile: LiveChoicesPath(os.Getenv("XDG_RUNTIME_DIR")),
-		SessionLocale:   func(lang string) error { return SetSessionLocale(ExecRunner{}, lang) },
+		SessionLocale: func(lang string) error {
+			if err := SetSessionLocale(ExecRunner{}, lang); err != nil {
+				return err
+			}
+			// Welcome itself follows the language from the next frame.
+			i18n.SetLanguage(i18n.Candidates(func(k string) string {
+				if k == "LANG" {
+					return lang
+				}
+				return ""
+			})...)
+			return nil
+		},
 		SessionKeymap: func(layout, variant string) error {
 			return ApplySessionKeymap(ExecRunner{}, home, d, layout, variant)
 		},
@@ -179,7 +195,7 @@ func main() {
 		liveDockPin(d, home, PinFirstToCosmicDock)
 	}
 	if ownBar {
-		u.bar = &guikit.TitleBar{Title: "Welcome to Isotope", Left: guikit.ControlsLeftHere()}
+		u.bar = &guikit.TitleBar{Title: i18n.T("Welcome to Isotope"), Left: guikit.ControlsLeftHere()}
 	}
 	u.version = versionLine(releaseFile)
 	if page == PageLiveArg {

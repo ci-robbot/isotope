@@ -18,6 +18,7 @@ import (
 	"github.com/godbus/dbus/v5"
 
 	"github.com/kairos-community/isotope/pkg/firewall"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/shares"
 )
 
@@ -268,20 +269,20 @@ func wrapErr(err error) error {
 func Describe(err error) string {
 	switch errName(err) {
 	case "NotAuthorized":
-		return "Only members of the admin group can do this."
+		return i18n.T("Only members of the admin group can do this.")
 	case "RebootPending":
-		return "The last update waits for a restart; restart first."
+		return i18n.T("The last update waits for a restart; restart first.")
 	case "Busy":
-		return "The update service is busy with another job; try again when it ends."
+		return i18n.T("The update service is busy with another job; try again when it ends.")
 	case "Exiting":
-		return "The update service was stopping; try again."
+		return i18n.T("The update service was stopping; try again.")
 	case "Refused":
 		// The daemon's own sentence says what may not be done.
 		return err.Error()
 	}
 	var dbe dbus.Error
 	if errors.As(err, &dbe) && strings.HasPrefix(dbe.Name, "org.freedesktop.DBus.Error.") {
-		return "The update service (isotope-updated) is not available."
+		return i18n.T("The update service (isotope-updated) is not available.")
 	}
 	if err == nil {
 		return ""
@@ -712,7 +713,7 @@ func withSecrets(secrets []string, call func(dbus.UnixFD) error) error {
 	if len(payload) > 4096 {
 		clear(payload)
 		w.Close()
-		return errors.New("the secret is too long")
+		return errors.New(i18n.T("the secret is too long"))
 	}
 	// A pipe buffer holds at least 4096 bytes (PIPE_BUF; 64 KiB by default
 	// on Linux), so this write never blocks.
@@ -762,7 +763,7 @@ var watchPoll = 3 * time.Second
 func (d *busDaemon) Watch() (<-chan Event, func(), error) {
 	opts := []dbus.MatchOption{dbus.WithMatchSender(busName), dbus.WithMatchObjectPath(busPath), dbus.WithMatchInterface(busInterface)}
 	if err := d.conn.AddMatchSignal(opts...); err != nil {
-		return nil, nil, fmt.Errorf("subscribing to the update service: %w", err)
+		return nil, nil, fmt.Errorf(i18n.T("subscribing to the update service: %w"), err)
 	}
 	sigs := make(chan *dbus.Signal, 64)
 	d.conn.Signal(sigs)

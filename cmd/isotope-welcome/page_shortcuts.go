@@ -5,6 +5,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -40,7 +41,7 @@ func (p *shortcutsPage) showAll() {
 		return
 	}
 	if err := p.u.hooks.OpenShortcutSheet(); err != nil {
-		p.openErr = "The shortcut sheet did not open: " + err.Error()
+		p.openErr = i18n.Tf("The shortcut sheet did not open: %v", err)
 	}
 }
 
@@ -49,7 +50,7 @@ func (p *shortcutsPage) Body(gtx layout.Context) layout.Dimensions {
 	rows := MainShortcuts(u.shortcuts)
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		kids := []layout.FlexChild{
-			layout.Rigid(u.Heading("Shortcuts", "Isotope is made to be used from the keyboard. Super is the key with the Windows logo. These keys work in every app.")),
+			layout.Rigid(u.Heading(i18n.T("Shortcuts"), i18n.T("Isotope is made to be used from the keyboard. Super is the key with the Windows logo. These keys work in every app."))),
 			guikit.VGap(26),
 		}
 		for i, s := range rows {
@@ -60,7 +61,7 @@ func (p *shortcutsPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		kids = append(kids, guikit.VGap(26),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Link(gtx, &p.all, "Show all shortcuts")
+				return u.Link(gtx, &p.all, i18n.T("Show all shortcuts"))
 			}))
 		if p.openErr != "" {
 			kids = append(kids, guikit.VGap(12), layout.Rigid(func(gtx layout.Context) layout.Dimensions {

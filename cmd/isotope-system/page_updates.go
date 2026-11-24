@@ -1,13 +1,13 @@
 package main
 
 import (
-	"strconv"
 	"strings"
 
 	"gioui.org/layout"
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 func init() {
@@ -90,13 +90,10 @@ func (p *updatesPage) loadAppUpdates() {
 
 // appUpdatesLine is "N app updates", "" for none.
 func appUpdatesLine(n int) string {
-	switch {
-	case n <= 0:
+	if n <= 0 {
 		return ""
-	case n == 1:
-		return "1 app update"
 	}
-	return strconv.Itoa(n) + " app updates"
+	return i18n.Nf("%d app update", "%d app updates", n, n)
 }
 
 // loadAuto reads the automatic update setting and its last run. Anyone
@@ -113,7 +110,7 @@ func (p *updatesPage) loadAuto() {
 		p.auto.Loaded = true
 		p.auto.Err = ""
 		if err != nil {
-			p.auto.Err = "Could not read the automatic update setting: " + Describe(err)
+			p.auto.Err = i18n.Tf("Could not read the automatic update setting: %s", Describe(err))
 			return
 		}
 		p.auto.Auto = a
@@ -134,7 +131,7 @@ func (p *updatesPage) setAuto(on bool) {
 		return
 	}
 	u.mu.Lock()
-	p.autoWorking = map[bool]string{true: "Turning automatic updates on…", false: "Turning automatic updates off…"}[on]
+	p.autoWorking = map[bool]string{true: i18n.T("Turning automatic updates on…"), false: i18n.T("Turning automatic updates off…")}[on]
 	u.mu.Unlock()
 	u.async(func() {
 		err := d.SetAutoUpdate(on)
@@ -142,7 +139,7 @@ func (p *updatesPage) setAuto(on bool) {
 		p.autoWorking = ""
 		u.mu.Unlock()
 		if err != nil {
-			u.tell("Automatic updates", Describe(err))
+			u.tell(i18n.T("Automatic updates"), Describe(err))
 		}
 		p.loadAuto()
 	})
@@ -193,9 +190,9 @@ func (p *updatesPage) refresh(check bool) {
 		}
 		switch {
 		case err != nil:
-			p.checkErr = "Could not check for updates: " + Describe(err)
+			p.checkErr = i18n.Tf("Could not check for updates: %s", Describe(err))
 		case lerr != nil:
-			p.checkErr = "Could not list the releases: " + Describe(lerr)
+			p.checkErr = i18n.Tf("Could not list the releases: %s", Describe(lerr))
 		}
 	})
 }
@@ -232,7 +229,7 @@ func (p *updatesPage) Update(gtx layout.Context) {
 		p.setAuto(!autoOn)
 	}
 	if p.cancel.Clicked(gtx) {
-		p.call("Cannot cancel", func(d Daemon) error { return d.Cancel() })
+		p.call(i18n.T("Cannot cancel"), func(d Daemon) error { return d.Cancel() })
 	}
 	if p.restart.Clicked(gtx) {
 		u.reboot()
@@ -240,17 +237,17 @@ func (p *updatesPage) Update(gtx layout.Context) {
 	p.updateFirmwareClicks(gtx)
 	if p.rollback.Clicked(gtx) {
 		if u.writingFirmware() {
-			u.tell("Cannot restart", firmwareWritingText)
+			u.tell(i18n.T("Cannot restart"), i18n.T(firmwareWritingText))
 		} else {
-			u.ask("Restart into the previous system?",
-				"The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again.",
-				choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
-				choice{Label: "Restart", Kind: guikit.ButtonPrimary, Do: func() {
+			u.ask(i18n.T("Restart into the previous system?"),
+				i18n.T("The computer restarts into the system you had before the last update, for the next boot only. The one after starts this system again."),
+				choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary},
+				choice{Label: i18n.T("Restart"), Kind: guikit.ButtonPrimary, Do: func() {
 					if u.writingFirmware() {
-						u.tell("Cannot restart", firmwareWritingText)
+						u.tell(i18n.T("Cannot restart"), i18n.T(firmwareWritingText))
 						return
 					}
-					p.call("Cannot restart into the previous system", func(d Daemon) error { return d.RebootPrevious() })
+					p.call(i18n.T("Cannot restart into the previous system"), func(d Daemon) error { return d.RebootPrevious() })
 				}})
 		}
 	}
@@ -265,7 +262,7 @@ func (p *updatesPage) Update(gtx layout.Context) {
 func (p *updatesPage) installTag(tag string) {
 	ref, err := releaseRef(p.u.sys.Release, p.u.sys.Release.Flavor, p.u.sys.Release.Line(), tag)
 	if err != nil {
-		p.u.tell("Cannot install "+tag, err.Error())
+		p.u.tell(i18n.Tf("Cannot install %s", tag), err.Error())
 		return
 	}
 	p.u.startInstall("Isotope "+tag, ref, false, "")
@@ -289,18 +286,18 @@ func (p *updatesPage) Footer() (leading, trailing []guikit.Action) {
 	p.u.mu.Lock()
 	checking := p.checking
 	p.u.mu.Unlock()
-	label := "Check now"
+	label := i18n.T("Check now")
 	if checking {
-		label = "Checking…"
+		label = i18n.T("Checking…")
 	}
 	trailing = append(trailing, guikit.Action{Click: &p.check, Kind: guikit.ButtonSecondary, Label: label,
 		Disabled: !ok || checking || st.Busy()})
 	if o.Latest != "" {
 		trailing = append(trailing, guikit.Action{Click: &p.install, Kind: guikit.ButtonPrimary,
-			Label: "Install " + o.Latest, Disabled: !o.CanInstall || !p.u.sys.Admin})
+			Label: i18n.Tf("Install %s", o.Latest), Disabled: !o.CanInstall || !p.u.sys.Admin})
 	}
 	if o.Restart {
-		trailing = append(trailing, guikit.Action{Click: &p.restart, Kind: guikit.ButtonPrimary, Label: "Restart now",
+		trailing = append(trailing, guikit.Action{Click: &p.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart now"),
 			Disabled: p.u.writingFirmware()})
 	}
 	return nil, trailing
@@ -320,10 +317,10 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Updates", "Isotope updates as a whole image: the running system is not touched, the new one starts at the next boot, and the previous one stays in the boot menu."))
+		c.add(u.Heading(i18n.T("Updates"), i18n.T("Isotope updates as a whole image: the running system is not touched, the new one starts at the next boot, and the previous one stays in the boot menu.")))
 		c.gap(24)
 		if u.sys.ReleaseErr != "" {
-			c.add(u.errorBox("This system has no Isotope release file: " + u.sys.ReleaseErr))
+			c.add(u.errorBox(i18n.Tf("This system has no Isotope release file: %s", u.sys.ReleaseErr)))
 			return c.layout(gtx)
 		}
 		if !ok {
@@ -331,9 +328,9 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.add(u.lead(o.Headline))
-		sub := "Installed: Isotope " + orUnknown(st.Installed) + " · " + lineLabels[u.sys.Release.Line()]
+		sub := i18n.Tf("Installed: Isotope %[1]s · %[2]s", orUnknown(st.Installed), lineLabel(u.sys.Release.Line()))
 		if st.Pin != "" {
-			sub += " · pinned to " + st.Pin + " (installing the latest release removes the pin)"
+			sub += " · " + i18n.Tf("pinned to %s (installing the latest release removes the pin)", st.Pin)
 		}
 		c.gap(6)
 		c.add(u.dim(sub))
@@ -360,12 +357,12 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.log(lines, 8))
 			if o.Cancel {
 				c.gap(10)
-				c.add(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: "Cancel the update"}))
+				c.add(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel the update")}))
 			}
 		}
 		if !u.sys.Admin {
 			c.gap(16)
-			c.add(u.notice("Only an administrator (a member of the admin group) can install updates. You can still check for them."))
+			c.add(u.notice(i18n.T("Only an administrator (a member of the admin group) can install updates. You can still check for them.")))
 		}
 		c.gap(28)
 		c.add(p.autoSection())
@@ -378,9 +375,9 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 				p.others = make([]widget.Clickable, len(o.Others))
 			}
 			c.gap(28)
-			c.add(u.caps("OTHER RELEASES"))
+			c.add(u.caps(i18n.T("OTHER RELEASES")))
 			c.gap(4)
-			c.add(u.dim("Installing an older release pins the system to it, until you install the latest again."))
+			c.add(u.dim(i18n.T("Installing an older release pins the system to it, until you install the latest again.")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -389,16 +386,16 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 						rows.gap(8)
 					}
 					rows.add(u.row("Isotope "+tag, "", u.buttons(guikit.Action{Click: &p.others[i], Kind: guikit.ButtonSecondary,
-						Label: "Install", Disabled: !o.CanInstall || !u.sys.Admin})))
+						Label: i18n.T("Install"), Disabled: !o.CanInstall || !u.sys.Admin})))
 				}
 				return rows.layout(gtx)
 			}))
 		}
 		if o.Advanced {
 			c.gap(28)
-			c.add(u.caps("INSTALL AN IMAGE"))
+			c.add(u.caps(i18n.T("INSTALL AN IMAGE")))
 			c.gap(4)
-			c.add(u.dim("Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first."))
+			c.add(u.dim(i18n.T("Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first.")))
 			c.gap(10)
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
@@ -406,14 +403,14 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 						return u.Input(gtx, p.image, guikit.StMono13, 38, "", nil)
 					}),
 					layout.Rigid(layout.Spacer{Width: 10}.Layout),
-					layout.Rigid(u.buttons(guikit.Action{Click: &p.advanced, Kind: guikit.ButtonSecondary, Label: "Install…",
+					layout.Rigid(u.buttons(guikit.Action{Click: &p.advanced, Kind: guikit.ButtonSecondary, Label: i18n.T("Install…"),
 						Disabled: !o.CanInstall || !u.sys.Admin})),
 				)
 			})
 		}
 		if hl := HistoryLines(history, st.Installed, u.now()); len(hl) > 0 {
 			c.gap(28)
-			c.add(u.caps("HISTORY"))
+			c.add(u.caps(i18n.T("HISTORY")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -428,10 +425,10 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if o.Rollback {
 			c.gap(28)
-			c.add(u.caps("PREVIOUS SYSTEM"))
+			c.add(u.caps(i18n.T("PREVIOUS SYSTEM")))
 			c.gap(10)
-			c.add(u.row("Restart into the previous system", "For the next boot only: the system you had before the last update.",
-				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: "Restart…", Disabled: !u.sys.Admin || u.writingFirmware()})))
+			c.add(u.row(i18n.T("Restart into the previous system"), i18n.T("For the next boot only: the system you had before the last update."),
+				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || u.writingFirmware()})))
 		}
 		// Isotope's own releases stay here; the apps update on their page.
 		if l := appUpdatesLine(appsN); l != "" && u.hooks.Apps != nil {
@@ -439,7 +436,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Your apps from Flathub: ")
+						return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Your apps from Flathub: "))
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.appsLink, l) }),
 				)
@@ -457,7 +454,7 @@ func (p *updatesPage) autoSection() layout.Widget {
 	u.mu.Unlock()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps("AUTOMATIC UPDATES"))
+		c.add(u.caps(i18n.T("AUTOMATIC UPDATES")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col
@@ -466,7 +463,7 @@ func (p *updatesPage) autoSection() layout.Widget {
 				right = u.buttons(guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle,
 					Disabled: !v.Enabled || working != ""})
 			}
-			rows.add(u.row("Install updates automatically", v.Sub, right))
+			rows.add(u.row(i18n.T("Install updates automatically"), v.Sub, right))
 			if working != "" {
 				rows.gap(8)
 				rows.add(u.spinnerLine(working))

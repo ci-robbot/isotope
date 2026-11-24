@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -15,6 +16,7 @@ import (
 	"gioui.org/op/clip"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/installer"
 )
 
@@ -79,7 +81,12 @@ func (u *UI) blank(gtx layout.Context) layout.Dimensions {
 
 // steps is the sidebar.
 func (u *UI) steps() guikit.Steps {
-	return guikit.Steps{Title: "Install Isotope", Names: u.stepNames(), Current: stepOf(u.page), Note: u.version}
+	names := u.stepNames()
+	shown := make([]string, len(names))
+	for i, n := range names {
+		shown[i] = i18n.T(n)
+	}
+	return guikit.Steps{Title: i18n.T("Install Isotope"), Names: shown, Current: stepOf(u.page), Note: u.version}
 }
 
 // slide is w sliding in as the page changes.
@@ -111,20 +118,20 @@ func (u *UI) body(gtx layout.Context) layout.Dimensions {
 func (u *UI) footer(gtx layout.Context) layout.Dimensions {
 	if u.page == pWelcome {
 		return u.Footer(gtx,
-			[]guikit.Action{{Click: &u.shutdown, Kind: guikit.ButtonGhost, Label: "Shut down"}},
+			[]guikit.Action{{Click: &u.shutdown, Kind: guikit.ButtonGhost, Label: i18n.T("Shut down")}},
 			func(gtx layout.Context) layout.Dimensions {
 				return layout.E.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					return layout.Inset{Right: 20}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, "About five minutes")
+						return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("About five minutes"))
 					})
 				})
 			},
-			[]guikit.Action{{Click: &u.cont, Kind: guikit.ButtonPrimary, Label: "Continue"}})
+			[]guikit.Action{{Click: &u.cont, Kind: guikit.ButtonPrimary, Label: i18n.T("Continue")}})
 	}
-	kind, txt, enabled := guikit.ButtonPrimary, "Continue", true
+	kind, txt, enabled := guikit.ButtonPrimary, i18n.T("Continue"), true
 	switch u.page {
 	case pSummary:
-		kind, txt = guikit.ButtonDanger, "Erase and install"
+		kind, txt = guikit.ButtonDanger, i18n.T("Erase and install")
 	case pRecovery:
 		enabled = u.recoveryConfirmed()
 	case pAccount:
@@ -133,7 +140,7 @@ func (u *UI) footer(gtx layout.Context) layout.Dimensions {
 		enabled = len(u.w.Disks) > 0
 	}
 	return u.Footer(gtx, nil, nil, []guikit.Action{
-		{Click: &u.back, Kind: guikit.ButtonSecondary, Label: "Go back"},
+		{Click: &u.back, Kind: guikit.ButtonSecondary, Label: i18n.T("Go back")},
 		{Click: &u.cont, Kind: kind, Label: txt, Disabled: !enabled},
 	})
 }
@@ -153,12 +160,12 @@ func (u *UI) welcome(gtx layout.Context) layout.Dimensions {
 				}),
 				guikit.VGap(36),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StHero, guikit.ColText, "Welcome to Isotope")
+					return u.Label(gtx, guikit.StHero, guikit.ColText, i18n.T("Welcome to Isotope"))
 				}),
 				guikit.VGap(14),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 500))
-					return u.LabelLines(gtx, guikit.StLead, guikit.ColText2, 1.55, "An immutable Linux desktop, built on Hadron. The system is a read-only image. An update arrives as a whole new image, and a bad one rolls back by itself.")
+					return u.LabelLines(gtx, guikit.StLead, guikit.ColText2, 1.55, i18n.T("An immutable Linux desktop, built on Hadron. The system is a read-only image. An update arrives as a whole new image, and a bad one rolls back by itself."))
 				}),
 				guikit.VGap(40),
 				layout.Rigid(u.images),
@@ -171,21 +178,21 @@ func (u *UI) welcome(gtx layout.Context) layout.Dimensions {
 // The welcome page's line when cage runs in software rendering
 // (isotope-install-ui's fallback when Mesa has no working driver for the
 // GPU). A virtual GPU without 3D gets none: software is normal there.
-const (
-	softwareText         = "No graphics driver for this GPU: the screen is drawn in software, so it can be slow."
-	softwareTextVM       = "This image is for virtual machines and has no graphics drivers: the screen is drawn in software, so it can be slow. On a computer, install the standard Isotope image."
-	softwareTextFirmware = "The graphics driver is off or did not load (for example, nomodeset): the screen is drawn in software, so it can be slow."
+var (
+	softwareText         = i18n.Mark("No graphics driver for this GPU: the screen is drawn in software, so it can be slow.")
+	softwareTextVM       = i18n.Mark("This image is for virtual machines and has no graphics drivers: the screen is drawn in software, so it can be slow. On a computer, install the standard Isotope image.")
+	softwareTextFirmware = i18n.Mark("The graphics driver is off or did not load (for example, nomodeset): the screen is drawn in software, so it can be slow.")
 )
 
 // softwareLine picks the line for the GPU class and the image line.
 func (u *UI) softwareLine() string {
 	switch {
 	case u.gpuClass == "firmware":
-		return softwareTextFirmware
+		return i18n.T(softwareTextFirmware)
 	case u.vmImage:
-		return softwareTextVM
+		return i18n.T(softwareTextVM)
 	}
-	return softwareText
+	return i18n.T(softwareText)
 }
 
 // softwareNote is that line, or nothing on a GPU with a working driver, so
@@ -203,7 +210,7 @@ func (u *UI) softwareNote(gtx layout.Context) layout.Dimensions {
 // splash draws while booting: the one you run, the one that takes the next
 // update, and the way back.
 func (u *UI) images(gtx layout.Context) layout.Dimensions {
-	names := [3][2]string{{"ACTIVE", "runs your desktop"}, {"PASSIVE", "takes the next update"}, {"RECOVERY", "the way back"}}
+	names := [3][2]string{{i18n.T("ACTIVE"), i18n.T("runs your desktop")}, {i18n.T("PASSIVE"), i18n.T("takes the next update")}, {i18n.T("RECOVERY"), i18n.T("the way back")}}
 	var kids []layout.FlexChild
 	for i, n := range names {
 		i, n := i, n
@@ -260,17 +267,17 @@ func (u *UI) keyboard(gtx layout.Context) layout.Dimensions {
 			kb = u.w.Keyboards[i].Description
 		}
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(u.Heading("Time zone", "The keyboard layout is "+kb+", the one this session uses. You can change it on the last page.")),
+			layout.Rigid(u.Heading(i18n.T("Time zone"), i18n.Tf("The keyboard layout is %s, the one this session uses. You can change it on the last page.", kb))),
 			guikit.VGap(22),
 			layout.Flexed(1, u.zoneColumn),
 		)
 	}
-	sub := "The layout applies at once, here and on the disk passphrase prompt at every start."
+	sub := i18n.T("The layout applies at once, here and on the disk passphrase prompt at every start.")
 	if u.window {
-		sub = "The layout is for the installed system, and for the disk passphrase prompt at every start."
+		sub = i18n.T("The layout is for the installed system, and for the disk passphrase prompt at every start.")
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Keyboard and time zone", sub)),
+		layout.Rigid(u.Heading(i18n.T("Keyboard and time zone"), sub)),
 		guikit.VGap(22),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{}.Layout(gtx,
@@ -286,7 +293,7 @@ func (u *UI) keyboardColumn(gtx layout.Context) layout.Dimensions {
 	try := []layout.FlexChild{
 		guikit.VGap(14),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Try it")
+			return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Try it"))
 		}),
 		guikit.VGap(10),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Input(gtx, u.kbTry, guikit.StBody, 38, "", nil) }),
@@ -297,7 +304,7 @@ func (u *UI) keyboardColumn(gtx layout.Context) layout.Dimensions {
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx, append([]layout.FlexChild{
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StLabel, guikit.ColText2, "Keyboard layout")
+			return u.Label(gtx, guikit.StLabel, guikit.ColText2, i18n.T("Keyboard layout"))
 		}),
 		guikit.VGap(10),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -316,7 +323,7 @@ func (u *UI) keyboardColumn(gtx layout.Context) layout.Dimensions {
 func (u *UI) zoneColumn(gtx layout.Context) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StLabel, guikit.ColText2, "Time zone")
+			return u.Label(gtx, guikit.StLabel, guikit.ColText2, i18n.T("Time zone"))
 		}),
 		guikit.VGap(10),
 		// The map, or while a city is being typed the zones it matches.
@@ -344,9 +351,9 @@ func (u *UI) zoneColumn(gtx layout.Context) layout.Dimensions {
 			if u.tzField.Err != "" {
 				return u.Label(gtx, guikit.StSmall, guikit.ColError, u.tzField.Err)
 			}
-			hint := "Found from this computer's clock. Click the map or type a city."
+			hint := i18n.T("Found from this computer's clock. Click the map or type a city.")
 			if len(u.zoneCoords) == 0 {
-				hint = "Found from this computer's clock. Type a city to change it."
+				hint = i18n.T("Found from this computer's clock. Type a city to change it.")
 			}
 			return u.LabelLines(gtx, guikit.StSmall, guikit.ColDim, 1.4, hint)
 		}),
@@ -381,16 +388,16 @@ func (u *UI) account(gtx layout.Context) layout.Dimensions {
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return guikit.Scrolled(gtx, &u.acctList, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-					layout.Rigid(u.Heading("Computer and account", "This account is the computer's administrator: it installs updates and extensions.")),
+					layout.Rigid(u.Heading(i18n.T("Computer and account"), i18n.T("This account is the computer's administrator: it installs updates and extensions."))),
 					guikit.VGap(16),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Labelled(gtx, "Computer name", u.host, "", func(gtx layout.Context) layout.Dimensions {
+						return u.Labelled(gtx, i18n.T("Computer name"), u.host, "", func(gtx layout.Context) layout.Dimensions {
 							return u.Input(gtx, u.host, guikit.StBody, 38, "", nil)
 						})
 					}),
 					guikit.VGap(16),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Labelled(gtx, "User name", u.user, "Lowercase letters, digits, - or _, up to 32 characters.", func(gtx layout.Context) layout.Dimensions {
+						return u.Labelled(gtx, i18n.T("User name"), u.user, i18n.T("Lowercase letters, digits, - or _, up to 32 characters."), func(gtx layout.Context) layout.Dimensions {
 							return u.Input(gtx, u.user, guikit.StBody, 38, "", nil)
 						})
 					}),
@@ -398,16 +405,16 @@ func (u *UI) account(gtx layout.Context) layout.Dimensions {
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						hint := ""
 						if u.pw2.Editor.Len() > 0 && !u.passwordsMatch() {
-							hint = "The passwords do not match yet."
+							hint = i18n.T("The passwords do not match yet.")
 						}
 						return guikit.TwoCols(gtx,
 							func(gtx layout.Context) layout.Dimensions {
-								return u.Labelled(gtx, "Password", u.pw, "", func(gtx layout.Context) layout.Dimensions {
+								return u.Labelled(gtx, i18n.T("Password"), u.pw, "", func(gtx layout.Context) layout.Dimensions {
 									return u.Input(gtx, u.pw, guikit.StBody, 38, "", nil)
 								})
 							},
 							func(gtx layout.Context) layout.Dimensions {
-								return u.Labelled(gtx, "Type it again", u.pw2, hint, func(gtx layout.Context) layout.Dimensions {
+								return u.Labelled(gtx, i18n.T("Type it again"), u.pw2, hint, func(gtx layout.Context) layout.Dimensions {
 									return u.Input(gtx, u.pw2, guikit.StBody, 38, "", nil)
 								})
 							})
@@ -472,10 +479,10 @@ func (u *UI) githubBox(gtx layout.Context) layout.Dimensions {
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return keyIcon(gtx, 16) }),
 					layout.Rigid(layout.Spacer{Width: 10}.Layout),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StLabel, guikit.ColText2, "SSH keys from GitHub ")
+						return u.Label(gtx, guikit.StLabel, guikit.ColText2, i18n.T("SSH keys from GitHub")+" ")
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, "(optional)")
+						return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("(optional)"))
 					}),
 				)
 			}),
@@ -500,7 +507,7 @@ func (u *UI) githubBox(gtx layout.Context) layout.Dimensions {
 							if good {
 								return guikit.CheckIcon(gtx, 12)
 							}
-							if txt == "Checking GitHub" {
+							if txt == i18n.T("Checking GitHub") {
 								return guikit.Spinner(gtx, 12, float32(u.now().UnixMilli()%1000)/1000)
 							}
 							return guikit.WarnIcon(gtx, 13, guikit.ColWarn)
@@ -525,16 +532,16 @@ func (u *UI) githubBox(gtx layout.Context) layout.Dimensions {
 func (u *UI) disk(gtx layout.Context) layout.Dimensions {
 	if len(u.w.Disks) == 0 {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(u.Heading("Where should Isotope go?", "No disk was found. Connect one, then rescan.")),
+			layout.Rigid(u.Heading(i18n.T("Where should Isotope go?"), i18n.T("No disk was found. Connect one, then rescan."))),
 			guikit.VGap(22),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Button(gtx, &u.rescan, guikit.ButtonSecondary, "Rescan", true)
+				return u.Button(gtx, &u.rescan, guikit.ButtonSecondary, i18n.T("Rescan"), true)
 			}),
 		)
 	}
 	info := u.info(u.diskSel)
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Where should Isotope go?", "Isotope uses the whole disk. Everything on the disk you pick is erased.")),
+		layout.Rigid(u.Heading(i18n.T("Where should Isotope go?"), i18n.T("Isotope uses the whole disk. Everything on the disk you pick is erased."))),
 		guikit.VGap(22),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			rows := (len(u.w.Disks) + 2) / 3
@@ -587,14 +594,14 @@ func (u *UI) diskTitle(i int) string {
 	if m := u.info(i).Model; m != "" {
 		return m
 	}
-	return installer.HumanSize(u.info(i).SizeBytes) + " disk"
+	return i18n.Tf("%s disk", installer.HumanSize(u.info(i).SizeBytes))
 }
 
 // diskLine is "1 TB · NVMe".
 func (u *UI) diskLine(i int) string {
 	s := installer.HumanSize(u.info(i).SizeBytes)
 	if b := u.info(i).Bus; b != "" {
-		s += " · " + b
+		s += " · " + i18n.T(b)
 	}
 	return s
 }
@@ -645,7 +652,7 @@ func (u *UI) diskBar(gtx layout.Context, i int) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Spacing: layout.SpaceBetween}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StLabel, guikit.ColText2, "On "+u.w.Disks[i].Path+" now")
+						return u.Label(gtx, guikit.StLabel, guikit.ColText2, i18n.Tf("On %s now", u.w.Disks[i].Path))
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return u.Label(gtx, guikit.StSmall, guikit.ColDim, installer.HumanSize(info.SizeBytes))
@@ -684,13 +691,13 @@ func (u *UI) diskBar(gtx layout.Context, i int) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				var parts []string
 				for _, sg := range segs {
-					parts = append(parts, sg.Kind+" · "+installer.HumanSize(sg.SizeBytes))
+					parts = append(parts, i18n.T(sg.Kind)+" · "+installer.HumanSize(sg.SizeBytes))
 				}
 				switch {
 				case !info.Read:
-					parts = []string{"What is on this disk could not be read."}
+					parts = []string{i18n.T("What is on this disk could not be read.")}
 				case len(parts) == 0:
-					parts = []string{"No partitions"}
+					parts = []string{i18n.T("No partitions")}
 				}
 				return u.LabelLines(gtx, guikit.StTiny, guikit.ColDim, 1.5, strings.Join(parts, "     "))
 			}),
@@ -702,35 +709,35 @@ func (u *UI) diskBar(gtx layout.Context, i int) layout.Dimensions {
 
 // The Trusted Boot recovery key text is the text installer's, shortened to
 // fit a card.
-const tpmText = "This computer unlocks its disk with its TPM security chip, without asking you anything. If the TPM is reset or a firmware update changes what it checks, your files cannot be opened without a recovery key. The computer asks for the key only then."
+var tpmText = i18n.Mark("This computer unlocks its disk with its TPM security chip, without asking you anything. If the TPM is reset or a firmware update changes what it checks, your files cannot be opened without a recovery key. The computer asks for the key only then.")
 
 func (u *UI) encryption(gtx layout.Context) layout.Dimensions {
 	if u.w.TrustedBoot {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(u.Heading("Create a recovery key?", tpmText)),
+			layout.Rigid(u.Heading(i18n.T("Create a recovery key?"), i18n.T(tpmText))),
 			guikit.VGap(18),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return guikit.TwoCols(gtx,
 					func(gtx layout.Context) layout.Dimensions {
-						return u.ChoiceCard(gtx, &u.encNo, !u.recKey, "No, the TPM only", "Nothing to keep safe.")
+						return u.ChoiceCard(gtx, &u.encNo, !u.recKey, i18n.T("No, the TPM only"), i18n.T("Nothing to keep safe."))
 					},
 					func(gtx layout.Context) layout.Dimensions {
-						return u.ChoiceCard(gtx, &u.encYes, u.recKey, "Create a recovery key", "You see it once, on the next screen.")
+						return u.ChoiceCard(gtx, &u.encYes, u.recKey, i18n.T("Create a recovery key"), i18n.T("You see it once, on the next screen."))
 					})
 			}),
 			layout.Rigid(u.encError),
 		)
 	}
 	kids := []layout.FlexChild{
-		layout.Rigid(u.Heading("Encrypt your files?", "With encryption, nobody can read your files from a lost or stolen disk. You type a passphrase every time the computer starts.")),
+		layout.Rigid(u.Heading(i18n.T("Encrypt your files?"), i18n.T("With encryption, nobody can read your files from a lost or stolen disk. You type a passphrase every time the computer starts."))),
 		guikit.VGap(18),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return guikit.TwoCols(gtx,
 				func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &u.encNo, !u.encOn, "Don't encrypt", "Starts without a passphrase.")
+					return u.ChoiceCard(gtx, &u.encNo, !u.encOn, i18n.T("Don't encrypt"), i18n.T("Starts without a passphrase."))
 				},
 				func(gtx layout.Context) layout.Dimensions {
-					return u.ChoiceCard(gtx, &u.encYes, u.encOn, "Encrypt my files", "A passphrase at every start.")
+					return u.ChoiceCard(gtx, &u.encYes, u.encOn, i18n.T("Encrypt my files"), i18n.T("A passphrase at every start."))
 				})
 		}),
 	}
@@ -740,12 +747,12 @@ func (u *UI) encryption(gtx layout.Context) layout.Dimensions {
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return guikit.TwoCols(gtx,
 					func(gtx layout.Context) layout.Dimensions {
-						return u.Labelled(gtx, "Disk passphrase", u.pp, "", func(gtx layout.Context) layout.Dimensions {
+						return u.Labelled(gtx, i18n.T("Disk passphrase"), u.pp, "", func(gtx layout.Context) layout.Dimensions {
 							return u.Input(gtx, u.pp, guikit.StBody, 38, "", nil)
 						})
 					},
 					func(gtx layout.Context) layout.Dimensions {
-						return u.Labelled(gtx, "Type it again", u.pp2, "", func(gtx layout.Context) layout.Dimensions {
+						return u.Labelled(gtx, i18n.T("Type it again"), u.pp2, "", func(gtx layout.Context) layout.Dimensions {
 							return u.Input(gtx, u.pp2, guikit.StBody, 38, "", nil)
 						})
 					})
@@ -754,7 +761,7 @@ func (u *UI) encryption(gtx layout.Context) layout.Dimensions {
 			layout.Rigid(u.strength),
 			guikit.VGap(18),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return u.Label(gtx, guikit.StTiny, guikit.ColDim, fmt.Sprintf("%d characters or more. A few words work well.", installer.MinPassphraseLen))
+				return u.Label(gtx, guikit.StTiny, guikit.ColDim, i18n.Tf("%d characters or more. A few words work well.", installer.MinPassphraseLen))
 			}),
 			guikit.VGap(18),
 			layout.Rigid(u.recoveryBox),
@@ -779,20 +786,12 @@ func (u *UI) encError(gtx layout.Context) layout.Dimensions {
 // four bars and its words.
 func (u *UI) strength(gtx layout.Context) layout.Dimensions {
 	s := installer.PassphraseStrength(u.pp.Editor.Text())
-	bars, col, txtCol := 0, guikit.ColAccent, guikit.ColGlow
-	switch {
-	case s == "":
-	case strings.HasPrefix(s, "too short"):
-		bars, col, txtCol = 1, guikit.ColError, guikit.ColErrorText
-	case strings.HasPrefix(s, "weak"):
-		bars, col, txtCol = 2, guikit.ColError, guikit.ColErrorText
-	case strings.HasPrefix(s, "fair"):
-		bars = 3
-	default:
-		bars = 4
+	bars, col, txtCol := installer.PassphraseLevel(u.pp.Editor.Text()), guikit.ColAccent, guikit.ColGlow
+	if bars == 1 || bars == 2 {
+		col, txtCol = guikit.ColError, guikit.ColErrorText
 	}
-	if s != "" {
-		s = strings.ToUpper(s[:1]) + s[1:]
+	if r, n := utf8.DecodeRuneInString(s); n > 0 {
+		s = string(unicode.ToUpper(r)) + s[n:]
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -819,7 +818,7 @@ func (u *UI) strength(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) recoveryBox(gtx layout.Context) layout.Dimensions {
-	return u.CheckCard(gtx, &u.recBox, u.recKey, "Also create a recovery key", "A second way in if you forget the passphrase. You see it once, on the next screen.")
+	return u.CheckCard(gtx, &u.recBox, u.recKey, i18n.T("Also create a recovery key"), i18n.T("A second way in if you forget the passphrase. You see it once, on the next screen."))
 }
 
 // --- 6. Recovery key ---------------------------------------------------------
@@ -828,7 +827,7 @@ func (u *UI) recovery(gtx layout.Context) layout.Dimensions {
 	groups := installer.RecoveryKeyGroups(u.w.Choice.RecoveryKeyValue)
 	ask := u.w.ConfirmGroup
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Your recovery key", "Write it down or take a photo of it now. It is shown only this once and saved nowhere.")),
+		layout.Rigid(u.Heading(i18n.T("Your recovery key"), i18n.T("Write it down or take a photo of it now. It is shown only this once and saved nowhere."))),
 		guikit.VGap(18),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
@@ -860,22 +859,22 @@ func (u *UI) recovery(gtx layout.Context) layout.Dimensions {
 		}),
 		guikit.VGap(18),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StTiny, guikit.ColDim, "Only these letters appear: "+strings.Join(strings.Split(installer.Modhex, ""), " "))
+			return u.Label(gtx, guikit.StTiny, guikit.ColDim, i18n.Tf("Only these letters appear: %s", strings.Join(strings.Split(installer.Modhex, ""), " ")))
 		}),
 		guikit.VGap(22),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.End}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = guikit.Dp(gtx, 280)
-					return u.Labelled(gtx, fmt.Sprintf("To check you saved it, type group %d", ask+1), u.rk, "", func(gtx layout.Context) layout.Dimensions {
+					return u.Labelled(gtx, i18n.Tf("To check you saved it, type group %d", ask+1), u.rk, "", func(gtx layout.Context) layout.Dimensions {
 						return u.Input(gtx, u.rk, stMonoField, 40, "", nil)
 					})
 				}),
 				layout.Rigid(layout.Spacer{Width: 14}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					txt := "Show as QR code"
+					txt := i18n.T("Show as QR code")
 					if u.showQR {
-						txt = "Hide the QR code"
+						txt = i18n.T("Hide the QR code")
 					}
 					return u.qrToggle(gtx, txt)
 				}),
@@ -958,26 +957,23 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 	}
 	acct := c.Username
 	if c.Github != "" {
-		keys := "SSH keys"
+		keys := i18n.T("SSH keys")
 		if g := u.ghState; g.answered == c.Github && g.err == nil && g.n > 0 {
-			keys = strconv.Itoa(g.n) + " SSH keys"
-			if g.n == 1 {
-				keys = "1 SSH key"
-			}
+			keys = i18n.Nf("%d SSH key", "%d SSH keys", g.n, g.n)
 		}
-		acct += " · " + keys + " from github.com/" + c.Github
+		acct += " · " + i18n.Tf("%[1]s from github.com/%[2]s", keys, c.Github)
 	}
-	enc := "Off"
+	enc := i18n.T("Off")
 	encPage := pEncrypt
 	switch {
 	case c.Encrypt && c.RecoveryKey:
-		enc = "On, passphrase at every start · recovery key saved"
+		enc = i18n.T("On, passphrase at every start · recovery key saved")
 	case c.Encrypt:
-		enc = "On, passphrase at every start"
+		enc = i18n.T("On, passphrase at every start")
 	case u.w.TrustedBoot && c.RecoveryKey:
-		enc = "On, unlocked by the TPM · recovery key saved"
+		enc = i18n.T("On, unlocked by the TPM · recovery key saved")
 	case u.w.TrustedBoot:
-		enc = "On, unlocked by the TPM"
+		enc = i18n.T("On, unlocked by the TPM")
 	}
 	diskVal := c.Disk
 	for i, d := range u.w.Disks {
@@ -989,19 +985,19 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 		}
 	}
 	rows := []row{
-		{"Keyboard", kb, code, pKeyboard, false},
-		{"Time zone", c.Timezone, "", pKeyboard, false},
-		{"Computer name", c.Hostname, "", pAccount, false},
-		{"Account", acct, "", pAccount, false},
-		{"Encryption", enc, "", encPage, false},
-		{"Disk", diskVal, c.Disk, pDisk, true},
+		{i18n.T("Keyboard"), kb, code, pKeyboard, false},
+		{i18n.T("Time zone"), c.Timezone, "", pKeyboard, false},
+		{i18n.T("Computer name"), c.Hostname, "", pAccount, false},
+		{i18n.T("Account"), acct, "", pAccount, false},
+		{i18n.T("Encryption"), enc, "", encPage, false},
+		{i18n.T("Disk"), diskVal, c.Disk, pDisk, true},
 	}
 	u.summaryChanges = u.summaryChanges[:0]
 	for _, r := range rows {
 		u.summaryChanges = append(u.summaryChanges, r.page)
 	}
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(u.Heading("Ready to install", "Check what you picked. Click Change to go back to it.")),
+		layout.Rigid(u.Heading(i18n.T("Ready to install"), i18n.T("Check what you picked. Click Change to go back to it."))),
 		guikit.VGap(18),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
@@ -1014,7 +1010,11 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 						dims := layout.Inset{Top: 12, Bottom: 12, Left: 18, Right: 18}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 							return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
 								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									gtx.Constraints = layout.Exact(image.Pt(guikit.Dp(gtx, 152), gtx.Sp(18)))
+									// A fixed column, as wide as the mock's; a longer
+									// name (Italian, Spanish) wraps instead of running
+									// into the value.
+									w := guikit.Dp(gtx, 152)
+									gtx.Constraints.Min.X, gtx.Constraints.Max.X = w, w
 									return u.Label(gtx, guikit.StBody, guikit.ColDim, r.name)
 								}),
 								layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -1024,7 +1024,9 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 									}
 									return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
 										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-											return u.LabelMax(gtx, st, col, 1, r.value)
+											// Two lines: a translation runs longer than the
+											// English the row was drawn for.
+											return u.LabelMax(gtx, st, col, 2, r.value)
 										}),
 										layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 											if r.code == "" {
@@ -1041,7 +1043,7 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 									)
 								}),
 								layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-									return u.Link(gtx, &u.change[i], "Change")
+									return u.Link(gtx, &u.change[i], i18n.T("Change"))
 								}),
 							)
 						})
@@ -1056,7 +1058,7 @@ func (u *UI) summary(gtx layout.Context) layout.Dimensions {
 		}),
 		guikit.VGap(18),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.Warning(gtx, fmt.Sprintf("Installing erases everything on %s. This cannot be undone.", c.Disk))
+			return u.Warning(gtx, i18n.Tf("Installing erases everything on %s. This cannot be undone.", c.Disk))
 		}),
 	)
 }
@@ -1082,12 +1084,12 @@ func (u *UI) installing(gtx layout.Context) layout.Dimensions {
 			guikit.VGap(22),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = 0
-				return u.Label(gtx, stInstTitle, guikit.ColText, "Installing Isotope")
+				return u.Label(gtx, stInstTitle, guikit.ColText, i18n.T("Installing Isotope"))
 			}),
 			guikit.VGap(6),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = 0
-				return u.Label(gtx, guikit.StBody, guikit.ColDim, "Do not turn off the computer.")
+				return u.Label(gtx, guikit.StBody, guikit.ColDim, i18n.T("Do not turn off the computer."))
 			}),
 			guikit.VGap(22),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -1097,7 +1099,7 @@ func (u *UI) installing(gtx layout.Context) layout.Dimensions {
 						gtx.Constraints.Min.X = gtx.Constraints.Max.X
 						return layout.Flex{Spacing: layout.SpaceBetween}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Label(gtx, guikit.StSmall500, guikit.ColText, installer.Steps[cur].Name)
+								return u.Label(gtx, guikit.StSmall500, guikit.ColText, i18n.T(installer.Steps[cur].Name))
 							}),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 								// Nothing until the active system has
@@ -1145,9 +1147,9 @@ func (u *UI) installing(gtx layout.Context) layout.Dimensions {
 				return layout.S.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							txt := "Show details"
+							txt := i18n.T("Show details")
 							if s.show {
-								txt = "Hide details"
+								txt = i18n.T("Hide details")
 							}
 							return u.details.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 								col := guikit.ColDim
@@ -1196,7 +1198,9 @@ func (u *UI) stageRow(gtx layout.Context, i, cur int, phase float32) layout.Dime
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 		layout.Rigid(icon),
 		layout.Rigid(layout.Spacer{Width: 10}.Layout),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Label(gtx, st, col, installer.Steps[i].Name) }),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return u.Label(gtx, st, col, i18n.T(installer.Steps[i].Name))
+		}),
 	)
 }
 
@@ -1219,7 +1223,7 @@ func (u *UI) logBox(gtx layout.Context, height float32) layout.Dimensions {
 
 func (u *UI) failed(gtx layout.Context) layout.Dimensions {
 	s := &u.install
-	stage := installer.Steps[s.step].Name
+	stage := i18n.T(installer.Steps[s.step].Name)
 	why := ""
 	if s.err != nil {
 		why = s.err.Error()
@@ -1233,17 +1237,17 @@ func (u *UI) failed(gtx layout.Context) layout.Dimensions {
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.WarnIcon(gtx, 28, guikit.ColError) }),
 							layout.Rigid(layout.Spacer{Width: 14}.Layout),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Label(gtx, guikit.StTitle, guikit.ColText, "Isotope could not be installed")
+								return u.Label(gtx, guikit.StTitle, guikit.ColText, i18n.T("Isotope could not be installed"))
 							}),
 						)
 					}),
 					guikit.VGap(10),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.LabelLines(gtx, guikit.StBody, guikit.ColText2, 1.5, fmt.Sprintf("It stopped at \"%s\": %s. Save the log to report it, or restart the computer to try again.", stage, why))
+						return u.LabelLines(gtx, guikit.StBody, guikit.ColText2, 1.5, i18n.Tf("It stopped at \"%[1]s\": %[2]s. Save the log to report it, or restart the computer to try again.", stage, why))
 					}),
 					guikit.VGap(18),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StLabel, guikit.ColText2, "The end of the install log")
+						return u.Label(gtx, guikit.StLabel, guikit.ColText2, i18n.T("The end of the install log"))
 					}),
 					guikit.VGap(8),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -1254,7 +1258,7 @@ func (u *UI) failed(gtx layout.Context) layout.Dimensions {
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return u.Footer(gtx,
-				[]guikit.Action{{Click: &u.saveLog, Kind: guikit.ButtonGhost, Label: "Save the log", Disabled: u.hooks.saveLog == nil}},
+				[]guikit.Action{{Click: &u.saveLog, Kind: guikit.ButtonGhost, Label: i18n.T("Save the log"), Disabled: u.hooks.saveLog == nil}},
 				func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					return layout.Inset{Left: 8, Right: 8}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -1272,20 +1276,20 @@ func (u *UI) failed(gtx layout.Context) layout.Dimensions {
 func (u *UI) failedActions() []guikit.Action {
 	if u.window {
 		return []guikit.Action{
-			{Click: &u.keep, Kind: guikit.ButtonSecondary, Label: "Close"},
-			{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: "Restart"},
+			{Click: &u.keep, Kind: guikit.ButtonSecondary, Label: i18n.T("Close")},
+			{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart")},
 		}
 	}
 	return []guikit.Action{
-		{Click: &u.terminal, Kind: guikit.ButtonSecondary, Label: "Open a terminal", Disabled: u.hooks.terminal == nil},
-		{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: "Restart"},
+		{Click: &u.terminal, Kind: guikit.ButtonSecondary, Label: i18n.T("Open a terminal"), Disabled: u.hooks.terminal == nil},
+		{Click: &u.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart")},
 	}
 }
 
 // failedPageHasClose says whether the failed page offers Close (window mode).
 func (u *UI) failedPageHasClose() bool {
 	for _, a := range u.failedActions() {
-		if a.Label == "Close" {
+		if a.Label == i18n.T("Close") {
 			return true
 		}
 	}
@@ -1296,18 +1300,18 @@ func (u *UI) failedPageHasClose() bool {
 
 func (u *UI) done(gtx layout.Context) layout.Dimensions {
 	s := &u.install
-	msg := "Remove the installation media, then restart and sign in as " + s.user + "."
+	msg := i18n.Tf("Remove the installation media, then restart and sign in as %s.", s.user)
 	if s.encrypt {
-		msg = "Remove the installation media, then restart. You will type your disk passphrase, then sign in as " + s.user + "."
+		msg = i18n.Tf("Remove the installation media, then restart. You will type your disk passphrase, then sign in as %s.", s.user)
 	}
 	if s.user == "" {
-		msg = "Remove the installation media, then restart."
+		msg = i18n.T("Remove the installation media, then restart.")
 	}
 	var checks []string
 	if s.encrypt {
-		checks = append(checks, "Encrypted")
+		checks = append(checks, i18n.T("Encrypted"))
 	}
-	checks = append(checks, "Recovery image ready", "Updates roll back by themselves")
+	checks = append(checks, i18n.T("Recovery image ready"), i18n.T("Updates roll back by themselves"))
 	return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min = gtx.Constraints.Max
@@ -1323,7 +1327,7 @@ func (u *UI) done(gtx layout.Context) layout.Dimensions {
 					}),
 					guikit.VGap(20),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, stDoneTitle, guikit.ColText, "Isotope is installed")
+						return u.Label(gtx, stDoneTitle, guikit.ColText, i18n.T("Isotope is installed"))
 					}),
 					guikit.VGap(20),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -1360,15 +1364,15 @@ func (u *UI) done(gtx layout.Context) layout.Dimensions {
 						// (the launcher then says the install is done).
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Button(gtx, &u.restart, guikit.ButtonPrimary, "Restart now", true)
+								return u.Button(gtx, &u.restart, guikit.ButtonPrimary, i18n.T("Restart now"), true)
 							}),
 							layout.Rigid(layout.Spacer{Width: 10}.Layout),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Button(gtx, &u.keep, guikit.ButtonSecondary, "Keep trying", true)
+								return u.Button(gtx, &u.keep, guikit.ButtonSecondary, i18n.T("Keep trying"), true)
 							}),
 						)
 					}
-					return u.Button(gtx, &u.restart, guikit.ButtonPrimary, "Restart", true)
+					return u.Button(gtx, &u.restart, guikit.ButtonPrimary, i18n.T("Restart"), true)
 				})
 			})
 		}),

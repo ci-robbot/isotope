@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/kairos-community/isotope/pkg/i18n"
 	"github.com/kairos-community/isotope/pkg/isorelease"
 )
 
@@ -103,9 +104,9 @@ func hasGroup(ids []string, gid string) bool {
 func otherSettings(desktop string) (name string, network []string) {
 	switch desktop {
 	case "COSMIC":
-		return "COSMIC Settings", []string{"cosmic-settings", "wireless"}
+		return i18n.T("COSMIC Settings"), []string{"cosmic-settings", "wireless"}
 	case "niri":
-		return "the control center", []string{"noctalia", "msg", "panel-open", "control-center", "network"}
+		return i18n.T("the control center"), []string{"noctalia", "msg", "panel-open", "control-center", "network"}
 	}
 	return "", nil
 }

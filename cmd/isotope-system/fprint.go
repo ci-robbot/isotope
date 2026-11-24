@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 	"sync"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Fingerprints: fprintd (the fingerprint system extension) for the user's
@@ -67,8 +68,47 @@ var fingerNames = []string{
 	"right-thumb", "right-index-finger", "right-middle-finger", "right-ring-finger", "right-little-finger",
 }
 
+// fingerLabels, fingerShorts and fingerPhrases are the words for
+// fprintd's finger names, marked for translation.
+var fingerLabels = map[string]string{
+	"left-thumb":          i18n.Mark("Left thumb"),
+	"left-index-finger":   i18n.Mark("Left index finger"),
+	"left-middle-finger":  i18n.Mark("Left middle finger"),
+	"left-ring-finger":    i18n.Mark("Left ring finger"),
+	"left-little-finger":  i18n.Mark("Left little finger"),
+	"right-thumb":         i18n.Mark("Right thumb"),
+	"right-index-finger":  i18n.Mark("Right index finger"),
+	"right-middle-finger": i18n.Mark("Right middle finger"),
+	"right-ring-finger":   i18n.Mark("Right ring finger"),
+	"right-little-finger": i18n.Mark("Right little finger"),
+}
+
+var fingerShorts = map[string]string{
+	"thumb":         i18n.Mark("Thumb"),
+	"index-finger":  i18n.Mark("Index finger"),
+	"middle-finger": i18n.Mark("Middle finger"),
+	"ring-finger":   i18n.Mark("Ring finger"),
+	"little-finger": i18n.Mark("Little finger"),
+}
+
+var fingerPhrases = map[string]string{
+	"left-thumb":          i18n.Mark("your left thumb"),
+	"left-index-finger":   i18n.Mark("your left index finger"),
+	"left-middle-finger":  i18n.Mark("your left middle finger"),
+	"left-ring-finger":    i18n.Mark("your left ring finger"),
+	"left-little-finger":  i18n.Mark("your left little finger"),
+	"right-thumb":         i18n.Mark("your right thumb"),
+	"right-index-finger":  i18n.Mark("your right index finger"),
+	"right-middle-finger": i18n.Mark("your right middle finger"),
+	"right-ring-finger":   i18n.Mark("your right ring finger"),
+	"right-little-finger": i18n.Mark("your right little finger"),
+}
+
 // fingerLabel is "Right index finger" for "right-index-finger".
 func fingerLabel(name string) string {
+	if l, ok := fingerLabels[name]; ok {
+		return i18n.T(l)
+	}
 	s := strings.ReplaceAll(name, "-", " ")
 	if s == "" {
 		return ""
@@ -83,12 +123,18 @@ func fingerShort(name string) string {
 	if !ok {
 		rest = name
 	}
+	if l, ok := fingerShorts[rest]; ok {
+		return i18n.T(l)
+	}
 	return fingerLabel(rest)
 }
 
 // fingerPhrase is "your right index finger", for the instructions.
 func fingerPhrase(name string) string {
-	return "your " + strings.ReplaceAll(name, "-", " ")
+	if l, ok := fingerPhrases[name]; ok {
+		return i18n.T(l)
+	}
+	return i18n.Tf("your %s", strings.ReplaceAll(name, "-", " "))
 }
 
 // sortFingers puts known names in fingerNames' order, unknown ones last.
@@ -115,35 +161,37 @@ func sortFingers(in []string) []string {
 // enrollMessage is the line to show for an fprintd EnrollStatus result,
 // and whether the result ends the enrollment and with which error.
 func enrollMessage(result string, swipe bool) (msg string, done bool, err error) {
-	verb := "Touch"
-	if swipe {
-		verb = "Swipe"
-	}
 	switch result {
 	case "enroll-stage-passed":
-		return "Good. Lift your finger, then " + strings.ToLower(verb) + " the reader again.", false, nil
+		if swipe {
+			return i18n.T("Good. Lift your finger, then swipe the reader again."), false, nil
+		}
+		return i18n.T("Good. Lift your finger, then touch the reader again."), false, nil
 	case "enroll-completed":
 		return "", true, nil
 	case "enroll-retry-scan":
-		return "That scan did not work. " + verb + " the reader again.", false, nil
+		if swipe {
+			return i18n.T("That scan did not work. Swipe the reader again."), false, nil
+		}
+		return i18n.T("That scan did not work. Touch the reader again."), false, nil
 	case "enroll-swipe-too-short":
-		return "The swipe was too short. Swipe again.", false, nil
+		return i18n.T("The swipe was too short. Swipe again."), false, nil
 	case "enroll-finger-not-centered":
-		return "Put your finger in the middle of the reader and try again.", false, nil
+		return i18n.T("Put your finger in the middle of the reader and try again."), false, nil
 	case "enroll-remove-and-retry":
-		return "Lift your finger, then try again.", false, nil
+		return i18n.T("Lift your finger, then try again."), false, nil
 	case "enroll-too-fast":
-		return "Too fast. Wait a moment, then try again.", false, nil
+		return i18n.T("Too fast. Wait a moment, then try again."), false, nil
 	case "enroll-duplicate":
-		return "", true, errors.New("this finger is already enrolled, for you or another user")
+		return "", true, errors.New(i18n.T("this finger is already enrolled, for you or another user"))
 	case "enroll-data-full":
-		return "", true, errors.New("the reader has no room for another fingerprint")
+		return "", true, errors.New(i18n.T("the reader has no room for another fingerprint"))
 	case "enroll-disconnected":
-		return "", true, errors.New("the reader was disconnected")
+		return "", true, errors.New(i18n.T("the reader was disconnected"))
 	case "enroll-failed":
-		return "", true, errors.New("the reader could not enroll this finger: try again")
+		return "", true, errors.New(i18n.T("the reader could not enroll this finger: try again"))
 	}
-	return "", true, fmt.Errorf("the reader reported %s", result)
+	return "", true, errors.New(i18n.Tf("the reader reported %s", result))
 }
 
 // ---- fprintd over D-Bus ----
@@ -272,7 +320,7 @@ func (f *fprintd) State() (FingerState, error) {
 		st.Reader, _ = v.Value().(string)
 	}
 	if st.Reader == "" {
-		st.Reader = "Fingerprint reader"
+		st.Reader = i18n.T("Fingerprint reader")
 	}
 	if v, err := dev.GetProperty(fprintDeviceIf + ".scan-type"); err == nil {
 		s, _ := v.Value().(string)

@@ -8,12 +8,15 @@ package main
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net/netip"
 	"sort"
 	"time"
 
 	"github.com/godbus/dbus/v5"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // NetState is what the Network page needs to know about the machine.
@@ -86,7 +89,7 @@ const (
 func deviceKind(t uint32) string {
 	switch t {
 	case nmDeviceEthernet:
-		return "Wired"
+		return i18n.Mark("Wired")
 	case nmDeviceWifi:
 		return "Wi-Fi"
 	}
@@ -97,19 +100,19 @@ func deviceKind(t uint32) string {
 func deviceState(s uint32) string {
 	switch {
 	case s == 100:
-		return "Connected"
+		return i18n.Mark("Connected")
 	case s >= 40 && s < 100:
-		return "Connecting"
+		return i18n.Mark("Connecting")
 	case s == 30:
-		return "Disconnected"
+		return i18n.Mark("Disconnected")
 	case s == 20:
-		return "Cable unplugged"
+		return i18n.Mark("Cable unplugged")
 	case s == 110 || s == 120:
-		return "Disconnecting"
+		return i18n.Mark("Disconnecting")
 	case s == 10:
-		return "Not managed"
+		return i18n.Mark("Not managed")
 	}
-	return "Unavailable"
+	return i18n.Mark("Unavailable")
 }
 
 // ipv4 is NetworkManager's uint32 address (network byte order, read as
@@ -363,7 +366,7 @@ func (n nmNetwork) Forget(ssid string) error {
 		}
 	}
 	if !found {
-		return fmt.Errorf("%s is not a saved network", ssid)
+		return fmt.Errorf(i18n.T("%s is not a saved network"), ssid)
 	}
 	return nil
 }
@@ -379,7 +382,7 @@ func (n nmNetwork) Disconnect() error {
 		return err
 	}
 	if dev == "" {
-		return fmt.Errorf("No Wi-Fi device")
+		return errors.New(i18n.T("No Wi-Fi device"))
 	}
 	return c.Object(nmName, dev).Call(nmIface+".Device.Disconnect", 0).Err
 }
@@ -444,7 +447,12 @@ func apRSN(c *dbus.Conn, dev dbus.ObjectPath, ssid string) uint32 {
 
 // errWrongPassword is a secured connection that NetworkManager dropped
 // while activating: nearly always a wrong key.
-var errWrongPassword = fmt.Errorf("Wrong password")
+var errWrongPassword error = nmTextError(i18n.Mark("Wrong password"))
+
+// nmTextError is an error whose English message is translated when shown.
+type nmTextError string
+
+func (e nmTextError) Error() string { return i18n.T(string(e)) }
 
 // connectFailure is the error of a connection that NetworkManager dropped
 // while activating. Only a network joined with a WPA-PSK password can say
@@ -453,7 +461,7 @@ func connectFailure(ssid, password string) error {
 	if password != "" {
 		return errWrongPassword
 	}
-	return fmt.Errorf("Could not connect to %s", ssid)
+	return fmt.Errorf(i18n.T("Could not connect to %s"), ssid)
 }
 
 func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
@@ -467,7 +475,7 @@ func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
 		return err
 	}
 	if dev == "" {
-		return fmt.Errorf("No Wi-Fi device")
+		return errors.New(i18n.T("No Wi-Fi device"))
 	}
 	var settingsPath, active dbus.ObjectPath
 	err = c.Object(nmName, nmPath).Call(nmIface+".AddAndActivateConnection", 0,
@@ -493,5 +501,5 @@ func (n nmNetwork) Connect(ssid, password string, hidden bool) error {
 	}
 	_ = c.Object(nmName, nmPath).Call(nmIface+".DeactivateConnection", 0, active).Err
 	_ = c.Object(nmName, settingsPath).Call(nmIface+".Settings.Connection.Delete", 0).Err
-	return fmt.Errorf("Timed out connecting to %s", ssid)
+	return fmt.Errorf(i18n.T("Timed out connecting to %s"), ssid)
 }

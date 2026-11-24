@@ -8,21 +8,21 @@ import (
 	"time"
 
 	"github.com/godbus/dbus/v5"
-)
 
-// later says where to find the apps again.
-const later = "Open it later from the Isotope menu (Super+Esc → Welcome)."
+	"github.com/kairos-community/isotope/pkg/i18n"
+)
 
 // CompletionNotice is the notification for an install that ended while
 // the window was gone: its summary and body, from the apps' names.
 func CompletionNotice(ok, failed []string) (summary, body string) {
 	switch {
 	case len(failed) == 0:
-		return "Apps installed", "Installed: " + strings.Join(ok, ", ") + ". Find them with the app launcher."
+		return i18n.T("Apps installed"), i18n.Tf("Installed: %s. Find them with the app launcher.", strings.Join(ok, ", "))
 	case len(ok) > 0:
-		return "Some apps did not install", "Installed: " + strings.Join(ok, ", ") + ". Failed: " + strings.Join(failed, ", ") + ". " + later
+		// TRANSLATORS: %[1]s and %[2]s are lists of app names; the end says where to find the apps again.
+		return i18n.T("Some apps did not install"), i18n.Tf("Installed: %[1]s. Failed: %[2]s. Open it later from the Isotope menu (Super+Esc → Welcome).", strings.Join(ok, ", "), strings.Join(failed, ", "))
 	}
-	return "Apps did not install", "Failed: " + strings.Join(failed, ", ") + ". " + later
+	return i18n.T("Apps did not install"), i18n.Tf("Failed: %s. Open it later from the Isotope menu (Super+Esc → Welcome).", strings.Join(failed, ", "))
 }
 
 // Notify sends a desktop notification with busctl, as the terminal
@@ -74,7 +74,7 @@ func Remind(summary, body string, open func()) error {
 	var id uint32
 	for i := 0; ; i++ {
 		call := obj.Call(notifications+".Notify", 0, "Isotope", uint32(0), "", summary, body,
-			[]string{"default", "Open"}, map[string]dbus.Variant{}, int32(15000))
+			[]string{"default", i18n.X("verb", "Open")}, map[string]dbus.Variant{}, int32(15000))
 		if err = call.Store(&id); err == nil {
 			break
 		}
@@ -128,10 +128,10 @@ func waitAction(c <-chan *dbus.Signal, id uint32, timeout time.Duration) bool {
 func reminderText(installed map[string]bool, apps []App) (summary, body string) {
 	for _, a := range apps {
 		if a.Group == "browser" && installed[a.ID] {
-			return "Install essential apps", "Pick a few essential apps from Flathub, or install the ones that did not finish."
+			return i18n.T("Install essential apps"), i18n.T("Pick a few essential apps from Flathub, or install the ones that did not finish.")
 		}
 	}
-	return "Install a browser and essential apps", "Isotope has no browser yet. Pick one and a few essentials from Flathub."
+	return i18n.T("Install a browser and essential apps"), i18n.T("Isotope has no browser yet. Pick one and a few essentials from Flathub.")
 }
 
 // remindApps is the --login step for a user who skipped Apps offline: once

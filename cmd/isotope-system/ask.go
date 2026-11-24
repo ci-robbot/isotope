@@ -15,6 +15,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // `isotope-system ask KIND ...` is one small dialog in a window of its own.
@@ -106,10 +107,10 @@ type askModel struct {
 
 // askLabels are the words for the fields NetworkManager's secrets use.
 var askLabels = map[string]string{
-	"password":           "Password",
-	"secondary_password": "Second password",
-	"otp":                "One-time code",
-	"private-key":        "Private key",
+	"password":           i18n.Mark("Password"),
+	"secondary_password": i18n.Mark("Second password"),
+	"otp":                i18n.Mark("One-time code"),
+	"private-key":        i18n.Mark("Private key"),
 }
 
 // askVisible are the fields shown as typed: a one-time code is no secret.
@@ -142,7 +143,7 @@ func (m *askModel) secretDialog() *dialog {
 		if label == "" {
 			label = name
 		}
-		m.fields = append(m.fields, &askField{name: name, label: label, f: f})
+		m.fields = append(m.fields, &askField{name: name, label: i18n.T(label), f: f})
 	}
 	ready := func() bool {
 		for _, f := range m.fields {
@@ -152,13 +153,13 @@ func (m *askModel) secretDialog() *dialog {
 		}
 		return true
 	}
-	title := "Connect to " + m.spec.name
+	title := i18n.Tf("Connect to %s", m.spec.name)
 	if m.spec.name == "" {
-		title = "Connect to the VPN"
+		title = i18n.T("Connect to the VPN")
 	}
 	body := m.spec.message
 	if body == "" {
-		body = "The VPN asks for this to connect."
+		body = i18n.T("The VPN asks for this to connect.")
 	}
 	focused := false
 	var d *dialog
@@ -183,8 +184,8 @@ func (m *askModel) secretDialog() *dialog {
 		}
 		return c.layout(gtx)
 	}, 1,
-		choice{Label: "Cancel", Kind: guikit.ButtonSecondary, Do: func() { m.finish(1) }},
-		choice{Label: "Connect", Kind: guikit.ButtonPrimary, Enabled: ready, Do: func() {
+		choice{Label: i18n.T("Cancel"), Kind: guikit.ButtonSecondary, Do: func() { m.finish(1) }},
+		choice{Label: i18n.T("Connect"), Kind: guikit.ButtonPrimary, Enabled: ready, Do: func() {
 			got := map[string]string{}
 			for _, f := range m.fields {
 				got[f.name] = f.f.Editor.Text()
@@ -197,16 +198,15 @@ func (m *askModel) secretDialog() *dialog {
 func (m *askModel) fileDialog() *dialog {
 	who := m.spec.device
 	if who == "" {
-		who = "A Bluetooth device"
+		who = i18n.T("A Bluetooth device")
 	}
-	body := fmt.Sprintf("%s wants to send you %s", who, m.spec.file)
+	body := i18n.Tf("%[1]s wants to send you %[2]s. The file goes to your Downloads folder.", who, m.spec.file)
 	if m.spec.size > 0 {
-		body += " (" + humanSize(m.spec.size) + ")"
+		body = i18n.Tf("%[1]s wants to send you %[2]s (%[3]s). The file goes to your Downloads folder.", who, m.spec.file, humanSize(m.spec.size))
 	}
-	body += ". The file goes to your Downloads folder."
-	return newDialog("Receive a file?", body, nil, 0,
-		choice{Label: "Decline", Kind: guikit.ButtonSecondary, Do: func() { m.answer(map[string]bool{"accept": false}) }},
-		choice{Label: "Accept", Kind: guikit.ButtonPrimary, Do: func() { m.answer(map[string]bool{"accept": true}) }})
+	return newDialog(i18n.T("Receive a file?"), body, nil, 0,
+		choice{Label: i18n.T("Decline"), Kind: guikit.ButtonSecondary, Do: func() { m.answer(map[string]bool{"accept": false}) }},
+		choice{Label: i18n.T("Accept"), Kind: guikit.ButtonPrimary, Do: func() { m.answer(map[string]bool{"accept": true}) }})
 }
 
 // layout draws one frame of the ask window.

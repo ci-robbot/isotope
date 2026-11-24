@@ -7,6 +7,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // DefaultHostname is the hostname when the person leaves the field empty.
@@ -44,15 +46,15 @@ func ConfigOut() string {
 // wiped. The check has to live here, before the value can reach the renderer.
 var posixUsername = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
 
-const usernameRule = "username must be 1-32 chars: lowercase letters, digits, - or _, starting with a letter or _"
+var usernameRule = i18n.Mark("username must be 1-32 chars: lowercase letters, digits, - or _, starting with a letter or _")
 
 // ValidateUsername checks the name of the desktop account.
 func ValidateUsername(v string) error {
 	if v == "" {
-		return errors.New("username is required")
+		return errors.New(i18n.T("username is required"))
 	}
 	if !posixUsername.MatchString(v) {
-		return errors.New(usernameRule)
+		return errors.New(i18n.T(usernameRule))
 	}
 	return nil
 }
@@ -74,7 +76,7 @@ func ValidateUsername(v string) error {
 // returns no error and so cannot refuse, so the check lives here at the input.
 var githubHandle = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
 
-const githubRule = "github username must be 1-39 chars: letters, digits or hyphens, not starting or ending with a hyphen"
+var githubRule = i18n.Mark("github username must be 1-39 chars: letters, digits or hyphens, not starting or ending with a hyphen")
 
 // ValidateGithub accepts the empty string: importing SSH keys is optional and
 // skipping the step is the documented way to decline.
@@ -83,7 +85,7 @@ func ValidateGithub(v string) error {
 		return nil
 	}
 	if !githubHandle.MatchString(v) {
-		return errors.New(githubRule)
+		return errors.New(i18n.T(githubRule))
 	}
 	return nil
 }
@@ -408,7 +410,7 @@ func (w *Wizard) SetUsername(v string) error {
 func (w *Wizard) SetPassword(v string) error {
 	v = strings.TrimSpace(v)
 	if v == "" {
-		return errors.New("password is required")
+		return errors.New(i18n.T("password is required"))
 	}
 	w.Choice.Password = v
 	w.Page = PageGithub
@@ -427,7 +429,7 @@ func (w *Wizard) SetGithub(v string) error {
 	}
 	w.Choice.Github = v
 	if len(w.Disks) == 0 {
-		return errors.New("no installable disk found")
+		return errors.New(i18n.T("no installable disk found"))
 	}
 	w.Page = PageDisk
 	return nil
@@ -474,7 +476,7 @@ func (w *Wizard) SetPassphrase(raw string) error {
 // ConfirmPassphrase takes the second entry, which must match the first.
 func (w *Wizard) ConfirmPassphrase(raw string) error {
 	if raw != w.passphraseFirst {
-		return errors.New("the passphrases do not match: type it again, or esc to start over")
+		return errors.New(i18n.T("the passphrases do not match: type it again, or esc to start over"))
 	}
 	w.Choice.Passphrase = w.passphraseFirst
 	w.passphraseFirst = ""
@@ -512,7 +514,7 @@ func (w *Wizard) KeySaved() {
 // ConfirmRecoveryKey takes the group typed back, or the whole key.
 func (w *Wizard) ConfirmRecoveryKey(typed string) error {
 	if !confirmsRecoveryKey(w.Choice.RecoveryKeyValue, w.ConfirmGroup, typed) {
-		return fmt.Errorf("that is not group %d: check what you wrote down, or esc to see the key again", w.ConfirmGroup+1)
+		return errors.New(i18n.Tf("that is not group %d: check what you wrote down, or esc to see the key again", w.ConfirmGroup+1))
 	}
 	w.Page = PageReview
 	return nil

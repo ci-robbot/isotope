@@ -1,0 +1,985 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: isotope isotope-installer\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: cmd/isotope-install-gui/app.go
+msgid "Introduction"
+msgstr "Introducción"
+
+#: cmd/isotope-install-gui/app.go
+#: cmd/isotope-install-gui/pages.go
+msgid "Keyboard and time zone"
+msgstr "Teclado y zona horaria"
+
+#: cmd/isotope-install-gui/app.go
+#: cmd/isotope-install-gui/pages.go
+msgid "Account"
+msgstr "Cuenta"
+
+#: cmd/isotope-install-gui/app.go
+#: cmd/isotope-install-gui/pages.go
+msgid "Disk"
+msgstr "Disco"
+
+#: cmd/isotope-install-gui/app.go
+#: cmd/isotope-install-gui/pages.go
+msgid "Encryption"
+msgstr "Cifrado"
+
+#: cmd/isotope-install-gui/app.go
+msgid "Summary"
+msgstr "Resumen"
+
+#: cmd/isotope-install-gui/app.go
+msgid "Installation"
+msgstr "Instalación"
+
+#: cmd/isotope-install-gui/app.go
+msgid "Pick a time zone from the list."
+msgstr "Elija una zona horaria de la lista."
+
+#: cmd/isotope-install-gui/app.go
+msgid "the passwords do not match"
+msgstr "las contraseñas no coinciden"
+
+#: cmd/isotope-install-gui/app.go
+#: cmd/isotope-install-gui/pages.go
+msgid "Checking GitHub"
+msgstr "Comprobando GitHub"
+
+#: cmd/isotope-install-gui/app.go
+#, go-format
+msgid "Saved to %s"
+msgstr "Guardado en %s"
+
+#: cmd/isotope-install-gui/main.go
+#: cmd/isotope-install-gui/pages.go
+#: cmd/isotope-install-gui/window.go
+msgid "Install Isotope"
+msgstr "Instalar Isotope"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Shut down"
+msgstr "Apagar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "About five minutes"
+msgstr "Unos cinco minutos"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Continue"
+msgstr "Continuar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Erase and install"
+msgstr "Borrar e instalar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Go back"
+msgstr "Atrás"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Welcome to Isotope"
+msgstr "Bienvenido a Isotope"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "An immutable Linux desktop, built on Hadron. The system is a read-only image. An update arrives as a whole new image, and a bad one rolls back by itself."
+msgstr "Un escritorio Linux inmutable, basado en Hadron. El sistema es una imagen de solo lectura. Una actualización llega como una imagen nueva y completa, y una defectuosa se revierte sola."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "No graphics driver for this GPU: the screen is drawn in software, so it can be slow."
+msgstr "No hay controlador gráfico para esta GPU: la pantalla se dibuja por software, así que puede ir lenta."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "This image is for virtual machines and has no graphics drivers: the screen is drawn in software, so it can be slow. On a computer, install the standard Isotope image."
+msgstr "Esta imagen es para máquinas virtuales y no tiene controladores gráficos: la pantalla se dibuja por software, así que puede ir lenta. En un equipo, instale la imagen estándar de Isotope."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "The graphics driver is off or did not load (for example, nomodeset): the screen is drawn in software, so it can be slow."
+msgstr "El controlador gráfico está desactivado o no se cargó (por ejemplo, nomodeset): la pantalla se dibuja por software, así que puede ir lenta."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "ACTIVE"
+msgstr "ACTIVA"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "runs your desktop"
+msgstr "ejecuta su escritorio"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "PASSIVE"
+msgstr "PASIVA"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "takes the next update"
+msgstr "recibe la próxima actualización"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "RECOVERY"
+msgstr "RECUPERACIÓN"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "the way back"
+msgstr "el camino de vuelta"
+
+#: cmd/isotope-install-gui/pages.go
+#: cmd/isotope-install-gui/window.go
+msgid "Time zone"
+msgstr "Zona horaria"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "The keyboard layout is %s, the one this session uses. You can change it on the last page."
+msgstr "La distribución del teclado es %s, la de esta sesión. Puede cambiarla en la última página."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "The layout applies at once, here and on the disk passphrase prompt at every start."
+msgstr "La distribución se aplica de inmediato, aquí y al pedir la frase de contraseña del disco en cada inicio."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "The layout is for the installed system, and for the disk passphrase prompt at every start."
+msgstr "La distribución es para el sistema instalado y para la petición de la frase de contraseña del disco en cada inicio."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Try it"
+msgstr "Pruébela"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Keyboard layout"
+msgstr "Distribución del teclado"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Found from this computer's clock. Click the map or type a city."
+msgstr "Detectada a partir del reloj de este equipo. Haga clic en el mapa o escriba una ciudad."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Found from this computer's clock. Type a city to change it."
+msgstr "Detectada a partir del reloj de este equipo. Escriba una ciudad para cambiarla."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Computer and account"
+msgstr "Equipo y cuenta"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "This account is the computer's administrator: it installs updates and extensions."
+msgstr "Esta cuenta es la de administrador del equipo: instala las actualizaciones y las extensiones."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Computer name"
+msgstr "Nombre del equipo"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "User name"
+msgstr "Nombre de usuario"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Lowercase letters, digits, - or _, up to 32 characters."
+msgstr "Letras minúsculas, dígitos, - o _, hasta 32 caracteres."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "The passwords do not match yet."
+msgstr "Las contraseñas aún no coinciden."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Password"
+msgstr "Contraseña"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Type it again"
+msgstr "Escríbala de nuevo"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "SSH keys from GitHub"
+msgstr "Claves SSH de GitHub"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "(optional)"
+msgstr "(opcional)"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Where should Isotope go?"
+msgstr "¿Dónde instalar Isotope?"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "No disk was found. Connect one, then rescan."
+msgstr "No se encontró ningún disco. Conecte uno y vuelva a buscar."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Rescan"
+msgstr "Volver a buscar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Isotope uses the whole disk. Everything on the disk you pick is erased."
+msgstr "Isotope usa el disco entero. Todo lo que hay en el disco que elija se borra."
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "%s disk"
+msgstr "Disco de %s"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "On %s now"
+msgstr "Ahora en %s"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "What is on this disk could not be read."
+msgstr "No se pudo leer el contenido de este disco."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "No partitions"
+msgstr "Sin particiones"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "This computer unlocks its disk with its TPM security chip, without asking you anything. If the TPM is reset or a firmware update changes what it checks, your files cannot be opened without a recovery key. The computer asks for the key only then."
+msgstr "Este equipo desbloquea su disco con el chip de seguridad TPM, sin preguntarle nada. Si el TPM se restablece o una actualización del firmware cambia lo que comprueba, sus archivos no se pueden abrir sin una clave de recuperación. El equipo solo pide la clave en ese caso."
+
+#: cmd/isotope-install-gui/pages.go
+#: cmd/isotope-install-ui/wizard.go
+msgid "Create a recovery key?"
+msgstr "¿Crear una clave de recuperación?"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "No, the TPM only"
+msgstr "No, solo el TPM"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Nothing to keep safe."
+msgstr "Nada que guardar."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Create a recovery key"
+msgstr "Crear una clave de recuperación"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "You see it once, on the next screen."
+msgstr "La verá una sola vez, en la siguiente pantalla."
+
+#: cmd/isotope-install-gui/pages.go
+#: cmd/isotope-install-ui/wizard.go
+msgid "Encrypt your files?"
+msgstr "¿Cifrar sus archivos?"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "With encryption, nobody can read your files from a lost or stolen disk. You type a passphrase every time the computer starts."
+msgstr "Con el cifrado, nadie puede leer sus archivos de un disco perdido o robado. Escribirá una frase de contraseña cada vez que se inicie el equipo."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Don't encrypt"
+msgstr "No cifrar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Starts without a passphrase."
+msgstr "Se inicia sin frase de contraseña."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Encrypt my files"
+msgstr "Cifrar mis archivos"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "A passphrase at every start."
+msgstr "Una frase de contraseña en cada inicio."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Disk passphrase"
+msgstr "Frase de contraseña del disco"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "%d characters or more. A few words work well."
+msgstr "%d caracteres o más. Unas cuantas palabras funcionan bien."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Also create a recovery key"
+msgstr "Crear también una clave de recuperación"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "A second way in if you forget the passphrase. You see it once, on the next screen."
+msgstr "Una segunda forma de entrar si olvida la frase de contraseña. La verá una sola vez, en la siguiente pantalla."
+
+#: cmd/isotope-install-gui/pages.go
+#: cmd/isotope-install-ui/wizard.go
+msgid "Your recovery key"
+msgstr "Su clave de recuperación"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Write it down or take a photo of it now. It is shown only this once and saved nowhere."
+msgstr "Anótela o hágale una foto ahora. Solo se muestra esta vez y no se guarda en ningún sitio."
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "Only these letters appear: %s"
+msgstr "Solo aparecen estas letras: %s"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "To check you saved it, type group %d"
+msgstr "Para comprobar que la guardó, escriba el grupo %d"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Show as QR code"
+msgstr "Mostrar como código QR"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Hide the QR code"
+msgstr "Ocultar el código QR"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "SSH keys"
+msgstr "Claves SSH"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "%d SSH key"
+msgid_plural "%d SSH keys"
+msgstr[0] "%d clave SSH"
+msgstr[1] "%d claves SSH"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "%[1]s from github.com/%[2]s"
+msgstr "%[1]s de github.com/%[2]s"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Off"
+msgstr "Desactivado"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "On, passphrase at every start · recovery key saved"
+msgstr "Activado, frase de contraseña en cada inicio · clave de recuperación guardada"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "On, passphrase at every start"
+msgstr "Activado, frase de contraseña en cada inicio"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "On, unlocked by the TPM · recovery key saved"
+msgstr "Activado, desbloqueado por el TPM · clave de recuperación guardada"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "On, unlocked by the TPM"
+msgstr "Activado, desbloqueado por el TPM"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Keyboard"
+msgstr "Teclado"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Ready to install"
+msgstr "Listo para instalar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Check what you picked. Click Change to go back to it."
+msgstr "Revise lo que eligió. Haga clic en Cambiar para volver a ello."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Change"
+msgstr "Cambiar"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "Installing erases everything on %s. This cannot be undone."
+msgstr "La instalación borra todo en %s. No se puede deshacer."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Installing Isotope"
+msgstr "Instalando Isotope"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Do not turn off the computer."
+msgstr "No apague el equipo."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Show details"
+msgstr "Mostrar detalles"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Hide details"
+msgstr "Ocultar detalles"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Isotope could not be installed"
+msgstr "No se pudo instalar Isotope"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "It stopped at \"%[1]s\": %[2]s. Save the log to report it, or restart the computer to try again."
+msgstr "Se detuvo en \"%[1]s\": %[2]s. Guarde el registro para informar del problema, o reinicie el equipo para volver a intentarlo."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "The end of the install log"
+msgstr "El final del registro de instalación"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Save the log"
+msgstr "Guardar el registro"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Close"
+msgstr "Cerrar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Restart"
+msgstr "Reiniciar"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Open a terminal"
+msgstr "Abrir un terminal"
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "Remove the installation media, then restart and sign in as %s."
+msgstr "Retire el medio de instalación, reinicie e inicie sesión como %s."
+
+#: cmd/isotope-install-gui/pages.go
+#, go-format
+msgid "Remove the installation media, then restart. You will type your disk passphrase, then sign in as %s."
+msgstr "Retire el medio de instalación y reinicie. Escribirá la frase de contraseña del disco y después iniciará sesión como %s."
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Remove the installation media, then restart."
+msgstr "Retire el medio de instalación y reinicie."
+
+#: cmd/isotope-install-gui/pages.go
+#: pkg/installer/diskinfo.go
+msgid "Encrypted"
+msgstr "Cifrado"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Recovery image ready"
+msgstr "Imagen de recuperación lista"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Updates roll back by themselves"
+msgstr "Las actualizaciones se revierten solas"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Isotope is installed"
+msgstr "Isotope está instalado"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+#: cmd/isotope-install-gui/pages.go
+msgid "Keep trying"
+msgstr "Seguir probando"
+
+#: cmd/isotope-install-ui/gui.go
+msgid "The graphical installer could not start. This is the text installer."
+msgstr "No se pudo iniciar el instalador gráfico. Este es el instalador de texto."
+
+#: cmd/isotope-install-ui/gui.go
+#, go-format
+msgid "The graphical installer stopped (exit status %d). This is the text installer: start again from the first question."
+msgstr "El instalador gráfico se detuvo (estado de salida %d). Este es el instalador de texto: empiece de nuevo desde la primera pregunta."
+
+#: cmd/isotope-install-ui/model.go
+msgid "waking the machine..."
+msgstr "despertando la máquina..."
+
+#: cmd/isotope-install-ui/model.go
+msgid "install halted"
+msgstr "instalación detenida"
+
+#: cmd/isotope-install-ui/model.go
+msgid "press 's' for a rescue shell · ctrl+c to exit"
+msgstr "pulse 's' para un shell de rescate · ctrl+c para salir"
+
+#: cmd/isotope-install-ui/model.go
+msgid "press 'l' to hide logs"
+msgstr "pulse 'l' para ocultar los registros"
+
+#: cmd/isotope-install-ui/model.go
+msgid "system installed - rebooting..."
+msgstr "sistema instalado - reiniciando..."
+
+#: cmd/isotope-install-ui/model.go
+msgid "press 'l' to show logs · do not power off"
+msgstr "pulse 'l' para ver los registros · no apague"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "keyboard"
+msgstr "teclado"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "timezone"
+msgstr "zona horaria"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "hostname"
+msgstr "nombre de host"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "username"
+msgstr "usuario"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "password"
+msgstr "contraseña"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "ssh keys"
+msgstr "claves ssh"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "target disk"
+msgstr "disco de destino"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "encryption"
+msgstr "cifrado"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "disk passphrase"
+msgstr "frase de contraseña del disco"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "recovery key"
+msgstr "clave de recuperación"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "review"
+msgstr "resumen"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "search: "
+msgstr "buscar: "
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "nothing matches the search"
+msgstr "nada coincide con la búsqueda"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid ""
+"A recovery key is a second, long code that also opens your files.\n"
+"It is for the day you forget the passphrase: without it, your\n"
+"files are gone.\n"
+"\n"
+"If you create one, keep it somewhere safe and NOT on this computer:\n"
+"on paper, or in a password manager on another device. Anyone with\n"
+"the key and the disk can read your files."
+msgstr ""
+"Una clave de recuperación es un segundo código, largo, que también\n"
+"abre sus archivos. Sirve para el día en que olvide la frase de\n"
+"contraseña: sin ella, sus archivos se pierden.\n"
+"\n"
+"Si crea una, guárdela en un lugar seguro y NO en este equipo: en\n"
+"papel o en un gestor de contraseñas de otro dispositivo. Cualquiera\n"
+"con la clave y el disco puede leer sus archivos."
+
+#: cmd/isotope-install-ui/wizard.go
+msgid ""
+"This computer unlocks its disk with its TPM security chip, without\n"
+"asking you anything. Without a recovery key, your files cannot be\n"
+"recovered if:\n"
+"\n"
+"  - the TPM is reset or cleared,\n"
+"  - a firmware (BIOS) update changes what the TPM checks at start,\n"
+"  - the disk is moved to another computer.\n"
+"\n"
+"A recovery key is a long code that the computer asks for only then.\n"
+"If you create one, keep it somewhere safe and NOT on this computer:\n"
+"on paper, or in a password manager on another device."
+msgstr ""
+"Este equipo desbloquea su disco con el chip de seguridad TPM, sin\n"
+"preguntarle nada. Sin una clave de recuperación, sus archivos no se\n"
+"pueden recuperar si:\n"
+"\n"
+"  - el TPM se restablece o se borra,\n"
+"  - una actualización del firmware (BIOS) cambia lo que comprueba el TPM,\n"
+"  - el disco se mueve a otro equipo.\n"
+"\n"
+"Una clave de recuperación es un código largo que el equipo solo pide\n"
+"entonces. Si crea una, guárdela en un lugar seguro y NO en este equipo:\n"
+"en papel o en un gestor de contraseñas de otro dispositivo."
+
+#: cmd/isotope-install-ui/wizard.go
+msgid ""
+"Encrypt the partition that holds your files (/home) and /var\n"
+"with a passphrase you choose.\n"
+"\n"
+"This computer asks for the passphrase every time it starts.\n"
+"\n"
+"Protects: your files if the laptop or its disk is stolen while it\n"
+"is switched off. The system itself is not encrypted; it holds\n"
+"nothing of yours.\n"
+"\n"
+"If you forget the passphrase, your files are gone. Nobody can\n"
+"recover them. Write it down and keep it away from the computer."
+msgstr ""
+"Cifra la partición que guarda sus archivos (/home) y /var\n"
+"con una frase de contraseña que usted elija.\n"
+"\n"
+"Este equipo pide la frase de contraseña cada vez que se inicia.\n"
+"\n"
+"Protege: sus archivos si roban el portátil o su disco mientras\n"
+"está apagado. El sistema en sí no está cifrado; no guarda\n"
+"nada suyo.\n"
+"\n"
+"Si olvida la frase de contraseña, sus archivos se pierden. Nadie\n"
+"puede recuperarlos. Anótela y guárdela lejos del equipo."
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "desktop install · %s"
+msgstr "instalación de escritorio · %s"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no match"
+msgstr "sin coincidencias"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "type to search · up/down select · enter confirm"
+msgstr "escriba para buscar · arriba/abajo elegir · enter confirmar"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "type to search · up/down select · enter confirm · esc back"
+msgstr "escriba para buscar · arriba/abajo elegir · enter confirmar · esc atrás"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "the selected disk will be ERASED"
+msgstr "el disco elegido se BORRARÁ"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "up/down select · enter confirm · esc back"
+msgstr "arriba/abajo elegir · enter confirmar · esc atrás"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no, do not encrypt"
+msgstr "no, no cifrar"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "yes, encrypt my files"
+msgstr "sí, cifrar mis archivos"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no, the TPM only"
+msgstr "no, solo el TPM"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "yes, create a recovery key"
+msgstr "sí, crear una clave de recuperación"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "Also create a recovery key?"
+msgstr "¿Crear también una clave de recuperación?"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no, the passphrase only"
+msgstr "no, solo la frase de contraseña"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "yes, also create a recovery key"
+msgstr "sí, crear también una clave de recuperación"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid ""
+"Write it down or take a photo of it now, and keep it away from\n"
+"this computer. It is shown only this once and saved nowhere."
+msgstr ""
+"Anótela o hágale una foto ahora, y guárdela lejos de este equipo.\n"
+"Solo se muestra esta vez y no se guarda en ningún sitio."
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "The letters are only these: %s"
+msgstr "Las letras son solo estas: %s"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "enter when you have saved it · esc back"
+msgstr "enter cuando la haya guardado · esc atrás"
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "this ERASES %s and installs isotope"
+msgstr "esto BORRA %s e instala isotope"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "none"
+msgstr "ninguna"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "disk"
+msgstr "disco"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no"
+msgstr "no"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "no (the TPM only)"
+msgstr "no (solo el TPM)"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "yes (you saved it)"
+msgstr "sí (la guardó)"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "recovery"
+msgstr "recuperación"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "off"
+msgstr "desactivado"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "on (passphrase at every start)"
+msgstr "activado (frase de contraseña en cada inicio)"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "encrypt"
+msgstr "cifrado"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "enter to INSTALL · esc back"
+msgstr "enter para INSTALAR · esc atrás"
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "strength: %s"
+msgstr "fortaleza: %s"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "enter continue · esc back"
+msgstr "enter continuar · esc atrás"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "keyboard layout"
+msgstr "distribución del teclado"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "hostname for this machine"
+msgstr "nombre de host de esta máquina"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "username for the desktop account"
+msgstr "nombre de usuario de la cuenta del escritorio"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "password for that account"
+msgstr "contraseña de esa cuenta"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "GitHub username to import SSH keys from (blank to skip)"
+msgstr "usuario de GitHub del que importar las claves SSH (vacío para omitir)"
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "disk passphrase, %d characters or more (a few words work well)"
+msgstr "frase de contraseña del disco, %d caracteres o más (unas palabras funcionan bien)"
+
+#: cmd/isotope-install-ui/wizard.go
+msgid "type the disk passphrase again"
+msgstr "escriba de nuevo la frase de contraseña del disco"
+
+#: cmd/isotope-install-ui/wizard.go
+#, go-format
+msgid "to check you saved it, type the %[1]s group of the recovery key (group %[2]d of 8)"
+msgstr "para comprobar que la guardó, escriba el %[1]s grupo de la clave de recuperación (grupo %[2]d de 8)"
+
+#: pkg/installer/diskinfo.go
+msgid "SD card"
+msgstr "Tarjeta SD"
+
+#: pkg/installer/diskinfo.go
+msgid "Swap"
+msgstr "Intercambio"
+
+#: pkg/installer/diskinfo.go
+msgid "Unknown"
+msgstr "Desconocido"
+
+#: pkg/installer/diskinfo.go
+msgid "Windows, a Linux system and their files on this disk will be erased."
+msgstr "Windows, un sistema Linux y sus archivos en este disco se borrarán."
+
+#: pkg/installer/diskinfo.go
+msgid "Windows and its files on this disk will be erased."
+msgstr "Windows y sus archivos en este disco se borrarán."
+
+#: pkg/installer/diskinfo.go
+msgid "The Kairos system on this disk (Isotope or another) and its files will be erased."
+msgstr "El sistema Kairos de este disco (Isotope u otro) y sus archivos se borrarán."
+
+#: pkg/installer/diskinfo.go
+msgid "The Linux system and its files on this disk will be erased."
+msgstr "El sistema Linux y sus archivos en este disco se borrarán."
+
+#: pkg/installer/diskinfo.go
+msgid "This disk has no partitions. Anything on it will be erased."
+msgstr "Este disco no tiene particiones. Todo lo que contenga se borrará."
+
+#: pkg/installer/diskinfo.go
+msgid "Everything on this disk will be erased."
+msgstr "Todo lo que hay en este disco se borrará."
+
+#: pkg/installer/diskinfo.go
+msgid "Free"
+msgstr "Libre"
+
+#: pkg/installer/encrypt.go
+#, go-format
+msgid "the passphrase must be at least %d characters"
+msgstr "la frase de contraseña debe tener al menos %d caracteres"
+
+#: pkg/installer/encrypt.go
+msgid "the passphrase must not start or end with a space"
+msgstr "la frase de contraseña no debe empezar ni terminar con un espacio"
+
+#: pkg/installer/encrypt.go
+msgid "the passphrase must not contain control characters"
+msgstr "la frase de contraseña no debe contener caracteres de control"
+
+#: pkg/installer/encrypt.go
+#, go-format
+msgid "too short: %d of %d characters"
+msgstr "demasiado corta: %d de %d caracteres"
+
+#: pkg/installer/encrypt.go
+msgid "weak: make it longer"
+msgstr "débil: hágala más larga"
+
+#: pkg/installer/encrypt.go
+msgid "fair: a few more words make it strong"
+msgstr "aceptable: unas palabras más la harán fuerte"
+
+#: pkg/installer/encrypt.go
+msgid "strong"
+msgstr "fuerte"
+
+#: pkg/installer/estimate.go
+msgid "Less than a minute left"
+msgstr "Queda menos de un minuto"
+
+#: pkg/installer/estimate.go
+msgid "About a minute left"
+msgstr "Queda alrededor de un minuto"
+
+#: pkg/installer/estimate.go
+#, go-format
+msgid "About %d minute left"
+msgid_plural "About %d minutes left"
+msgstr[0] "Queda alrededor de %d minuto"
+msgstr[1] "Quedan alrededor de %d minutos"
+
+#: pkg/installer/githubkeys.go
+msgid "No GitHub user of that name. You can go on without keys."
+msgstr "No hay ningún usuario de GitHub con ese nombre. Puede continuar sin claves."
+
+#: pkg/installer/githubkeys.go
+msgid "Could not reach GitHub to check the name. You can go on."
+msgstr "No se pudo contactar con GitHub para comprobar el nombre. Puede continuar."
+
+#: pkg/installer/githubkeys.go
+msgid "No keys for that name. You can go on without keys."
+msgstr "No hay claves para ese nombre. Puede continuar sin claves."
+
+#: pkg/installer/githubkeys.go
+#, go-format
+msgid "%d key found"
+msgid_plural "%d keys found"
+msgstr[0] "%d clave encontrada"
+msgstr[1] "%d claves encontradas"
+
+#. TRANSLATORS: an ordinal number, as in "type the 3rd group".
+#: pkg/installer/recoverykey.go
+#, go-format
+msgid "%dst"
+msgstr "%d.º"
+
+#. TRANSLATORS: an ordinal number, as in "type the 3rd group".
+#: pkg/installer/recoverykey.go
+#, go-format
+msgid "%dnd"
+msgstr "%d.º"
+
+#. TRANSLATORS: an ordinal number, as in "type the 3rd group".
+#: pkg/installer/recoverykey.go
+#, go-format
+msgid "%drd"
+msgstr "%d.º"
+
+#. TRANSLATORS: an ordinal number, as in "type the 3rd group".
+#: pkg/installer/recoverykey.go
+#, go-format
+msgid "%dth"
+msgstr "%d.º"
+
+#: pkg/installer/savelog.go
+msgid "the install log is gone: %w"
+msgstr "el registro de instalación ya no existe: %w"
+
+#: pkg/installer/steps.go
+msgid "Preparing"
+msgstr "Preparando"
+
+#: pkg/installer/steps.go
+msgid "Partitioning disk"
+msgstr "Particionando el disco"
+
+#: pkg/installer/steps.go
+msgid "Running before-install"
+msgstr "Ejecutando before-install"
+
+#: pkg/installer/steps.go
+msgid "Installing active system"
+msgstr "Instalando el sistema activo"
+
+#: pkg/installer/steps.go
+msgid "Configuring bootloader"
+msgstr "Configurando el cargador de arranque"
+
+#: pkg/installer/steps.go
+msgid "Creating recovery image"
+msgstr "Creando la imagen de recuperación"
+
+#: pkg/installer/steps.go
+msgid "Creating passive image"
+msgstr "Creando la imagen pasiva"
+
+#: pkg/installer/steps.go
+msgid "Running after-install"
+msgstr "Ejecutando after-install"
+
+#: pkg/installer/steps.go
+msgid "Checking the disk passphrase"
+msgstr "Comprobando la frase de contraseña del disco"
+
+#: pkg/installer/steps.go
+msgid "Complete"
+msgstr "Completado"
+
+#: pkg/installer/wizard.go
+msgid "username must be 1-32 chars: lowercase letters, digits, - or _, starting with a letter or _"
+msgstr "el nombre de usuario debe tener 1-32 caracteres: letras minúsculas, dígitos, - o _, empezando por una letra o _"
+
+#: pkg/installer/wizard.go
+msgid "username is required"
+msgstr "el nombre de usuario es obligatorio"
+
+#: pkg/installer/wizard.go
+msgid "github username must be 1-39 chars: letters, digits or hyphens, not starting or ending with a hyphen"
+msgstr "el usuario de github debe tener 1-39 caracteres: letras, dígitos o guiones, sin guion al principio ni al final"
+
+#: pkg/installer/wizard.go
+msgid "password is required"
+msgstr "la contraseña es obligatoria"
+
+#: pkg/installer/wizard.go
+msgid "no installable disk found"
+msgstr "no se encontró ningún disco donde instalar"
+
+#: pkg/installer/wizard.go
+msgid "the passphrases do not match: type it again, or esc to start over"
+msgstr "las frases de contraseña no coinciden: escríbala de nuevo, o esc para empezar otra vez"
+
+#: pkg/installer/wizard.go
+#, go-format
+msgid "that is not group %d: check what you wrote down, or esc to see the key again"
+msgstr "ese no es el grupo %d: revise lo que anotó, o esc para ver la clave otra vez"

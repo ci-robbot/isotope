@@ -18,6 +18,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/kairos-community/isotope/pkg/i18n"
 )
 
 // Profile is one A2DP profile of a Bluetooth card.
@@ -62,7 +64,7 @@ var profileLabels = map[string]string{
 	"a2dp-sink-ldac":       "LDAC",
 	"a2dp-sink-lc3plus_h3": "LC3",
 	"a2dp-sink-opus_05":    "Opus",
-	"a2dp-sink-opus_g":     "Opus (gaming)",
+	"a2dp-sink-opus_g":     i18n.Mark("Opus (gaming)"),
 }
 
 // pwObject is the part of a pw-dump object the page reads. pw-dump prints
@@ -164,12 +166,12 @@ func (p cardProfile) label() string {
 	}
 	m := reCodec.FindStringSubmatch(p.desc)
 	if m == nil {
-		return "Automatic"
+		return i18n.X("codec", "Automatic")
 	}
 	codec := strings.TrimSpace(m[1])
 	for name, label := range profileLabels {
 		if norm(label) == norm(codec) || norm(strings.TrimPrefix(name, "a2dp-sink-")) == norm(codec) {
-			return label
+			return i18n.T(label)
 		}
 	}
 	return codec
@@ -177,7 +179,7 @@ func (p cardProfile) label() string {
 
 func profileLabel(name string) string {
 	if l, ok := profileLabels[name]; ok {
-		return l
+		return i18n.T(l)
 	}
 	return name
 }
@@ -207,7 +209,7 @@ func SetProfile(address, profile string) error {
 		return err
 	}
 	if c == nil {
-		return errors.New("this device has no audio card yet")
+		return errors.New(i18n.T("this device has no audio card yet"))
 	}
 	for _, p := range c.profiles {
 		if p.name == profile {
@@ -215,5 +217,5 @@ func SetProfile(address, profile string) error {
 			return err
 		}
 	}
-	return fmt.Errorf("the device has no profile %s", profile)
+	return fmt.Errorf(i18n.T("the device has no profile %s"), profile)
 }

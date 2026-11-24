@@ -1,0 +1,296 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: isotope isotope-tray\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Log in to %[1]s as %[2]s."
+msgstr "Inicie sesión en %[1]s como %[2]s."
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Log in to %s."
+msgstr "Inicie sesión en %s."
+
+#: cmd/isotope/agents.go
+msgid "The server asks for a second step to log in."
+msgstr "El servidor solicita un segundo paso para iniciar sesión."
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "The server asks for a second step to log in. It asks for: %s"
+msgstr "El servidor solicita un segundo paso para iniciar sesión. Solicita: %s"
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "Could not log in: %s"
+msgstr "No se pudo iniciar sesión: %s"
+
+#: cmd/isotope/agents.go
+#, go-format
+msgid "The login failed: %s"
+msgstr "Falló el inicio de sesión: %s"
+
+#: cmd/isotope/agents.go
+msgid "The server did not answer in time."
+msgstr "El servidor no respondió a tiempo."
+
+#: cmd/isotope/apps_tray.go
+#: cmd/isotope/firmware_tray.go
+msgid "Open Isotope System"
+msgstr "Abrir Isotope System"
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%[1]s and %[2]s"
+msgstr "%[1]s y %[2]s"
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%[1]s, %[2]s and %[3]d more"
+msgid_plural "%[1]s, %[2]s and %[3]d more"
+msgstr[0] "%[1]s, %[2]s y %[3]d más"
+msgstr[1] "%[1]s, %[2]s y %[3]d más"
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "An app update needs your OK"
+msgid_plural "%d app updates need your OK"
+msgstr[0] "Una actualización de aplicación necesita su aprobación"
+msgstr[1] "%d actualizaciones de aplicaciones necesitan su aprobación"
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%s asks for more permissions. Isotope System's Apps page shows what it asks for."
+msgid_plural "%s ask for more permissions. Isotope System's Apps page shows what they ask for."
+msgstr[0] "%s solicita más permisos. La página Aplicaciones de Isotope System muestra qué solicita."
+msgstr[1] "%s solicitan más permisos. La página Aplicaciones de Isotope System muestra qué solicitan."
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%d app update"
+msgid_plural "%d app updates"
+msgstr[0] "%d actualización de aplicación"
+msgstr[1] "%d actualizaciones de aplicaciones"
+
+#: cmd/isotope/apps_tray.go
+#, go-format
+msgid "%s can be updated. Isotope System's Apps page installs it."
+msgid_plural "%s can be updated. Isotope System's Apps page installs them."
+msgstr[0] "%s se puede actualizar. La página Aplicaciones de Isotope System instala la actualización."
+msgstr[1] "%s se pueden actualizar. La página Aplicaciones de Isotope System instala las actualizaciones."
+
+#: cmd/isotope/client.go
+msgid "Only members of the admin group can change this system."
+msgstr "Solo los miembros del grupo admin pueden modificar este sistema."
+
+#: cmd/isotope/client.go
+msgid "The last update waits for a restart; restart first."
+msgstr "La última actualización espera un reinicio; reinicie primero."
+
+#: cmd/isotope/client.go
+msgid "Another update is running."
+msgstr "Hay otra actualización en curso."
+
+#: cmd/isotope/client.go
+msgid "The last update did not finish; restart before choosing a system."
+msgstr "La última actualización no terminó; reinicie antes de elegir un sistema."
+
+#: cmd/isotope/client.go
+msgid "An update is installed and waits for a reboot; restart into it first. The system you run now is then the previous one."
+msgstr "Hay una actualización instalada que espera un reinicio; reinicie primero en ella. El sistema que usa ahora pasará a ser el anterior."
+
+#: cmd/isotope/client.go
+msgid "The system is already restarting."
+msgstr "El sistema ya se está reiniciando."
+
+#: cmd/isotope/firmware_tray.go
+#, go-format
+msgid "%[1]s can be updated to version %[2]s. Isotope System's Updates page installs it."
+msgstr "%[1]s se puede actualizar a la versión %[2]s. La página Actualizaciones de Isotope System la instala."
+
+#: cmd/isotope/firmware_tray.go
+#, go-format
+msgid "A device can be updated to version %s. Isotope System's Updates page installs it."
+msgstr "Un dispositivo se puede actualizar a la versión %s. La página Actualizaciones de Isotope System la instala."
+
+#: cmd/isotope/firmware_tray.go
+msgid "Firmware update available"
+msgstr "Actualización del firmware disponible"
+
+#: cmd/isotope/menu.go
+msgid "Unmanaged image"
+msgstr "Imagen no gestionada"
+
+#: cmd/isotope/menu.go
+msgid "Checking for updates…"
+msgstr "Buscando actualizaciones…"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s (pinned)"
+msgstr "Isotope %s (fijado)"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s is up to date"
+msgstr "Isotope %s está actualizado"
+
+#: cmd/isotope/menu.go
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s is available"
+msgstr "Isotope %s está disponible"
+
+#: cmd/isotope/menu.go
+msgid "Checking the image…"
+msgstr "Comprobando la imagen…"
+
+#: cmd/isotope/menu.go
+msgid "Installing the update…"
+msgstr "Instalando la actualización…"
+
+#: cmd/isotope/menu.go
+msgid "Changing system extensions…"
+msgstr "Cambiando las extensiones del sistema…"
+
+#: cmd/isotope/menu.go
+msgid "Backing up this machine…"
+msgstr "Haciendo una copia de seguridad de este equipo…"
+
+#: cmd/isotope/menu.go
+msgid "Restoring a backup…"
+msgstr "Restaurando una copia de seguridad…"
+
+#: cmd/isotope/menu.go
+msgid "Update failed; restart before trying again"
+msgstr "Falló la actualización; reinicie antes de volver a intentarlo"
+
+#: cmd/isotope/menu.go
+msgid "Update interrupted; restart before trying again"
+msgstr "Actualización interrumpida; reinicie antes de volver a intentarlo"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Isotope %s is installed: restart to finish"
+msgstr "Isotope %s está instalado: reinicie para terminar"
+
+#: cmd/isotope/menu.go
+msgid "Update installed; restart to use it"
+msgstr "Actualización instalada; reinicie para usarla"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Error: %s"
+msgstr "Error: %s"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Install %s"
+msgstr "Instalar %s"
+
+#: cmd/isotope/menu.go
+#, go-format
+msgid "Install latest (%s)"
+msgstr "Instalar la más reciente (%s)"
+
+#: cmd/isotope/menu.go
+msgid "Other releases"
+msgstr "Otras versiones"
+
+#: cmd/isotope/menu.go
+msgid "Switch desktop"
+msgstr "Cambiar de escritorio"
+
+#: cmd/isotope/menu.go
+msgid "Switch to the hardware image"
+msgstr "Cambiar a la imagen para hardware"
+
+#: cmd/isotope/menu.go
+msgid "Switch to the virtual machine image"
+msgstr "Cambiar a la imagen para máquina virtual"
+
+#: cmd/isotope/menu.go
+msgid "Install an image…"
+msgstr "Instalar una imagen…"
+
+#: cmd/isotope/menu.go
+msgid "Cancel the update"
+msgstr "Cancelar la actualización"
+
+#: cmd/isotope/menu.go
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+#: cmd/isotope/menu.go
+msgid "Extensions…"
+msgstr "Extensiones…"
+
+#: cmd/isotope/menu.go
+msgid "Recovery key…"
+msgstr "Clave de recuperación…"
+
+#: cmd/isotope/menu.go
+msgid "Restart into the previous system"
+msgstr "Reiniciar en el sistema anterior"
+
+#: cmd/isotope/tray.go
+msgid "Isotope updates"
+msgstr "Actualizaciones de Isotope"
+
+#: cmd/isotope/trayapp.go
+msgid "Update service not available"
+msgstr "Servicio de actualizaciones no disponible"
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s was installed in the background. It starts at the next restart."
+msgstr "Isotope %s se instaló en segundo plano. Se iniciará en el próximo reinicio."
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "Isotope %s was installed in the background. It starts at the next restart. Run `isotope reboot` to restart now."
+msgstr "Isotope %s se instaló en segundo plano. Se iniciará en el próximo reinicio. Ejecute `isotope reboot` para reiniciar ahora."
+
+#: cmd/isotope/trayapp.go
+msgid "Restart to finish the update"
+msgstr "Reinicie para terminar la actualización"
+
+#: cmd/isotope/trayapp.go
+msgid "Restart"
+msgstr "Reiniciar"
+
+#: cmd/isotope/trayapp.go
+msgid "could not open Isotope System: %w"
+msgstr "no se pudo abrir Isotope System: %w"
+
+#: cmd/isotope/trayapp.go
+msgid "the update service is not available"
+msgstr "el servicio de actualizaciones no está disponible"
+
+#: cmd/isotope/trayapp.go
+msgid "Isotope update"
+msgstr "Actualización de Isotope"
+
+#: cmd/isotope/trayapp.go
+msgid "unknown"
+msgstr "desconocido"
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "You are on %s. Install it from the update icon's menu in the panel."
+msgstr "Está usando %s. Instálela desde el menú del icono de actualizaciones en el panel."
+
+#: cmd/isotope/trayapp.go
+#, go-format
+msgid "You are on %s. Run `isotope upgrade` in a terminal to install it."
+msgstr "Está usando %s. Ejecute `isotope upgrade` en una terminal para instalarla."
+
+#: cmd/isotope/trayapp.go
+msgid "no terminal to open: %s sets no TERMINAL_EXEC, and neither foot nor xterm is installed"
+msgstr "no hay ningún terminal que abrir: %s no define TERMINAL_EXEC y no están instalados ni foot ni xterm"
