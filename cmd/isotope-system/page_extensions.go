@@ -104,6 +104,12 @@ func (p *extPage) change(what string, f func(force bool) error) {
 	})
 }
 
+// extFirstLine is the first line of an extension job's result.
+func extFirstLine(s string) string {
+	first, _, _ := strings.Cut(s, "\n")
+	return first
+}
+
 func (p *extPage) jobEnded(prev string, st Status) {
 	if prev != StateExtension {
 		return
@@ -132,6 +138,12 @@ func (p *extPage) jobEnded(prev string, st Status) {
 			}})
 	case "failed":
 		u.tell("Could not "+what, st.ExtDetail)
+	case "ok":
+		// isotope-updated names the services it started or stopped on
+		// lines of their own after the first; say them.
+		if _, services, ok := strings.Cut(st.ExtDetail, "\n"); ok && strings.TrimSpace(services) != "" {
+			u.tell(extFirstLine(st.ExtDetail), strings.TrimSpace(services))
+		}
 	}
 	p.load()
 }

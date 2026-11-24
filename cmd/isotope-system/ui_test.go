@@ -507,6 +507,12 @@ func (n *fakeNet) ImportWireGuard(name string, conf []byte) error {
 	n.rec("ImportWireGuard " + name + " " + strconv.Itoa(len(conf)))
 	return nil
 }
+func (n *fakeNet) ConnectModem(id string) error    { n.rec("ConnectModem " + id); return nil }
+func (n *fakeNet) DisconnectModem(id string) error { n.rec("DisconnectModem " + id); return nil }
+func (n *fakeNet) SetModemAPN(id, apn string) error {
+	n.rec("SetModemAPN " + id + " " + apn)
+	return nil
+}
 func (n *fakeNet) AddOpenConnect(o OpenConnect) error {
 	n.rec("AddOpenConnect " + o.Name + "|" + o.Gateway + "|" + o.Protocol + "|" + o.User)
 	return nil
@@ -866,6 +872,19 @@ func TestExtensionConflictAsksBeforeForcing(t *testing.T) {
 		defer d.mu.Unlock()
 		return len(d.forceSet) == 2 && !d.forceSet[0] && d.forceSet[1]
 	})
+}
+
+// An extension job that started or stopped services says which.
+func TestExtensionJobNamesTheServices(t *testing.T) {
+	u, d, _ := testUI(t, true)
+	p := u.view(PageExtensions).(*extPage)
+	p.change("install modemmanager", func(force bool) error { return d.InstallExtension("modemmanager", "", force) })
+	u.setStatus(Status{State: StateExtension})
+	u.setStatus(Status{State: StateIdle, ExtResult: "ok", ExtDetail: "modemmanager is installed and enabled.\nStarted: ModemManager.service."})
+	q := waitQuestion(t, u, "modemmanager is installed and enabled.")
+	if q.body != "Started: ModemManager.service." {
+		t.Fatalf("body %q", q.body)
+	}
 }
 
 func TestBackupNowReportsTheEnd(t *testing.T) {

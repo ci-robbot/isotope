@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -26,6 +27,8 @@ type fakeExt struct {
 	dissectErr error
 	installErr error
 	enableErr  error
+	startErr   error
+	merged     []string      // the host files merge wrote, for unmerge
 	block      chan struct{} // when set, InstallExt waits for it to close
 	started    chan struct{} // when set, receives once per InstallExt
 }
@@ -64,11 +67,45 @@ func (f *fakeExt) EnableExt(file string, progress func(string)) error {
 		os.MkdirAll(d, 0o755)
 		os.Symlink(filepath.Join(extDir(), file), filepath.Join(d, file))
 	}
+	f.merge()
 	return nil
+}
+
+// merge does to the fake host what systemd-sysext does to /usr: the
+// image's files and links appear in it. A file the host has stays (the
+// overlay would only shadow it). unmerge takes them away again.
+func (f *fakeExt) merge() {
+	for _, e := range f.img.Entries {
+		if e.Type == "dir" || !strings.HasPrefix(e.Path, "usr/") {
+			continue
+		}
+		p := filepath.Join(hostRoot, e.Path)
+		if exists(p) {
+			continue
+		}
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		var err error
+		if e.Type == "link" {
+			err = os.Symlink(e.Link, p)
+		} else {
+			err = os.WriteFile(p, []byte("merged"), 0o644)
+		}
+		if err == nil {
+			f.merged = append(f.merged, p)
+		}
+	}
+}
+
+func (f *fakeExt) unmerge() {
+	for _, p := range f.merged {
+		os.Remove(p)
+	}
+	f.merged = nil
 }
 
 func (f *fakeExt) DisableExt(file string, progress func(string)) error {
 	f.rec("disable " + file)
+	f.unmerge()
 	os.Remove(filepath.Join(extDir(), "common", file))
 	os.Remove(filepath.Join(extMergedDir(), file))
 	return nil
@@ -76,9 +113,28 @@ func (f *fakeExt) DisableExt(file string, progress func(string)) error {
 
 func (f *fakeExt) RemoveExt(file string, progress func(string)) error {
 	f.rec("remove " + file)
+	f.unmerge()
 	os.Remove(filepath.Join(extDir(), "common", file))
 	os.Remove(filepath.Join(extMergedDir(), file))
 	return os.Remove(filepath.Join(extDir(), file))
+}
+
+func (f *fakeExt) ReloadExt(dbus, udev bool, progress func(string)) error {
+	f.rec(fmt.Sprintf("reload dbus=%v udev=%v", dbus, udev))
+	return nil
+}
+
+func (f *fakeExt) StartUnit(unit string, progress func(string)) error {
+	f.rec("start " + unit)
+	if f.startErr != nil && strings.HasPrefix(unit, "ModemManager") {
+		return f.startErr
+	}
+	return nil
+}
+
+func (f *fakeExt) StopUnit(unit string, progress func(string)) error {
+	f.rec("stop " + unit)
+	return nil
 }
 
 func (f *fakeExt) Dissect(path string) (ExtImage, error) {
@@ -632,5 +688,233 @@ func TestStreamCommandPlainText(t *testing.T) {
 	}
 	if got := strings.Join(lines, "|"); got != "INF copying|NO_COLOR=1" {
 		t.Errorf("lines = %q", got)
+	}
+}
+
+// mmImage is an extension with a service enabled from /usr, its D-Bus policy
+// and its udev rules, as extensions/modemmanager ships them, plus links it
+// must never act on: a link to a unit it does not ship, a link to a unit
+// of the base (NetworkManager.service, identical to the base's link), a
+// target that is never reached, and a nested path.
+func mmImage() ExtImage {
+	return ExtImage{Release: goodRel, Entries: []mtreeEntry{
+		{Path: ".", Type: "dir"},
+		{Path: "usr/bin/ModemManager", Type: "file", Size: 2, SHA256: sha("mm")},
+		{Path: "usr/lib/systemd/system/ModemManager.service", Type: "file", Size: 1, SHA256: sha("u")},
+		{Path: "usr/lib/systemd/system/mm-helper@.service", Type: "file", Size: 1, SHA256: sha("t")},
+		{Path: "usr/lib/systemd/system/mm.socket", Type: "file", Size: 1, SHA256: sha("s")},
+		{Path: "usr/lib/systemd/system/NetworkManager.service", Type: "file", Size: 4, SHA256: sha("base")},
+		{Path: "usr/lib/systemd/system/dbus-org.freedesktop.ModemManager1.service", Type: "link", Link: "ModemManager.service"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants", Type: "dir"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants/ModemManager.service", Type: "link", Link: "../ModemManager.service"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants/mm-helper@cdc-wdm0.service", Type: "link", Link: "../mm-helper@.service"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants/NetworkManager.service", Type: "link", Link: "../NetworkManager.service"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants/udisks2.service", Type: "link", Link: "../udisks2.service"},
+		{Path: "usr/lib/systemd/system/sockets.target.wants/mm.socket", Type: "link", Link: "../mm.socket"},
+		{Path: "usr/lib/systemd/system/graphical.target.wants/never.service", Type: "link", Link: "../never.service"},
+		{Path: "usr/lib/systemd/system/multi-user.target.wants/sub/odd.service", Type: "link", Link: "../x"},
+		{Path: "usr/share/dbus-1/system.d/org.freedesktop.ModemManager1.conf", Type: "file", Size: 1, SHA256: sha("p")},
+		{Path: "usr/lib/udev/rules.d/80-mm-candidate.rules", Type: "file", Size: 1, SHA256: sha("r")},
+	}}
+}
+
+// baseUnits gives the fake system NetworkManager's unit file and its
+// enablement link, identical to the ones mmImage carries.
+func baseUnits(t *testing.T) {
+	t.Helper()
+	dir := filepath.Join(hostRoot, "usr/lib/systemd/system")
+	if err := os.MkdirAll(filepath.Join(dir, "multi-user.target.wants"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "NetworkManager.service"), []byte("base"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../NetworkManager.service", filepath.Join(dir, "multi-user.target.wants/NetworkManager.service")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExtActivationOfOwnsOnlyItsUnits(t *testing.T) {
+	extEnv(t, &fakeExt{})
+	baseUnits(t)
+	a := extActivationOf(mmImage().Entries, hostRoot)
+	if strings.Join(a.Units, " ") != "ModemManager.service mm-helper@cdc-wdm0.service mm.socket" || !a.DBus || !a.Udev {
+		t.Fatalf("activation %+v", a)
+	}
+	if a := extActivationOf(gpgImage("base").Entries, hostRoot); !a.empty() {
+		t.Fatalf("a library extension asks for %+v", a)
+	}
+	// A unit file of the same name on the system, in /etc or as a
+	// template, is the system's.
+	os.MkdirAll(filepath.Join(hostRoot, "etc/systemd/system"), 0o755)
+	os.WriteFile(filepath.Join(hostRoot, "etc/systemd/system/ModemManager.service"), nil, 0o644)
+	os.WriteFile(filepath.Join(hostRoot, "usr/lib/systemd/system/mm-helper@.service"), nil, 0o644)
+	if a := extActivationOf(mmImage().Entries, hostRoot); strings.Join(a.Units, " ") != "mm.socket" {
+		t.Fatalf("units the system owns: %+v", a.Units)
+	}
+	if unitTemplate("a@b.service") != "a@.service" || unitTemplate("a.service") != "" {
+		t.Fatal("unitTemplate")
+	}
+}
+
+func TestExtInstallStartsAndStopsOnlyTheUnitsItOwns(t *testing.T) {
+	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage()}
+	d := extEnv(t, fe)
+	baseUnits(t)
+	st := runExtJob(t, d, func() error { return d.InstallExtension("modemmanager", "", false) })
+	if st.ExtResult != extResultOK {
+		t.Fatalf("status %+v", st)
+	}
+	got := strings.Join(fe.log(), "|")
+	if !strings.HasSuffix(got, "|enable modemmanager.sysext.raw|reload dbus=true udev=true|start ModemManager.service|start mm-helper@cdc-wdm0.service|start mm.socket") {
+		t.Fatalf("calls %q: the units start after the merge", got)
+	}
+	if !strings.Contains(st.ExtDetail, "\nStarted: ModemManager.service, mm-helper@cdc-wdm0.service, mm.socket.") {
+		t.Fatalf("the result does not name the units: %q", st.ExtDetail)
+	}
+
+	// Disable stops them while the image is still merged, reloads the bus
+	// and udev after, and never touches NetworkManager.service, whose
+	// link the image carries too.
+	fe.calls = nil
+	st = runExtJob(t, d, func() error { return d.SetExtensionEnabled("modemmanager", false, false) })
+	got = strings.Join(fe.log(), "|")
+	if st.ExtResult != extResultOK || got != "stop ModemManager.service|stop mm-helper@cdc-wdm0.service|stop mm.socket|disable modemmanager.sysext.raw|reload dbus=true udev=true" {
+		t.Fatalf("disable: %+v %q", st, got)
+	}
+	if strings.Contains(got, "NetworkManager") || strings.Contains(got, "udisks2") {
+		t.Fatalf("stopped a unit of the base: %q", got)
+	}
+	if !strings.Contains(st.ExtDetail, "\nStopped: ModemManager.service") {
+		t.Fatalf("the result does not name the stopped units: %q", st.ExtDetail)
+	}
+	// Not merged any more: nothing to stop before the remove.
+	fe.calls = nil
+	st = runExtJob(t, d, func() error { return d.RemoveExtension("modemmanager") })
+	if got := strings.Join(fe.log(), "|"); st.ExtResult != extResultOK || got != "remove modemmanager.sysext.raw" {
+		t.Fatalf("remove: %+v %q", st, got)
+	}
+	if _, err := os.Stat(extActivationFile("modemmanager.sysext.raw")); !os.IsNotExist(err) {
+		t.Fatal("the activation record outlived the extension")
+	}
+}
+
+func TestExtRemoveOfAMergedExtensionStopsItsUnits(t *testing.T) {
+	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage()}
+	d := extEnv(t, fe)
+	baseUnits(t)
+	runExtJob(t, d, func() error { return d.InstallExtension("modemmanager", "", false) })
+	fe.calls = nil
+	st := runExtJob(t, d, func() error { return d.RemoveExtension("modemmanager") })
+	if got := strings.Join(fe.log(), "|"); st.ExtResult != extResultOK ||
+		got != "stop ModemManager.service|stop mm-helper@cdc-wdm0.service|stop mm.socket|remove modemmanager.sysext.raw|reload dbus=true udev=true" {
+		t.Fatalf("remove: %+v %q", st, got)
+	}
+}
+
+func TestExtWithoutARecordStopsNothing(t *testing.T) {
+	// Enabled before Isotope started units, or with kairos-agent by hand.
+	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage()}
+	d := extEnv(t, fe)
+	runExtJob(t, d, func() error { return d.InstallExtension("modemmanager", "", false) })
+	os.Remove(extActivationFile("modemmanager.sysext.raw"))
+	fe.calls = nil
+	runExtJob(t, d, func() error { return d.SetExtensionEnabled("modemmanager", false, false) })
+	if got := strings.Join(fe.log(), "|"); got != "disable modemmanager.sysext.raw" {
+		t.Fatalf("calls %q", got)
+	}
+}
+
+func TestExtEnableReportsAUnitThatDidNotStart(t *testing.T) {
+	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage(), startErr: errors.New("Job for ModemManager.service failed")}
+	d := extEnv(t, fe)
+	baseUnits(t)
+	st := runExtJob(t, d, func() error { return d.InstallExtension("modemmanager", "", false) })
+	if st.ExtResult != extResultOK || !strings.Contains(st.ExtDetail, "is installed and enabled") ||
+		!strings.Contains(st.ExtDetail, "Not started: ModemManager.service (Job for ModemManager.service failed)") ||
+		!strings.Contains(st.ExtDetail, "Started: mm-helper@cdc-wdm0.service, mm.socket.") {
+		t.Fatalf("status %+v: the extension stays enabled and the result says which unit did not start", st)
+	}
+}
+
+// TestKairosBackendReloadsStartsAndStops checks the commands the real
+// backend runs.
+func TestKairosBackendReloadsStartsAndStops(t *testing.T) {
+	var calls []string
+	old := extSysRun
+	extSysRun = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		calls = append(calls, name+" "+strings.Join(args, " "))
+		return nil, nil
+	}
+	t.Cleanup(func() { extSysRun = old })
+	var kb kairosBackend
+	if err := kb.ReloadExt(true, true, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	kb.StartUnit("ModemManager.service", func(string) {})
+	kb.StopUnit("ModemManager.service", func(string) {})
+	want := []string{
+		"systemctl daemon-reload",
+		"busctl call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus ReloadConfig",
+		"udevadm control --reload",
+		"systemctl start -- ModemManager.service",
+		"systemctl stop -- ModemManager.service",
+	}
+	if strings.Join(calls, "|") != strings.Join(want, "|") {
+		t.Fatalf("calls %q", calls)
+	}
+	calls = nil
+	kb.ReloadExt(false, false, func(string) {})
+	if strings.Join(calls, "|") != "systemctl daemon-reload" {
+		t.Fatalf("reload without D-Bus or udev files: %q", calls)
+	}
+	extSysRun = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		return []byte("Job failed\n"), errors.New("exit status 1")
+	}
+	if err := kb.StartUnit("a.service", func(string) {}); err == nil || !strings.Contains(err.Error(), "Job failed") {
+		t.Fatalf("a failing systemctl: %v", err)
+	}
+}
+
+// TestExtMergeDoesNotHideItsOwnUnits: a real merge puts the extension's
+// unit files on the host's /usr before activate runs. What the extension
+// owns is decided before the merge, so its units still start, are
+// recorded, and stop on disable; the base's NetworkManager never does.
+func TestExtMergeDoesNotHideItsOwnUnits(t *testing.T) {
+	fe := &fakeExt{file: "modemmanager.sysext.raw", img: mmImage()}
+	d := extEnv(t, fe)
+	baseUnits(t)
+	st := runExtJob(t, d, func() error { return d.InstallExtension("modemmanager", "", false) })
+	if !exists(filepath.Join(hostRoot, "usr/lib/systemd/system/ModemManager.service")) {
+		t.Fatal("the fake merge did not put the unit file on the host")
+	}
+	if !strings.Contains(st.ExtDetail, "Started: ModemManager.service, mm-helper@cdc-wdm0.service, mm.socket.") {
+		t.Fatalf("after a merge: %q", st.ExtDetail)
+	}
+	if a := readActivation("modemmanager.sysext.raw"); strings.Join(a.Units, " ") != "ModemManager.service mm-helper@cdc-wdm0.service mm.socket" {
+		t.Fatalf("record %+v", a)
+	}
+	// Enabling it again while it is merged keeps the record.
+	fe.calls = nil
+	runExtJob(t, d, func() error { return d.SetExtensionEnabled("modemmanager", true, true) })
+	if got := strings.Join(fe.log(), "|"); !strings.Contains(got, "start ModemManager.service") {
+		t.Fatalf("enable again: %q", got)
+	}
+	fe.calls = nil
+	st = runExtJob(t, d, func() error { return d.SetExtensionEnabled("modemmanager", false, false) })
+	got := strings.Join(fe.log(), "|")
+	if !strings.HasPrefix(got, "stop ModemManager.service|stop mm-helper@cdc-wdm0.service|stop mm.socket|disable") ||
+		strings.Contains(got, "NetworkManager") {
+		t.Fatalf("disable: %q", got)
+	}
+	if exists(filepath.Join(hostRoot, "usr/lib/systemd/system/ModemManager.service")) ||
+		!exists(filepath.Join(hostRoot, "usr/lib/systemd/system/NetworkManager.service")) {
+		t.Fatal("the fake unmerge took the wrong files")
+	}
+	// Enabled again from unmerged: decided again against the base.
+	fe.calls = nil
+	runExtJob(t, d, func() error { return d.SetExtensionEnabled("modemmanager", true, false) })
+	if got := strings.Join(fe.log(), "|"); !strings.HasSuffix(got, "start ModemManager.service|start mm-helper@cdc-wdm0.service|start mm.socket") {
+		t.Fatalf("enable from unmerged: %q", got)
 	}
 }

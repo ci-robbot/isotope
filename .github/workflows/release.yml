@@ -448,6 +448,12 @@ jobs:
         shell: bash
         run: test/network/check-vpn.sh "${DESKTOP}-desktop:dev"
 
+      # Mobile broadband: NetworkManager's WWAN plugin and libmm-glib, for the
+      # modemmanager extension. On every image, the server included.
+      - name: Check mobile broadband support
+        shell: bash
+        run: test/network/check-wwan.sh "${DESKTOP}-desktop:dev"
+
       # Automatic updates: the daily timer is enabled and `isotope update
       # auto` is there; the setting is off on a new machine.
       - name: Check automatic updates

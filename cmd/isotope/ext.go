@@ -354,6 +354,7 @@ func recordSource(file, source string) error {
 
 func forgetSource(file string) {
 	_ = os.Remove(filepath.Join(extStateDir(), file))
+	_ = os.Remove(extActivationFile(file))
 }
 
 // isExtReference says whether ref names an image rather than a catalog
@@ -570,6 +571,15 @@ type ExtBackend interface {
 	EnableExt(file string, progress func(string)) error
 	DisableExt(file string, progress func(string)) error
 	RemoveExt(file string, progress func(string)) error
+	// ReloadExt makes the running system read what a merge or an unmerge
+	// changed: systemd's units, and the D-Bus policy and udev rules when
+	// dbus or udev say the extension has some. kairos-agent leaves the bus
+	// and udevd as they were.
+	ReloadExt(dbus, udev bool, progress func(string)) error
+	// StartUnit starts a unit and waits for it, so a unit that fails is an
+	// error. StopUnit stops one.
+	StartUnit(unit string, progress func(string)) error
+	StopUnit(unit string, progress func(string)) error
 	// Dissect reads an image's extension-release and its file list.
 	Dissect(path string) (ExtImage, error)
 }
@@ -604,6 +614,173 @@ func (kairosBackend) DisableExt(file string, progress func(string)) error {
 
 func (kairosBackend) RemoveExt(file string, progress func(string)) error {
 	return agentErr("remove", streamCommand(kairosAgent(), []string{"sysext", "remove", "--now", "--", file}, progress))
+}
+
+// extActivation is what a merged extension asks of the running system:
+// the units it owns and enables from /usr, and whether it brings D-Bus
+// system configuration or udev rules.
+type extActivation struct {
+	Units []string `json:"units,omitempty"`
+	DBus  bool     `json:"dbus,omitempty"`
+	Udev  bool     `json:"udev,omitempty"`
+}
+
+func (a extActivation) empty() bool { return len(a.Units) == 0 && !a.DBus && !a.Udev }
+
+// extStartTargets are the targets whose .wants links in an extension are
+// started after the merge. They are the ones a booted system has reached;
+// graphical.target is never reached on Kairos.
+var extStartTargets = []string{"multi-user.target", "sockets.target", "timers.target"}
+
+// extUnitDirs are where the system at hostRoot keeps unit files: a unit
+// found there belongs to the base (or to another extension), never to the
+// one being enabled.
+var extUnitDirs = []string{"usr/lib/systemd/system", "etc/systemd/system", "lib/systemd/system"}
+
+// unitTemplate is foo@.service for foo@bar.service, "" for a plain unit.
+func unitTemplate(unit string) string {
+	at := strings.Index(unit, "@")
+	dot := strings.LastIndex(unit, ".")
+	if at < 0 || dot < at {
+		return ""
+	}
+	return unit[:at+1] + unit[dot:]
+}
+
+// extActivationOf reads an image's file list, before it is merged, against
+// the system at root. A unit counts when the image links it directly in
+// usr/lib/systemd/system/<target>.wants/ (the way an extension enables a
+// unit, since it cannot write /etc), ships its unit file (or template)
+// there too, and the system has no unit file of that name: so an
+// extension never starts or stops a unit of the base, such as
+// NetworkManager.service, even when it carries the same link.
+func extActivationOf(entries []mtreeEntry, root string) extActivation {
+	var a extActivation
+	ships := map[string]bool{}
+	for _, e := range entries {
+		if u, ok := strings.CutPrefix(e.Path, "usr/lib/systemd/system/"); ok && !strings.Contains(u, "/") && e.Type != "dir" {
+			ships[u] = true
+		}
+	}
+	hostHas := func(unit string) bool {
+		for _, d := range extUnitDirs {
+			if exists(filepath.Join(root, d, unit)) {
+				return true
+			}
+		}
+		return false
+	}
+	seen := map[string]bool{}
+	for _, e := range entries {
+		switch {
+		case strings.HasPrefix(e.Path, "usr/share/dbus-1/system.d/"),
+			strings.HasPrefix(e.Path, "usr/share/dbus-1/system-services/"):
+			a.DBus = a.DBus || e.Type != "dir"
+		case strings.HasPrefix(e.Path, "usr/lib/udev/rules.d/"):
+			a.Udev = a.Udev || e.Type != "dir"
+		}
+		if e.Type != "link" {
+			continue
+		}
+		for _, t := range extStartTargets {
+			unit, ok := strings.CutPrefix(e.Path, "usr/lib/systemd/system/"+t+".wants/")
+			if !ok || unit == "" || strings.Contains(unit, "/") || seen[unit] {
+				continue
+			}
+			tmpl := unitTemplate(unit)
+			owned := ships[unit] || (tmpl != "" && ships[tmpl])
+			if !owned || hostHas(unit) || (tmpl != "" && hostHas(tmpl)) {
+				continue
+			}
+			seen[unit] = true
+			a.Units = append(a.Units, unit)
+		}
+	}
+	return a
+}
+
+// extActivationFile records, per installed file, what activate did, so a
+// disable or remove stops exactly those units: once merged, the image's
+// unit files are on the system too and can no longer be told from the
+// base's.
+func extActivationFile(file string) string {
+	return filepath.Join(extStateDir(), file+".activation")
+}
+
+func recordActivation(file string, a extActivation) error {
+	b, err := json.Marshal(a)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(extStateDir(), 0o755); err != nil {
+		return err
+	}
+	return writeRunFile(extActivationFile(file), string(b)+"\n")
+}
+
+// readActivation is the record of file, empty without one: an extension
+// enabled before Isotope started units, or by kairos-agent by hand, has
+// none, and nothing of it is stopped.
+func readActivation(file string) extActivation {
+	var a extActivation
+	if b, err := os.ReadFile(extActivationFile(file)); err == nil {
+		_ = json.Unmarshal(b, &a)
+	}
+	return a
+}
+
+// extSysRun runs systemctl, busctl and udevadm for ReloadExt, StartUnit
+// and StopUnit. A variable so tests can see the calls.
+var extSysRun fwRunner = execCtx
+
+// extSysTimeout bounds each of those commands; a start or a stop waits for
+// the unit.
+const extSysTimeout = 2 * time.Minute
+
+func extSys(progress func(string), name string, args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), extSysTimeout)
+	defer cancel()
+	out, err := extSysRun(ctx, name, args...)
+	text := strings.TrimSpace(stripANSI(string(out)))
+	for _, l := range strings.Split(text, "\n") {
+		if l = strings.TrimSpace(l); l != "" {
+			progress(l)
+		}
+	}
+	if err != nil {
+		if text != "" {
+			return fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, text)
+		}
+		return fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
+	}
+	return nil
+}
+
+// ReloadExt reloads systemd (systemd-sysext does too; a second reload
+// costs nothing), the bus's policy (a service cannot own its name before;
+// ReloadConfig keeps every connection) and udev's rules (a reload triggers
+// nothing).
+func (kairosBackend) ReloadExt(dbus, udev bool, progress func(string)) error {
+	if err := extSys(progress, "systemctl", "daemon-reload"); err != nil {
+		return err
+	}
+	if dbus {
+		if err := extSys(progress, "busctl", "call", "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ReloadConfig"); err != nil {
+			return err
+		}
+	}
+	if udev {
+		return extSys(progress, "udevadm", "control", "--reload")
+	}
+	return nil
+}
+
+func (kairosBackend) StartUnit(unit string, progress func(string)) error {
+	return extSys(progress, "systemctl", "start", "--", unit)
+}
+
+func (kairosBackend) StopUnit(unit string, progress func(string)) error {
+	return extSys(progress, "systemctl", "stop", "--", unit)
 }
 
 func agentErr(verb string, err error) error {
@@ -804,26 +981,102 @@ func (e *errExtConflict) Error() string {
 // vet runs the checks before an extension is enabled. A wrong architecture
 // or system is never overridable; a conflict is, with force, and then only
 // reported as a warning.
-func (d *Daemon) vet(file string, force bool) error {
+func (d *Daemon) vet(file string, force bool) (ExtImage, error) {
 	img, err := d.ext.Dissect(filepath.Join(extDir(), file))
 	if err != nil {
-		return fmt.Errorf("could not read the extension: %w", err)
+		return img, fmt.Errorf("could not read the extension: %w", err)
 	}
 	if err := checkRelease(img.Release, extGOARCH); err != nil {
-		return err
+		return img, err
 	}
 	clash, err := findConflicts(hostRoot, img.Entries)
 	if err != nil {
-		return fmt.Errorf("could not compare the extension with the system: %w", err)
+		return img, fmt.Errorf("could not compare the extension with the system: %w", err)
 	}
 	if len(clash) == 0 {
-		return nil
+		return img, nil
 	}
 	if !force {
-		return &errExtConflict{files: clash}
+		return img, &errExtConflict{files: clash}
 	}
 	d.progress(fmt.Sprintf("Warning: forced over %d file(s) the system has with other content: %s", len(clash), strings.Join(clash, ", ")))
-	return nil
+	return img, nil
+}
+
+// plan is what an extension about to be merged owns and enables. It must
+// run before EnableExt: once merged, the extension's own unit files are on
+// the host's /usr, and extActivationOf would take them for the base's. An
+// extension that is merged already (enabled again) keeps its record.
+func (d *Daemon) plan(x InstalledExt, img ExtImage) extActivation {
+	if x.Merged {
+		return readActivation(x.File)
+	}
+	return extActivationOf(img.Entries, hostRoot)
+}
+
+// activate starts what a just-merged extension owns and enables (a, from
+// plan, before the merge), and returns the lines the job's result adds:
+// the units started, and any that did not start (the extension stays
+// enabled; they start at the next boot through their link).
+func (d *Daemon) activate(file string, a extActivation) string {
+	if a.empty() {
+		return ""
+	}
+	if err := recordActivation(file, a); err != nil {
+		d.progress("isotope: could not record the extension's services: " + err.Error())
+	}
+	var out strings.Builder
+	if err := d.ext.ReloadExt(a.DBus, a.Udev, d.progress); err != nil {
+		out.WriteString("\nCould not reload the system's services: " + err.Error())
+	}
+	var started []string
+	for _, u := range a.Units {
+		d.progress("Starting " + u + "…")
+		if err := d.ext.StartUnit(u, d.progress); err != nil {
+			fmt.Fprintf(&out, "\nNot started: %s (%v); it starts at the next restart.", u, err)
+			continue
+		}
+		started = append(started, u)
+	}
+	if len(started) > 0 {
+		out.WriteString("\nStarted: " + strings.Join(started, ", ") + ".")
+	}
+	return out.String()
+}
+
+// deactivate stops, before an unmerge, the units activate started for x
+// (its record), and returns the result's lines and the record. It never
+// stops the disable or remove: a unit that does not stop is a line.
+func (d *Daemon) deactivate(x InstalledExt) (string, extActivation) {
+	a := readActivation(x.File)
+	if !x.Merged || len(a.Units) == 0 {
+		return "", a
+	}
+	var out strings.Builder
+	var stopped []string
+	for _, u := range a.Units {
+		d.progress("Stopping " + u + "…")
+		if err := d.ext.StopUnit(u, d.progress); err != nil {
+			fmt.Fprintf(&out, "\nCould not stop %s: %v", u, err)
+			continue
+		}
+		stopped = append(stopped, u)
+	}
+	if len(stopped) > 0 {
+		out.WriteString("\nStopped: " + strings.Join(stopped, ", ") + ".")
+	}
+	return out.String(), a
+}
+
+// unmerged reloads the bus and udev after an unmerge, so neither keeps the
+// policy or rules of an extension that is gone.
+func (d *Daemon) unmerged(x InstalledExt, a extActivation) {
+	if !x.Merged || (!a.DBus && !a.Udev) {
+		return
+	}
+	if err := d.ext.ReloadExt(a.DBus, a.Udev, d.progress); err != nil {
+		d.progress("isotope: could not reload the system's services: " + err.Error())
+	}
 }
 
 // startExt starts an extension job and returns at once, like Apply. It takes
@@ -928,7 +1181,8 @@ func (d *Daemon) InstallExtension(ref, version string, force bool) error {
 			return "", fmt.Errorf("kairos-agent reported success but added %d extension files, not one; nothing was enabled", len(added))
 		}
 		file := added[0]
-		if err := d.vet(file, force); err != nil {
+		img, err := d.vet(file, force)
+		if err != nil {
 			if rerr := d.ext.RemoveExt(file, d.progress); rerr != nil {
 				return "", fmt.Errorf("%w; removing it again failed too: %v", err, rerr)
 			}
@@ -937,10 +1191,11 @@ func (d *Daemon) InstallExtension(ref, version string, force bool) error {
 		if err := recordSource(file, source); err != nil {
 			d.progress("isotope: could not record where the extension came from: " + err.Error())
 		}
+		a := d.plan(InstalledExt{File: file}, img)
 		if err := d.ext.EnableExt(file, d.progress); err != nil {
 			return "", fmt.Errorf("%s is installed but could not be enabled: %w", extDisplayName(file), err)
 		}
-		return fmt.Sprintf("%s is installed and enabled.", extDisplayName(file)), nil
+		return fmt.Sprintf("%s is installed and enabled.", extDisplayName(file)) + d.activate(file, a), nil
 	})
 }
 
@@ -956,20 +1211,24 @@ func (d *Daemon) SetExtensionEnabled(name string, on, force bool) error {
 	}
 	if !on {
 		return d.startExt("Disabling the extension "+x.Name, func() (string, error) {
+			lines, a := d.deactivate(x)
 			if err := d.ext.DisableExt(x.File, d.progress); err != nil {
 				return "", err
 			}
-			return x.Name + " is disabled.", nil
+			d.unmerged(x, a)
+			return x.Name + " is disabled." + lines, nil
 		})
 	}
 	return d.startExt("Enabling the extension "+x.Name, func() (string, error) {
-		if err := d.vet(x.File, force); err != nil {
+		img, err := d.vet(x.File, force)
+		if err != nil {
 			return "", err
 		}
+		a := d.plan(x, img)
 		if err := d.ext.EnableExt(x.File, d.progress); err != nil {
 			return "", err
 		}
-		return x.Name + " is enabled.", nil
+		return x.Name + " is enabled." + d.activate(x.File, a), nil
 	})
 }
 
@@ -983,10 +1242,12 @@ func (d *Daemon) RemoveExtension(name string) error {
 		return err
 	}
 	return d.startExt("Removing the extension "+x.Name, func() (string, error) {
+		lines, a := d.deactivate(x)
 		if err := d.ext.RemoveExt(x.File, d.progress); err != nil {
 			return "", err
 		}
+		d.unmerged(x, a)
 		forgetSource(x.File)
-		return x.Name + " is removed.", nil
+		return x.Name + " is removed." + lines, nil
 	})
 }

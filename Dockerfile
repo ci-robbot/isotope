@@ -1727,11 +1727,49 @@ RUN ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking --without
 RUN make -j$(nproc) && make install DESTDIR=/libxslt
 
 
-# NetworkManager
+# libmm-glib, ModemManager's client library, for NetworkManager's WWAN device
+# plugin. ModemManager itself is the `modemmanager` extension
+# (extensions/modemmanager), which links its own copy from a private
+# directory; this one is only what NetworkManager loads. Built from
+# ModemManager's source without QMI, MBIM, udev, polkit or systemd: none of
+# them changes the client library. /mm-glib-dev is the whole install, for the
+# networkmanager stage's build; that stage copies libmm-glib.so.0 into the
+# images.
+FROM toolchain AS mm-glib
+COPY --from=libucontext /libucontext /
+COPY --from=glib2 /glib2 /
+COPY --from=pcre2 /pcre2 /
+# renovate: datasource=gitlab-tags depName=mobile-broadband/ModemManager registryUrl=https://gitlab.freedesktop.org extractVersion=^(?<version>\d+\.\d+\.\d+)$
+ARG MODEMMANAGER_VERSION=1.24.2
+WORKDIR /build
+RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://gitlab.freedesktop.org/mobile-broadband/ModemManager/-/archive/${MODEMMANAGER_VERSION}/ModemManager-${MODEMMANAGER_VERSION}.tar.gz -o mm.tar.gz && \
+    tar -xzf mm.tar.gz && rm mm.tar.gz && mv ModemManager-* mm-src
+WORKDIR /build/mm-src
+RUN pip3 install meson ninja packaging
+RUN meson setup buildDir ${COMMON_MESON_FLAGS} \
+    -Dudev=false -Dudevdir=/usr/lib/udev -Dmbim=false -Dqmi=false -Dqrtr=false \
+    -Dpolkit=no -Dsystemdsystemunitdir=no -Dsystemd_suspend_resume=false -Dsystemd_journal=false \
+    -Dintrospection=false -Dvapi=false -Dman=false -Dgtk_doc=false -Dbash_completion=false \
+    -Dtests=false -Dexamples=false
+RUN DESTDIR=/mm-glib-dev ninja -C buildDir install && \
+    install -Dm644 COPYING.LIB /mm-glib-dev/usr/share/licenses/ModemManager/COPYING.LIB && \
+    test -e /mm-glib-dev/usr/lib/libmm-glib.so.0 && test -e /mm-glib-dev/usr/lib/pkgconfig/mm-glib.pc
+
+
+# NetworkManager. With ModemManager support (the WWAN device plugin and
+# libnm-wwan, which link libmm-glib): the binary exports only the internal
+# symbols the plugins of its own build use (tools/create-exports-NetworkManager.sh),
+# so the plugin cannot come from another stage. This stage is not reached by
+# the COSMIC prebuilt keys (cosmic-shell, cosmic-apps), so it changes in place.
+# libmm-glib.so.0 goes into /networkmanager, so every image that copies
+# NetworkManager has what its plugin loads. Without the `modemmanager`
+# extension there is no ModemManager on the bus and no modem device. No pppd:
+# modems that only work over a PPP serial link do not connect.
 FROM toolchain AS networkmanager
 COPY --from=libucontext /libucontext /
 COPY --from=glib2 /glib2 /
 COPY --from=pcre2 /pcre2 /
+COPY --from=mm-glib /mm-glib-dev /
 COPY --from=libndp /libndp /
 COPY --from=libnl /libnl /
 COPY --from=libxslt /libxslt /
@@ -1750,13 +1788,20 @@ WORKDIR /build/nm-src
 RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} --sbindir=bin \
     -Dpolkit=false -Dwifi=true -Diwd=false -Dwext=false \
-    -Dnmcli=true -Dnmtui=true -Dmodem_manager=false -Dppp=false -Dovs=false \
+    -Dnmcli=true -Dnmtui=true -Dmodem_manager=true -Dppp=false -Dovs=false \
+    -Dmobile_broadband_provider_info_database=/usr/share/mobile-broadband-provider-info/serviceproviders.xml \
     -Dintrospection=false -Ddocs=false -Dtests=no -Dlibpsl=false -Dqt=false \
     -Dselinux=false -Dvapi=false -Difcfg_rh=false -Dlibaudit=no \
     -Dsession_tracking=systemd -Dsuspend_resume=systemd -Dsystemd_journal=true \
     -Dcrypto=null -Dconfig_dns_rc_manager_default=symlink \
     -Dc_link_args=-lncurses
 RUN DESTDIR=/networkmanager ninja -C buildDir install
+RUN mkdir -p /networkmanager/usr/share/licenses/ModemManager && \
+    cp -a /usr/lib/libmm-glib.so.0* /networkmanager/usr/lib/ && \
+    cp /usr/share/licenses/ModemManager/COPYING.LIB /networkmanager/usr/share/licenses/ModemManager/ && \
+    test -e /networkmanager/usr/lib/libmm-glib.so.0 && \
+    test -e /networkmanager/usr/lib/NetworkManager/${NM_VERSION}/libnm-device-plugin-wwan.so && \
+    test -e /networkmanager/usr/lib/NetworkManager/${NM_VERSION}/libnm-wwan.so
 
 
 # OpenConnect, the company VPN client (Cisco AnyConnect, Palo Alto

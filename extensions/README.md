@@ -24,7 +24,23 @@ extensions/<name>/
   digit, and it needs a `# renovate:` comment above it
   (`scripts/check-renovate-pins.sh`).
 - The `default` stage is `FROM scratch` with only files under `/usr`. A
-  system extension merges nothing else.
+  system extension merges nothing else, and on Kairos not even all of `/usr`:
+  only `/usr/bin`, `/usr/sbin`, `/usr/lib`, `/usr/share`, `/usr/include` and
+  `/usr/src` (`SYSTEMD_SYSEXT_HIERARCHIES` in kairos-init's `99_sysext.yaml`).
+  A helper that would go to `/usr/libexec` goes under `/usr/lib`
+  (`--libexecdir=lib/...`).
+- A library the extension needs and the image may already have (or may get
+  later) does not go into `/usr/lib`: link it statically, or ship it in a
+  directory of the extension's own, such as `/usr/lib/isotope-ext/<name>`,
+  found through a RUNPATH (`modemmanager/` does).
+- A service is enabled from `/usr`: a link in
+  `/usr/lib/systemd/system/multi-user.target.wants/` (or `sockets.target`,
+  `timers.target`), with the unit file next to it in
+  `/usr/lib/systemd/system`. After `isotope ext` merges an extension it
+  reloads systemd, the D-Bus configuration and the udev rules, and starts
+  the units linked there whose unit file the extension ships and the base
+  does not have; before it disables or removes a merged one, it stops those
+  same units. A link to a unit of the base is never acted on.
 - The `test` stage runs on `ghcr.io/kairos-io/hadron:${HADRON_VERSION}`. It
   must fail when a file of the extension already exists in the base. A file
   over the base's copy is what `isotope ext` refuses, and in the worst case it

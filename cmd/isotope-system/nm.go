@@ -27,6 +27,8 @@ type NetState struct {
 	Devices []Device
 	// Saved are the SSIDs of the saved Wi-Fi connections.
 	Saved []string
+	// Modems are the mobile broadband devices (the modemmanager extension).
+	Modems []Modem
 }
 
 // Device is one network device.
@@ -65,6 +67,14 @@ type Network interface {
 	ImportWireGuard(name string, conf []byte) error
 	// AddOpenConnect saves a company VPN.
 	AddOpenConnect(c OpenConnect) error
+
+	// ConnectModem connects a modem (a Modem's ID) with its saved
+	// connection, or a new automatic one.
+	ConnectModem(id string) error
+	DisconnectModem(id string) error
+	// SetModemAPN sets the APN of the modem's connection, "" for
+	// automatic, and saves the connection when there is none.
+	SetModemAPN(id, apn string) error
 }
 
 const (
@@ -261,6 +271,10 @@ func (n nmNetwork) State() (NetState, error) {
 		for _, p := range devs {
 			o := c.Object(nmName, p)
 			t, _ := prop[uint32](o, nmIface+".Device.DeviceType")
+			if t == nmDeviceModem {
+				out.Modems = append(out.Modems, modem(c, p))
+				continue
+			}
 			kind := deviceKind(t)
 			if kind == "" {
 				continue

@@ -15,7 +15,7 @@ import (
 
 func init() {
 	pageMakers[PageNetwork] = func(u *UI) pageView {
-		return &networkPage{u: u, apClicks: map[string]*apClicks{}, vpnClicks: map[string]*vpnClicks{}, fwClicks: map[string]*fwClicks{}}
+		return &networkPage{u: u, apClicks: map[string]*apClicks{}, vpnClicks: map[string]*vpnClicks{}, fwClicks: map[string]*fwClicks{}, modemClicks: map[string]*modemClicks{}}
 	}
 }
 
@@ -47,6 +47,8 @@ type networkPage struct {
 	addOC                          widget.Clickable
 	oc                             *ocForm // the open "Add company VPN" dialog
 	vpnClicks                      map[string]*vpnClicks
+	modemClicks                    map[string]*modemClicks
+	apn                            *guikit.Field // of the open APN dialog
 
 	// The firewall (firewall.go). fw, fwLoaded and fwErr are under u.mu.
 	fw              Firewall
@@ -61,6 +63,79 @@ type networkPage struct {
 type apClicks struct{ connect, forget widget.Clickable }
 
 type vpnClicks struct{ toggle, remove widget.Clickable }
+
+type modemClicks struct{ toggle, apn widget.Clickable }
+
+func (p *networkPage) modemClicksFor(id string) *modemClicks {
+	k, ok := p.modemClicks[id]
+	if !ok {
+		k = &modemClicks{}
+		p.modemClicks[id] = k
+	}
+	return k
+}
+
+// modemTitle names a modem row: "Mobile broadband", with its interface.
+func modemTitle(m Modem) string {
+	if m.Iface == "" {
+		return "Mobile broadband"
+	}
+	return "Mobile broadband (" + m.Iface + ")"
+}
+
+// modemSub is a modem row's second line: the state, the connection and
+// address, the network and the APN.
+func modemSub(m Modem) string {
+	parts := []string{m.State}
+	if m.Connection != "" {
+		parts = append(parts, m.Connection)
+	}
+	if m.Address != "" {
+		parts = append(parts, m.Address)
+	}
+	if m.Operator != "" {
+		parts = append(parts, "network "+m.Operator)
+	}
+	if m.APN != "" {
+		parts = append(parts, "APN "+m.APN)
+	} else {
+		parts = append(parts, "APN automatic")
+	}
+	return strings.Join(parts, " · ")
+}
+
+// apnDialog asks for the modem's APN; empty is automatic (from the
+// provider database, for the network the modem registered on).
+func (p *networkPage) apnDialog(m Modem) {
+	u := p.u
+	f := guikit.NewField(true)
+	f.Editor.SetText(m.APN)
+	p.apn = f
+	focused := false
+	var dlg *dialog
+	dlg = newDialog("Mobile broadband APN", "The access point name of "+modemTitle(m)+". Your operator gives it; most connections work without one.", func(gtx layout.Context) layout.Dimensions {
+		if f.Submitted(gtx) {
+			u.pick(dlg, 1) // ignored while Save is off
+		}
+		if !focused {
+			focused = true
+			gtx.Execute(focus(&f.Editor))
+		}
+		f.Err = ""
+		if err := checkAPN(strings.TrimSpace(f.Editor.Text())); err != nil {
+			f.Err = err.Error()
+		}
+		return u.Labelled(gtx, "APN", f, "Leave it empty to look it up for the network the modem is on.", func(gtx layout.Context) layout.Dimensions {
+			return u.Input(gtx, f, guikit.StBody, 38, "", nil)
+		})
+	}, 1,
+		choice{Label: "Cancel", Kind: guikit.ButtonSecondary},
+		choice{Label: "Save", Kind: guikit.ButtonPrimary, Enabled: func() bool { return checkAPN(strings.TrimSpace(f.Editor.Text())) == nil }, Do: func() {
+			apn, id := strings.TrimSpace(f.Editor.Text()), m.ID
+			p.do("Saving the APN…", func(n Network) error { return n.SetModemAPN(id, apn) })
+		}})
+	u.open(dlg)
+}
 
 func (p *networkPage) Shown() {
 	if p.password == nil {
@@ -150,6 +225,19 @@ func (p *networkPage) Update(gtx layout.Context) {
 				choice{Label: "Remove", Kind: guikit.ButtonDanger, Do: func() {
 					p.do("Removing "+v.ID+"…", func(n Network) error { return n.RemoveVPN(v.UUID) })
 				}})
+		}
+	}
+	for _, m := range st.Modems {
+		m, k := m, p.modemClicksFor(m.ID)
+		if k.toggle.Clicked(gtx) {
+			if m.Connected {
+				p.do("Disconnecting the modem…", func(n Network) error { return n.DisconnectModem(m.ID) })
+			} else {
+				p.do("Connecting the modem…", func(n Network) error { return n.ConnectModem(m.ID) })
+			}
+		}
+		if k.apn.Clicked(gtx) {
+			p.apnDialog(m)
 		}
 	}
 	p.updateFirewall(gtx)
@@ -462,6 +550,29 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 						sub += " · " + d.Address
 					}
 					rows.add(u.row(fmt.Sprintf("%s (%s)", d.Kind, d.Iface), sub, nil))
+				}
+				return rows.layout(gtx)
+			}))
+		}
+		if len(st.Modems) > 0 {
+			c.gap(26)
+			c.add(u.caps("MOBILE BROADBAND"))
+			c.gap(10)
+			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+				var rows col
+				for i, m := range st.Modems {
+					if i > 0 {
+						rows.gap(8)
+					}
+					k := p.modemClicksFor(m.ID)
+					label := "Connect"
+					if m.Connected {
+						label = "Disconnect"
+					}
+					rows.add(u.row(modemTitle(m), modemSub(m), u.buttons(
+						guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: label, Disabled: working != "" || !(m.Connected || m.Ready)},
+						guikit.Action{Click: &k.apn, Kind: guikit.ButtonGhost, Label: "APN…", Disabled: working != ""},
+					)))
 				}
 				return rows.layout(gtx)
 			}))
