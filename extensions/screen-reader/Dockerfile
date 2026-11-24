@@ -202,7 +202,11 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://gitlab.freedes
 # eSpeak NG, every language. No pcaudiolib (speech-dispatcher plays the
 # audio), no sonic, no MBROLA, no speech-player (C++). The data is compiled
 # with the binary just built, one job at a time (the dictionaries' rules
-# race in parallel).
+# race in parallel). libespeak-ng is what speech-dispatcher's module loads;
+# the espeak-ng program stays (it is small and the test stage speaks with
+# it), speak-ng (a second, static copy of the whole engine) and its speak
+# link do not. Both link libstdc++ and libgcc_s, which every desktop image
+# has (image-libs.txt).
 # renovate: datasource=github-releases depName=espeak-ng/espeak-ng
 ARG ESPEAK_NG_VERSION=1.52.0
 RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/espeak-ng/espeak-ng/archive/refs/tags/${ESPEAK_NG_VERSION}.tar.gz -o e.tar.gz && \
@@ -211,6 +215,7 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/esp
     ./configure --prefix=$P --libdir=$P/lib --disable-static --without-pcaudiolib --without-sonic \
       --without-mbrola --without-speechplayer && \
     make -j"$(nproc)" src/espeak-ng && make -j1 && make install && \
+    rm -f $P/bin/speak-ng $P/bin/speak && \
     test -d $P/share/espeak-ng-data/lang && $P/bin/espeak-ng --version
 
 # speech-dispatcher with its eSpeak NG module, PipeWire audio and the Python
@@ -325,19 +330,23 @@ RUN set -eux; \
 # Every ELF file needs only the C library, the image libraries named in
 # image-libs.txt ("linked") and libraries of the extension itself, and
 # every typelib names only libraries of the image list or the extension.
+# File names may have spaces (eSpeak NG's voices/!v/Mr serious), so the
+# list is NUL-separated.
 COPY image-libs.txt /build/image-libs.txt
 RUN set -eu; \
     allowed=" libc.so $(sed -n 's/^linked //p' /build/image-libs.txt | tr '\n' ' ') "; \
     loaded=" $(sed -n 's/^\(linked\|typelib\) //p' /build/image-libs.txt | tr '\n' ' ') "; \
     bad=; n=0; \
-    for f in $(find /output -type f); do \
+    find /output -type f -print0 >/tmp/files; \
+    while IFS= read -r -d '' f; do \
       [ "$(head -c 4 "$f" | od -An -c | tr -d ' ')" = '177ELF' ] || continue; n=$((n+1)); \
       for lib in $(readelf -d "$f" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do \
         case "$allowed" in *" $lib "*) continue ;; esac; \
         [ -e "/output$P/lib/$lib" ] && continue; \
         bad="$bad $f:$lib"; \
       done; \
-    done; \
+    done </tmp/files; \
+    rm -f /tmp/files; \
     echo "$n ELF files"; [ "$n" -gt 20 ]; \
     if [ -n "$bad" ]; then echo "libraries the image does not have:$bad" >&2; exit 1; fi; \
     for t in /output$P/lib/girepository-1.0/*.typelib; do \
@@ -369,14 +378,14 @@ COPY --from=default / /extension/
 # A system extension is merged over /usr. It must not carry a file the base
 # already has, or it would replace the base's copy.
 RUN set -eu; \
-    clash=$(cd /extension && find . ! -type d | while read -r f; do [ ! -e "/${f#./}" ] || echo "${f#./}"; done); \
+    clash=$(cd /extension && find . ! -type d | while IFS= read -r f; do [ ! -e "/${f#./}" ] || echo "${f#./}"; done); \
     if [ -n "$clash" ]; then echo "the extension overlays base files: $clash" >&2; exit 1; fi
 # Kairos merges only these hierarchies (SYSTEMD_SYSEXT_HIERARCHIES in
 # kairos-init's 99_sysext.yaml); a file anywhere else is never seen.
 RUN set -eu; \
     outside=$(cd /extension && find . ! -type d | sed 's#^\./##' | grep -v -E '^usr/(bin|sbin|lib|share|include|src)/' || true); \
     if [ -n "$outside" ]; then echo "files outside the merged hierarchies: $outside" >&2; exit 1; fi
-RUN cd /extension && find . -type f | while read -r f; do \
+RUN cd /extension && find . -type f | while IFS= read -r f; do \
       [ "$(head -c 4 "$f" | od -An -c | tr -d ' ')" = '177ELF' ] && echo "/${f#./}"; done >/tmp/elf; \
     test -s /tmp/elf
 # The image's libraries, which every desktop image has, without replacing a
@@ -386,13 +395,14 @@ RUN cp -an /image-runtime/. / && rm -rf /image-runtime
 RUN cp -a /extension/. / && rm -rf /extension
 # Every library each ELF file needs is found. Python's extension modules
 # (PyGObject's included) take Python's symbols from the interpreter that
-# loads them, and speech-dispatcher's audio plugins theirs from the module
-# that loads them, so for those musl's ldd also prints "Error relocating
-# ...: symbol not found" and exits 1; those lines are left out, a missing
-# library is not.
-RUN set -eu; while read -r f; do \
+# loads them, speech-dispatcher's audio plugins theirs from the module
+# that loads them, and libspeechd_module (the modules' common code) its
+# module_* callbacks from the module program that links it, so for those
+# musl's ldd also prints "Error relocating ...: symbol not found" and exits
+# 1; those lines are left out, a missing library is not.
+RUN set -eu; while IFS= read -r f; do \
       case "$f" in \
-        $P/lib/python3.12/*.so|$P/lib/speech-dispatcher/*.so) \
+        $P/lib/python3.12/*.so|$P/lib/speech-dispatcher/*.so|$P/lib/libspeechd_module.so*) \
           ldd "$f" 2>&1 | grep -v '^Error relocating .*: symbol not found$' >/tmp/ldd || true ;; \
         *) ldd "$f" >/tmp/ldd 2>&1 || { echo "ldd $f failed" >&2; cat /tmp/ldd >&2; exit 1; } ;; \
       esac; \

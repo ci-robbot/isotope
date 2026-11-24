@@ -21,6 +21,9 @@ linked libffi.so.8
 linked libz.so.1
 linked libdbus-1.so.3
 linked libpipewire-0.3.so.0
+linked libsystemd.so.0
+linked libstdc++.so.6
+linked libgcc_s.so.1
 typelib libgtk-3.so.0
 typelib libgdk-3.so.0
 typelib libatk-1.0.so.0
