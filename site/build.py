@@ -12,6 +12,7 @@ What it does:
   pins (same version and SHA-256). When that download fails, it uses the TTFs
   in pkg/guikit/fonts instead. The licences are copied next to them.
 - Copies the GUI screenshot goldens it shows from cmd/*/testdata.
+- Renders the user guide, site/guide/*.md, into guide/ (site/guide.py).
 - Reads the latest GitHub release and its build manifests
   (scripts/release-manifest.sh) and renders one download button per ISO.
   Without the API (--offline, no network, rate limit), every button links to
@@ -35,6 +36,8 @@ import tomllib
 import urllib.error
 import urllib.request
 import zipfile
+
+import guide
 
 SITE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(SITE)
@@ -394,6 +397,11 @@ def main():
     isos = release_isos(release, args.offline or bool(args.release_json))
     with open(os.path.join(out, "index.html"), "w") as f:
         f.write(render(release, isos, preload))
+    try:
+        pages = guide.build(out, REPO_URL)
+    except guide.GuideError as err:
+        raise SystemExit(f"build-site: user guide: {err}")
+    log(f"user guide: {len(pages)} page(s)")
     # GitHub Pages: serve the files as they are.
     open(os.path.join(out, ".nojekyll"), "w").close()
 

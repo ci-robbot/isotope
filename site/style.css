@@ -363,3 +363,67 @@ kbd {
   .lede { font-size: 1.0625rem; }
   .term { font-size: 0.8125rem; padding: 16px; }
 }
+
+/* --- the user guide (guide/*.html, site/guide.py) --------------------- */
+
+.top--guide { position: static; border-bottom: 1px solid var(--overlay); background: var(--base); }
+.guide {
+  display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: clamp(24px, 5vw, 64px);
+  padding: clamp(28px, 4vw, 48px) 0 72px;
+}
+.guide-nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; }
+.guide-nav-title { color: var(--dim); font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.guide-nav ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--overlay); }
+.guide-nav a {
+  display: block; padding: 0.3rem 0 0.3rem 14px; margin-left: -1px; border-left: 2px solid transparent;
+  color: var(--subtext); text-decoration: none; font-size: 0.9375rem;
+}
+.guide-nav a:hover { color: var(--text); }
+.guide-nav a[aria-current="page"] { color: var(--brand-glow); border-left-color: var(--brand); font-weight: 600; }
+
+.prose { max-width: 46rem; }
+.prose h1 { font-size: clamp(2.2rem, 1.4rem + 2.6vw, 3.2rem); line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 0.6em; }
+.prose h2 { font-size: 1.75rem; line-height: 1.15; margin: 2.2em 0 0.6em; scroll-margin-top: 16px; }
+.prose h3 { font-size: 1.25rem; margin: 1.8em 0 0.5em; scroll-margin-top: 16px; }
+.prose h4 { font-family: Urbanist, Inter, sans-serif; font-weight: 600; color: var(--text); font-size: 1.05rem; margin: 1.5em 0 0.4em; }
+.prose ul, .prose ol { padding-left: 1.4em; margin: 0 0 1em; }
+.prose li { margin: 0.35em 0; }
+.prose li::marker { color: var(--dim); }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose figure { margin: 1.5em 0; }
+.prose .term { margin: 0 0 1.25em; }
+.keys { white-space: nowrap; }
+.note {
+  margin: 1.25em 0; padding: 14px 18px; border-left: 3px solid var(--brand-deep);
+  background: var(--base); border-radius: 0 8px 8px 0;
+}
+.note p { margin-bottom: 0.5em; }
+.table { overflow-x: auto; margin: 0 0 1.25em; }
+.prose table { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+.prose th, .prose td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--overlay); }
+.prose th { color: var(--text); font-weight: 600; border-bottom-color: var(--border); }
+
+.guide-toc { margin: 0 0 2em; padding: 14px 18px; border: 1px solid var(--overlay); border-radius: 10px; font-size: 0.9375rem; }
+.guide-toc p { color: var(--dim); font-weight: 600; margin-bottom: 0.4em; }
+.guide-toc ul { margin: 0; padding-left: 1.2em; columns: 2; column-gap: 32px; }
+.guide-toc li { margin: 0; padding: 0.15em 0; break-inside: avoid; }
+
+.guide-pn { display: flex; justify-content: space-between; gap: 16px; max-width: 46rem; margin-top: 56px; }
+.guide-pn a {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 16px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 10px; color: var(--text); text-decoration: none; font-weight: 600;
+}
+.guide-pn a:hover { border-color: var(--brand); color: var(--text); }
+.guide-pn span { color: var(--dim); font-size: 0.8125rem; font-weight: 400; }
+.guide-next { margin-left: auto; text-align: right; }
+.guide-source { margin-top: 24px; color: var(--dim); font-size: 0.875rem; }
+.guide-source a { color: var(--subtext); }
+
+@media (max-width: 860px) {
+  .guide { grid-template-columns: 1fr; }
+  /* The page first; the list of pages under it. */
+  .guide-nav { position: static; max-height: none; order: 2; border-top: 1px solid var(--overlay); padding-top: 24px; }
+  .guide-nav ul { columns: 2; column-gap: 16px; }
+  .guide-nav li { break-inside: avoid; }
+  .guide-toc ul { columns: 1; }
+}

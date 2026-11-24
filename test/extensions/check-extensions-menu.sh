@@ -83,6 +83,8 @@ printf '# x\nBasics\tSuper + F1\tThis help\n' > "$T/sheet"
 expect "isotope-help lists isotope ext" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 2
 rm "$B/isotope-ext"
 expect "isotope-help hides isotope ext without it (agent)" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | grep -c 'isotope ext')" 0
+expect "isotope-help names the user guide under its title" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | sed -n 2p)" "User guide: https://kairos-community.github.io/isotope/guide/"
+expect "the About page opens the guide the sheet names" "$(sed -n 's/^const userGuideURL = "\(.*\)"$/\1/p' "$repo/cmd/isotope-system/page_other.go")" "https://kairos-community.github.io/isotope/guide/"
 expect "isotope-help still ends with the update rows" "$(ISOTOPE_SHORTCUTS="$T/sheet" "$repo/rootfs/common/usr/bin/isotope-help" --text | tail -n 1 | grep -c 'isotope upgrade')" 1
 
 # --- wiring -----------------------------------------------------------------

@@ -21,11 +21,17 @@ func init() {
 	pageMakers[PageAbout] = func(u *UI) pageView { return &aboutPage{u: u} }
 }
 
+// userGuideURL is the user guide on the website (site/guide/), which the
+// About page's "User guide" button opens. isotope-help names the same
+// address; test/extensions/check-extensions-menu.sh holds the two equal.
+const userGuideURL = "https://kairos-community.github.io/isotope/guide/"
+
 // aboutPage: the release, the base, the desktop and the machine.
 type aboutPage struct {
 	u     *UI
 	list  widget.List
 	notes widget.Clickable
+	guide widget.Clickable
 	// graphics is the Graphics row, read when the page opens; "" hides
 	// the row. Under u.mu.
 	graphics string
@@ -109,13 +115,19 @@ func (p *aboutPage) Update(gtx layout.Context) {
 			}
 		}
 	}
+	if p.guide.Clicked(gtx) {
+		if err := p.u.hooks.Start("xdg-open", userGuideURL); err != nil {
+			p.u.tell("Cannot open the user guide", err.Error())
+		}
+	}
 }
 
 func (p *aboutPage) Footer() (leading, trailing []guikit.Action) {
-	if p.notesURL() == "" {
-		return nil, nil
+	trailing = []guikit.Action{{Click: &p.guide, Kind: guikit.ButtonSecondary, Label: "User guide"}}
+	if p.notesURL() != "" {
+		trailing = append(trailing, guikit.Action{Click: &p.notes, Kind: guikit.ButtonSecondary, Label: "What's new in this release"})
 	}
-	return nil, []guikit.Action{{Click: &p.notes, Kind: guikit.ButtonSecondary, Label: "What's new in this release"}}
+	return nil, trailing
 }
 
 func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {

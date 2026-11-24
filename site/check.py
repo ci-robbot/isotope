@@ -5,6 +5,10 @@
 
 - Every local link, image, script, stylesheet and srcset entry in every HTML
   file resolves to a file in DIR, and every #fragment to an id on its page.
+- The user guide (guide/, from site/guide/*.md): guide/index.html exists,
+  the home page links to it, every guide page is linked from guide/index.html,
+  and no guide link still points at a Markdown file. Its local links and
+  #fragments are checked with the rest.
 - Every download button points at a release asset of the repository or at
   its release page, never at another host.
 - With --catalog: DIR/extensions.json exists, at the path installed systems
@@ -106,6 +110,7 @@ def check(root, catalog, external):
                 problems.append(f"{rel}: {url}: no element with id '{u.fragment}'")
     if buttons == 0:
         problems.append("no download buttons found")
+    problems += check_guide(root, pages)
 
     if catalog:
         cat = os.path.join(root, "extensions.json")
@@ -128,6 +133,35 @@ def check(root, catalog, external):
                 problems.append(f"external link does not answer: {url}")
 
     return problems, len(pages), len(externals)
+
+
+def check_guide(root, pages):
+    """The user guide's own rules; pages maps each HTML path to its Page."""
+    problems = []
+    gdir = os.path.join(root, "guide")
+    gindex = os.path.join(gdir, "index.html")
+    if gindex not in pages:
+        return ["guide/index.html is missing: the user guide was not built"]
+    home = pages.get(os.path.join(root, "index.html"))
+    if home and not any(urllib.parse.urlsplit(url).path in ("guide/", "guide/index.html")
+                        for _, _, url, _ in home.refs):
+        problems.append("index.html does not link to the user guide (guide/)")
+    linked = set()
+    for _, _, url, _ in pages[gindex].refs:
+        u = urllib.parse.urlsplit(url)
+        if not u.scheme and u.path:
+            linked.add(os.path.normpath(os.path.join(gdir, u.path)))
+    for path, page in pages.items():
+        if os.path.dirname(path) != gdir:
+            continue
+        rel = os.path.relpath(path, root)
+        if path != gindex and path not in linked:
+            problems.append(f"{rel}: not linked from guide/index.html")
+        for _, attr, url, _ in page.refs:
+            u = urllib.parse.urlsplit(url)
+            if not u.scheme and u.path.endswith(".md"):
+                problems.append(f"{rel}: {attr}={url} points at Markdown, not at a built page")
+    return problems
 
 
 def reachable(url):

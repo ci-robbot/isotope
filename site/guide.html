@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="How to install and use Isotope: the installer, Isotope Welcome, the desktops, Isotope System, updates, backups and more.">
+<meta name="theme-color" content="#141411">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body class="guide-body">
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top top--guide">
+  <a class="brand" href="../index.html" aria-label="Isotope, home">
+    <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true">
+      <path fill="#e4de48" d="M423.12 171.21L423.12 376.01L245.76 478.41L68.40 376.01L68.40 171.21L245.76 68.81L245.76 104.29L99.12 188.95L99.12 358.28L245.76 442.94L392.40 358.28L392.40 188.95Z"/>
+      <path fill="#f9f1af" d="M266.24 33.34L443.60 135.74L412.88 153.48L266.24 68.81Z"/>
+      <circle fill="#f9f1af" cx="245.76" cy="273.61" r="34.82"/>
+    </svg>
+    <span class="brand-word">Isotope</span>
+  </a>
+  <nav aria-label="Site">
+    <ul class="nav">
+      <li><a href="index.html">User guide</a></li>
+      <li class="nav-wide"><a href="{{repo_url}}">GitHub</a></li>
+      <li><a class="nav-cta" href="../index.html#download">Download</a></li>
+    </ul>
+  </nav>
+</header>
+
+<div class="guide wrap">
+  <nav class="guide-nav" aria-label="User guide">
+    <p class="guide-nav-title">User guide</p>
+    <ul>
+{{nav}}
+    </ul>
+  </nav>
+  <main id="main" class="guide-main">
+    <article class="prose">
+{{content}}
+    </article>
+    <nav class="guide-pn" aria-label="Previous and next page">{{prevnext}}</nav>
+    <p class="guide-source">Something wrong or missing on this page? <a href="{{source}}">Change it on GitHub</a>.</p>
+  </main>
+</div>
+
+<footer class="foot">
+  <div class="wrap">
+    <p class="foot-licence">Isotope, built on Hadron, by Kairos. Isotope is licensed under the <a href="../LICENSE.txt">Apache License 2.0</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

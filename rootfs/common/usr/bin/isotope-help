@@ -13,6 +13,8 @@
 # Keys are ASCII on purpose: awk pads by bytes, so a multi-byte character in
 # the key column would push its description out of line.
 sheet=${ISOTOPE_SHORTCUTS:-/usr/share/isotope/shortcuts.txt}
+# The user guide (site/guide/ in the repository), named under the title.
+guide=https://kairos-community.github.io/isotope/guide/
 
 if [ ! -r "$sheet" ]; then
     echo "isotope-help: no shortcut list at $sheet" >&2
@@ -41,7 +43,7 @@ rows() { { grep -v '^#' "$sheet"; software; }; }
 
 # render COLOUR: the sections of rows(), one heading per change of section.
 render() {
-    rows | awk -F '\t' -v colour="$1" '
+    rows | awk -F '\t' -v colour="$1" -v guide="$guide" '
         BEGIN {
             if (colour) { b = "\033[1;34m"; c = "\033[36m"; d = "\033[2m"; r = "\033[0m" }
             w = 34
@@ -49,6 +51,7 @@ render() {
         { sec[NR] = $1; key[NR] = $2; desc[NR] = $3; if (length($2) > w) w = length($2) }
         END {
             printf "%sIsotope%s  %sSuper is the Windows / Command key%s\n", b, r, d, r
+            printf "User guide: %s\n", guide
             for (i = 1; i <= NR; i++) {
                 if (sec[i] != last) { printf "\n%s%s%s\n", b, sec[i], r; last = sec[i] }
                 printf "  %s%-" w "s%s %s\n", c, key[i], r, desc[i]
