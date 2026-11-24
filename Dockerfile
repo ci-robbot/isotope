@@ -7647,5 +7647,9 @@ RUN . /etc/isotope/session && \
     sed -i "s|@VARIANT_SUBTITLE@|${subtitle}|" /etc/kairos/branding/isotope-theme/theme.txt && \
     ! grep -q '@VARIANT_SUBTITLE@' /etc/kairos/branding/isotope-theme/theme.txt
 # kairos-init regenerates /etc/motd (and may touch /etc/issue); re-apply the
-# branded console banners from the selected desktop overlay on top.
-COPY --from=desktop-config /etc/issue /etc/motd /etc/
+# branded console banners from the selected desktop overlay on top. From the
+# build context, not the desktop-config stage: on COSMIC that stage reaches
+# isotope-applets, cosmic-build and LLVM, and release.yml's Trusted Boot job
+# (make UKI_FROM=..., which rebuilds only this stage, with no prebuilt LLVM
+# image) would compile LLVM and time out.
+COPY rootfs/${DESKTOP}/etc/issue rootfs/${DESKTOP}/etc/motd /etc/
