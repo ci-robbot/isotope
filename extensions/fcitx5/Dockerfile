@@ -427,7 +427,10 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://github.com/fuj
 # What a system extension must not carry: /etc, headers, pkg-config and
 # CMake files, static and libtool archives, man pages and docs, libime's
 # and libhangul's command-line tools, X11's locale and error databases (i3
-# has its own at the same paths), and fcitx5's testing addons. Then the
+# has its own at the same paths), fcitx5's testing addons (the modules and
+# their addon files in share/fcitx5/testing) and fcitx5-configtool with its
+# launcher entry (a wrapper that only starts a Qt or KDE configuration tool,
+# and none is here). libxcb-xtest is libxcb's XTest library, not a test. Then the
 # stand-in of the image's libraries for the test stage.
 RUN set -eux; \
     rm -rf /output/etc /output/usr/include /output/usr/share/man /output/usr/share/doc \
@@ -438,7 +441,9 @@ RUN set -eux; \
     rm -rf /output$P/cairo; \
     find /output -name '*.la' -delete -o -name '*.a' -delete; \
     rm -f /output$P/fcitx5/*test*.so /output/usr/share/fcitx5/addon/test*.conf; \
-    if find /output -path '*fcitx5*' -name '*test*' | grep .; then echo "testing addons are left" >&2; exit 1; fi; \
+    rm -rf /output/usr/share/fcitx5/testing; \
+    rm -f /output/usr/bin/fcitx5-configtool /output/usr/share/applications/fcitx5-configtool.desktop; \
+    if find /output$P/fcitx5 /output/usr/share/fcitx5 -name '*test*' | grep .; then echo "testing addons are left" >&2; exit 1; fi; \
     mkdir -p /image-runtime/usr/lib /image-runtime/usr/bin; \
     grep -v -e '^#' -e '^$' -e '^libc.so$' /image-libs.txt | while read -r lib; do \
       cp -a /usr/lib/$lib* /image-runtime/usr/lib/ 2>/dev/null || [ -e /image-runtime/usr/lib/$lib ] || { echo "no $lib to stand in for the image" >&2; exit 1; }; \
