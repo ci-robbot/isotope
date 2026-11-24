@@ -51,6 +51,14 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://download.gnome
       -Dman-pages=disabled -Dintrospection=disabled -Dglib_debug=disabled \
       -Ddtrace=disabled -Dsysprof=disabled && \
     ninja -C buildDir install
+# xsltproc: ModemManager's include/meson.build makes ModemManager-names.h
+# with it. Build time only, as the image's `libxslt` stage.
+# renovate: datasource=gitlab-tags depName=GNOME/libxslt registryUrl=https://gitlab.gnome.org extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG LIBXSLT_VERSION=1.1.42
+RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://download.gnome.org/sources/libxslt/${LIBXSLT_VERSION%.*}/libxslt-${LIBXSLT_VERSION}.tar.xz -o x.tar.xz && \
+    tar -xf x.tar.xz && rm x.tar.xz && cd libxslt-* && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking --without-python && \
+    make -j"$(nproc)" && make install && xsltproc --version >/dev/null
 # For the test stage only, never the extension: a stand-in for the image's
 # GLib, gdbus (to watch the bus as another user), and a stub that owns
 # ModemManager's name and sends a signal (test/mm-signal-stub.c).
@@ -137,7 +145,9 @@ COPY files/ /output/
 RUN set -eux; \
     for p in mm-src:ModemManager libqmi-*:libqmi libmbim-*:libmbim libqrtr-glib-*:libqrtr-glib libgudev-*:libgudev; do \
       src=${p%%:*}; name=${p#*:}; mkdir -p /output/usr/share/licenses/modemmanager-extension/$name; \
-      cp $src/COPYING* /output/usr/share/licenses/modemmanager-extension/$name/; \
+      lic=$(ls -d $src/COPYING* $src/LICENSES/* 2>/dev/null || true); \
+      [ -n "$lic" ] || { echo "no licence in $src" >&2; exit 1; }; \
+      cp $lic /output/usr/share/licenses/modemmanager-extension/$name/; \
     done; \
     u=/output/usr/lib/systemd/system; \
     mkdir -p $u/multi-user.target.wants; \
@@ -193,9 +203,17 @@ COPY --from=build /mm-signal-stub /usr/local/bin/mm-signal-stub
 RUN cp -an /glib-runtime/. / && rm -rf /glib-runtime
 RUN cp -a /extension/. / && rm -rf /extension
 RUN set -eux; ModemManager --version; mmcli --version; qmicli --version; mbimcli --version
+# Every library each ELF file needs is found. A plugin's own symbols come
+# from the ModemManager program that loads it (mm_plugin_get_type, ...), so
+# for the plugins musl's ldd also prints "Error relocating ...: symbol not
+# found" and exits 1; those lines are left out, a missing library is not.
 RUN set -eu; while read -r f; do \
-      ldd "$f" >/tmp/ldd 2>&1 || { echo "ldd $f failed" >&2; cat /tmp/ldd >&2; exit 1; }; \
-      if grep -q 'not found' /tmp/ldd; then echo "$f:" >&2; cat /tmp/ldd >&2; exit 1; fi; \
+      case "$f" in \
+        /usr/lib/isotope-ext/modemmanager/ModemManager/libmm-plugin-*.so|/usr/lib/isotope-ext/modemmanager/ModemManager/libmm-shared-*.so) \
+          ldd "$f" 2>&1 | grep -v '^Error relocating .*: symbol not found$' >/tmp/ldd || true ;; \
+        *) ldd "$f" >/tmp/ldd 2>&1 || { echo "ldd $f failed" >&2; cat /tmp/ldd >&2; exit 1; } ;; \
+      esac; \
+      if grep -qE 'not found|Error loading' /tmp/ldd; then echo "$f:" >&2; cat /tmp/ldd >&2; exit 1; fi; \
     done </tmp/elf
 # The unit, its drop-in and the links that enable it from /usr.
 RUN set -eux; \

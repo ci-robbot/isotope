@@ -1739,6 +1739,8 @@ FROM toolchain AS mm-glib
 COPY --from=libucontext /libucontext /
 COPY --from=glib2 /glib2 /
 COPY --from=pcre2 /pcre2 /
+# xsltproc: include/meson.build makes ModemManager-names.h with it.
+COPY --from=libxslt /libxslt /
 # renovate: datasource=gitlab-tags depName=mobile-broadband/ModemManager registryUrl=https://gitlab.freedesktop.org extractVersion=^(?<version>\d+\.\d+\.\d+)$
 ARG MODEMMANAGER_VERSION=1.24.2
 WORKDIR /build
