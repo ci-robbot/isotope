@@ -389,6 +389,11 @@ jobs:
       - name: Remote desktop files and wiring
         run: test/remote-desktop/check-remote-desktop.sh --repo
 
+      # desktop-images.yml starts only on its pull_request paths; a plan rule
+      # with no matching path never builds an image (#181 ran none).
+      - name: Desktop Images trigger paths cover the plan's rules
+        run: test/ci/check-desktop-images-paths.sh
+
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh
