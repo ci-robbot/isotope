@@ -519,10 +519,15 @@ RUN set -eu; while read -r f; do \
       ldd "$f" >/tmp/ldd 2>&1 || { echo "ldd $f failed" >&2; cat /tmp/ldd >&2; exit 1; }; \
       if grep -qE 'not found|Error' /tmp/ldd; then echo "$f:" >&2; cat /tmp/ldd >&2; exit 1; fi; \
     done </tmp/elf
-# anthy finds its dictionary through its own configuration file.
+# anthy finds its dictionary through its own configuration file. The file
+# writes DIC_FILE as ${prefix}/share/...: anthy expands ${name} from the
+# file's own lines (expand_string in src-diclib/conf.c), so the check does
+# the same for prefix.
 RUN set -eux; \
     conf=/usr/lib/isotope-ext/fcitx5/etc/anthy-unicode.conf; cat $conf; \
-    dic=$(sed -n 's/^DIC_FILE[[:space:]]\{1,\}//p' $conf); test -s "$dic"; \
+    prefix=$(sed -n 's/^prefix[[:space:]]\{1,\}//p' $conf); test -n "$prefix"; \
+    dic=$(sed -n 's/^DIC_FILE[[:space:]]\{1,\}//p' $conf | sed "s#\${prefix}#$prefix#"); \
+    case "$dic" in *'$'*) echo "unexpanded variable in DIC_FILE: $dic" >&2; exit 1 ;; esac; test -s "$dic"; \
     test -s /usr/share/isotope-ext/fcitx5/iso-codes/json/iso_639-3.json; \
     test -n "$(ls /usr/share/libime)"; test -n "$(ls /usr/lib/isotope-ext/fcitx5/libime)"; \
     test -n "$(ls /usr/share/libhangul)"
