@@ -26,6 +26,7 @@ System	Super + S	Control center: Wi-Fi, Bluetooth, sound
 System	Super + Shift + ,	Shell settings: bar, dock, wallpaper, theme
 System	Super + Alt + L	Lock the screen
 System	Super + Alt + N	Night light on and off
+System	Super + Alt + S	Screen reader on and off (the screen-reader extension)
 System	Print	Screenshot (pick an area, then Enter)
 System	Super + Shift + Escape	Toggle the shortcut inhibit
 Notifications	Super + BackSpace	Close the newest notification

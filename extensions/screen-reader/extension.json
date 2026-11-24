@@ -1,0 +1,4 @@
+{
+  "title": "Screen reader",
+  "description": "Orca with speech (speech-dispatcher, eSpeak NG): reads the screen aloud on COSMIC and niri; Super+Alt+S turns it on and off"
+}

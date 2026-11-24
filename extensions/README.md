@@ -42,6 +42,9 @@ extensions/<name>/
   the units linked there whose unit file the extension ships and the base
   does not have; before it disables or removes a merged one, it stops those
   same units. A link to a unit of the base is never acted on.
+- A user unit (`/usr/lib/systemd/user`) is never started or enabled by
+  `isotope ext`: the session starts it (`screen-reader/` ships Orca's
+  `orca.service`, which `isotope-screen-reader` starts on niri).
 - The `test` stage runs on `ghcr.io/kairos-io/hadron:${HADRON_VERSION}`. It
   must fail when a file of the extension already exists in the base. A file
   over the base's copy is what `isotope ext` refuses, and in the worst case it

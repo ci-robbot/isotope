@@ -359,6 +359,14 @@ jobs:
       - name: Smart card extension and wiring
         run: test/smartcards/check-smartcards.sh --repo
 
+      # The screen reader: the switch with fake busctl and systemctl on each
+      # desktop, the keys, the menu entry, the accessibility bus in the COSMIC
+      # and niri stages, the extension's pins against the image's, the
+      # agent's removal. The images are checked in desktop-images.yml and
+      # release.yml, the extension in extensions.yml.
+      - name: Screen reader switch and wiring
+        run: test/accessibility/check-screen-reader.sh --repo
+
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh

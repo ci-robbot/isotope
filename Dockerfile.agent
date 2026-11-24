@@ -265,6 +265,12 @@ RUN rm -f /usr/lib/ld-linux-x86-64.so.2 /usr/lib/binfmt.d/isotope-appimage.conf 
 # isotope-clipboard is gone.
 RUN rm -f /usr/bin/isotope-clipboard /usr/bin/clipnotify && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-clipboard'
+# No screen reader switch: nobody listens to an appliance, it is i3 (where
+# the screen reader does not work), and it takes no system extensions, so
+# Orca cannot be installed. isotope-menu shows the entry only on COSMIC and
+# niri with the script there.
+RUN rm -f /usr/bin/isotope-screen-reader && ! test -e /usr/bin/isotope-screen-reader && \
+    ! grep -rhsv '^[[:space:]]*#' /etc/i3 /etc/xdg/autostart | grep -q 'isotope-screen-reader'
 # No software-rendering notice: the appliance is a VM, where drawing in
 # software is normal, and no person reads it. The probe and the session's
 # fallback (/usr/libexec/isotope-gpu-env, through ly's login shell) stay, so

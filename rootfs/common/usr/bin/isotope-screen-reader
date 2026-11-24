@@ -1,0 +1,117 @@
+#!/bin/sh
+# The screen reader on and off: Super+Alt+S and the Isotope menu's "Screen
+# reader". The screen reader is Orca from the `screen-reader` system
+# extension (extensions/screen-reader), so this only turns it on when the
+# extension is installed, and says how to install it when it is not.
+#
+#   isotope-screen-reader on|off|toggle   change it now
+#   isotope-screen-reader restore         start Orca at login if it was on
+#   isotope-screen-reader status          print on or off
+#
+# Orca reads the keyboard on Wayland through the compositor's
+# org.freedesktop.a11y.KeyboardMonitor, which cosmic-comp and niri serve and
+# sway does not; on i3 the image's at-spi2-core has no X11 support. So it
+# works on COSMIC and niri only, and the script refuses elsewhere.
+#
+# The setting is the accessibility bus's ScreenReaderEnabled property
+# (org.a11y.Status), which at-spi-bus-launcher keeps in GSettings, so it
+# survives a log out, and which apps such as Chromium and Firefox read to
+# turn on their accessibility. On COSMIC, cosmic-session starts and stops
+# /usr/bin/orca when the property changes (COSMIC's own Super+Alt+S and its
+# Accessibility settings change it too). On niri this script starts and
+# stops Orca's user unit, orca.service, and `restore` starts it at login.
+set -u
+
+DESKTOP_NAME=""
+# shellcheck disable=SC1090
+[ -r "${ISOTOPE_SESSION_FILE:-/etc/isotope/session}" ] && . "${ISOTOPE_SESSION_FILE:-/etc/isotope/session}"
+ORCA="${ISOTOPE_ORCA:-/usr/bin/orca}"
+
+usage() {
+    echo "usage: isotope-screen-reader on|off|toggle|restore|status" >&2
+    exit 2
+}
+
+# notify TEXT: a short pop-up through the session's notification server.
+notify() {
+    busctl --user call org.freedesktop.Notifications /org/freedesktop/Notifications \
+        org.freedesktop.Notifications Notify 'susssasa{sv}i' \
+        "Screen reader" 0 "" "Screen reader" "$1" 0 0 6000 >/dev/null 2>&1 || :
+}
+
+refuse() {
+    echo "isotope-screen-reader: $1" >&2
+    notify "$1"
+    exit 1
+}
+
+supported() {
+    case "$DESKTOP_NAME" in
+        COSMIC|niri) return 0 ;;
+    esac
+    refuse "The screen reader works on the COSMIC and niri desktops. This desktop cannot pass the keyboard to it."
+}
+
+installed() {
+    [ -x "$ORCA" ] && return 0
+    refuse "The screen reader is not installed. Install it from Extensions in Isotope System, or run: isotope ext install screen-reader"
+}
+
+a11y() { # a11y get|set PROPERTY [BOOL]
+    if [ "$1" = get ]; then
+        busctl --user get-property org.a11y.Bus /org/a11y/bus org.a11y.Status "$2" 2>/dev/null
+    else
+        busctl --user set-property org.a11y.Bus /org/a11y/bus org.a11y.Status "$2" b "$3" >/dev/null 2>&1
+    fi
+}
+
+# enabled: is the setting on? On niri, a running Orca counts too, so a
+# toggle stops one started some other way.
+enabled() {
+    [ "$(a11y get ScreenReaderEnabled)" = "b true" ] && return 0
+    [ "$DESKTOP_NAME" = niri ] && systemctl --user is-active -q orca.service 2>/dev/null
+}
+
+start_orca() {
+    # A user manager that looked for orca.service before the extension was
+    # merged remembers it as missing until it reloads.
+    systemctl --user start orca.service 2>/dev/null && return 0
+    systemctl --user daemon-reload 2>/dev/null
+    systemctl --user start orca.service
+}
+
+turn_on() {
+    supported; installed
+    # IsEnabled turns on the toolkits' accessibility; ScreenReaderEnabled
+    # tells apps a screen reader runs (and starts Orca on COSMIC).
+    a11y set IsEnabled true || :
+    a11y set ScreenReaderEnabled true || :
+    if [ "$DESKTOP_NAME" = niri ]; then
+        start_orca || refuse "Orca did not start. See: journalctl --user -u orca.service"
+    fi
+    notify "On. Super+Alt+S turns it off."
+}
+
+turn_off() {
+    supported
+    a11y set ScreenReaderEnabled false || :
+    if [ "$DESKTOP_NAME" = niri ]; then
+        systemctl --user stop orca.service 2>/dev/null || :
+    fi
+    notify "Off."
+}
+
+[ $# -eq 1 ] || usage
+case "$1" in
+    on)      turn_on ;;
+    off)     turn_off ;;
+    toggle)  if enabled; then turn_off; else turn_on; fi ;;
+    restore)
+        # Quietly: at login, on a supported desktop, with Orca installed.
+        case "$DESKTOP_NAME" in niri) ;; *) exit 0 ;; esac
+        [ -x "$ORCA" ] || exit 0
+        [ "$(a11y get ScreenReaderEnabled)" = "b true" ] || exit 0
+        start_orca ;;
+    status)  if enabled; then echo on; else echo off; fi ;;
+    *)       usage ;;
+esac

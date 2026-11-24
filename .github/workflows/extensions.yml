@@ -61,7 +61,10 @@ jobs:
     needs: discover
     if: needs.discover.outputs.names != '[]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # screen-reader builds CPython, gettext, GLib, gobject-introspection,
+    # PyGObject, eSpeak NG and speech-dispatcher with no cache: longer than
+    # the others.
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write

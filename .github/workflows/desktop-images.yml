@@ -149,7 +149,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|test/glibc/*|tools/isotope-glibc-loader.c|tools/isotope-appimage.c|docs/glibc-programs.md|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/apps/*|test/smartcards/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/apps/*|test/smartcards/*|test/accessibility/*|extensions/screen-reader/image-libs.txt|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -475,3 +475,11 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/smartcards/check-smartcards.sh "${DESKTOP}-desktop:dev"
+
+      # The screen reader: the accessibility bus and every library the
+      # screen-reader extension takes from the image on COSMIC and niri; the
+      # switch refuses on sway and i3.
+      - name: Check the screen reader's image side
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/accessibility/check-screen-reader.sh "${DESKTOP}-desktop:dev"

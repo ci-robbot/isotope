@@ -301,6 +301,9 @@ spawn-at-startup "isotope-not-live" "isotope-update" "tray"
 // Turn Noctalia's night light back on if the user had it on in an earlier
 // session; Noctalia itself starts with it off (noctalia-defaults.toml).
 spawn-at-startup "isotope-night-light" "restore"
+// Start the screen reader again if it was on when the user left (the
+// setting is the accessibility bus's, kept in GSettings).
+spawn-at-startup "isotope-screen-reader" "restore"
 // One notification when the screen is drawn in software (no Mesa driver for
 // the GPU; /usr/libexec/isotope-gpu-env, sourced by isotope-niri-session,
 // niri's session entry).
@@ -484,10 +487,10 @@ binds {
     // help: Night light on and off
     Super+Alt+N hotkey-overlay-title="Night Light On/Off" { spawn "isotope-night-light" "toggle"; }
 
-    // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
-    // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
-    // For example, this is a standard bind to toggle the screen reader (orca).
-    Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
+    // The screen reader (Orca, from the screen-reader extension), the same
+    // key as GNOME and COSMIC. Also on the lock screen.
+    // help: Screen reader on and off (the screen-reader extension)
+    Super+Alt+S allow-when-locked=true hotkey-overlay-title="Screen Reader On/Off" { spawn "isotope-screen-reader" "toggle"; }
 
     // Example volume keys mappings for PipeWire & WirePlumber.
     // The allow-when-locked=true property makes them work even when the session is locked.

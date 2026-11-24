@@ -6366,6 +6366,12 @@ COPY --from=cairo /cairo /
 COPY --from=pango /pango /
 COPY --from=atk /atk /
 COPY --from=gtk3 /gtk3 /
+# The accessibility bus (at-spi2-core: at-spi-bus-launcher, the registry,
+# libatspi), which the screen-reader extension's Orca talks to; COSMIC's
+# Super+Alt+S, its Accessibility settings and cosmic-session's Orca launch
+# need it too. i3 has it already for its X11 GTK. See
+# docs/superpowers/specs/2026-11-24-screen-reader-design.md.
+COPY --from=at-spi2-core /at-spi2-core /
 COPY --from=xdg-desktop-portal-gtk /xdg-desktop-portal-gtk /
 COPY --from=hicolor-icon-theme /hicolor-icon-theme /
 COPY --from=icon-themes /icon-themes /
@@ -6403,6 +6409,12 @@ COPY --from=gdk-pixbuf /gdk-pixbuf /
 COPY --from=atk /atk /
 COPY --from=libepoxy /libepoxy /
 COPY --from=gtk3 /gtk3 /
+# The accessibility bus (at-spi2-core: at-spi-bus-launcher, the registry,
+# libatspi), which the screen-reader extension's Orca talks to; COSMIC's
+# Super+Alt+S, its Accessibility settings and cosmic-session's Orca launch
+# need it too. i3 has it already for its X11 GTK. See
+# docs/superpowers/specs/2026-11-24-screen-reader-design.md.
+COPY --from=at-spi2-core /at-spi2-core /
 # Xwayland (run by xwayland-satellite) and the X11 libraries it needs.
 COPY --from=xorgproto /xorgproto /
 COPY --from=libxau /libxau /

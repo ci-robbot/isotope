@@ -1,7 +1,7 @@
 #!/bin/sh
 # The Isotope menu, on Super+Escape in every variant: one place to reach the
 # apps, the first-run app picker, Wi-Fi, Bluetooth, audio, screenshots,
-# emoji, the night light, clipboard history, updates, system extensions,
+# emoji, the night light, the screen reader, clipboard history, updates, system extensions,
 # backups, the shortcut sheet and the power actions. The picker is isotope-pick (fuzzel on Wayland, dmenu on
 # i3). Each entry opens what the variant already uses for it: the isotope-*
 # menus on sway and i3, Noctalia's panels on niri, COSMIC Settings and
@@ -204,6 +204,14 @@ Emoji${tab}󰞅"
 # COSMIC has no night light (see isotope-night-light), so no entry there.
 [ "$DESKTOP_NAME" = COSMIC ] || entries="$entries
 Night light${tab}󰖔"
+# The screen reader, where it works (COSMIC and niri; see
+# isotope-screen-reader). Without the extension the entry says how to
+# install it.
+case "$DESKTOP_NAME" in
+    COSMIC|niri)
+        command -v isotope-screen-reader >/dev/null 2>&1 && entries="$entries
+Screen reader${tab}󰗋" ;;
+esac
 command -v isotope-clipboard >/dev/null 2>&1 && entries="$entries
 Clipboard${tab}󰅍"
 command -v isotope-system >/dev/null 2>&1 && entries="$entries
@@ -245,6 +253,7 @@ case "$sel" in
     Capture)   capture ;;
     Emoji)     exec isotope-emoji ;;
     "Night light") exec isotope-night-light toggle ;;
+    "Screen reader") exec isotope-screen-reader toggle ;;
     Clipboard) exec isotope-clipboard ;;
     System)    system_page updates ;;
     Update)    system_page updates || update ;;
