@@ -208,7 +208,7 @@ image_mode() {
             "grep -q 'screen-reader-enabled' /usr/share/glib-2.0/schemas/org.gnome.desktop.a11y.applications.gschema.xml"
         while read -r kind lib; do
             case "$kind" in linked|typelib) ;; *) continue ;; esac
-            in_image "$desktop: the extension's $kind library $lib" "test -e /usr/lib/$lib || test -e /lib/$lib"
+            in_image "$desktop: the extension's $kind library $lib" "test -e /usr/lib/$lib || test -e /lib/$lib || test -e /lib64/$lib || test -e /usr/lib64/$lib"
         done <extensions/screen-reader/image-libs.txt
         in_image "$desktop: the Isotope menu offers it" "grep -qF '\"Screen reader\") exec isotope-screen-reader toggle' /usr/bin/isotope-menu"
         if [ "$desktop" = niri ]; then
