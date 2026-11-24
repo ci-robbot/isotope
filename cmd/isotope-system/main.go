@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gioui.org/app"
 	"gioui.org/op"
@@ -37,25 +38,27 @@ const (
 // instance is the exported object of the window.
 type instance struct{ u *UI }
 
+// ShowPage takes a page, or a page and its tab ("apps updates").
 func (i instance) ShowPage(page string) *dbus.Error {
-	p, ok := ParseArgs([]string{page})
+	p, tab, ok := ParseTarget(strings.Fields(page))
 	if !ok {
 		return dbus.MakeFailedError(fmt.Errorf("%q is not a page", page))
 	}
-	i.u.ShowPage(p)
+	i.u.ShowTab(p, tab)
 	return nil
 }
 
-// handOff asks a running window to show page. ok is true when one did.
-func handOff(conn *dbus.Conn, page Page) bool {
-	return conn.Object(instanceName, instancePath).Call(instanceIface+".ShowPage", dbus.FlagNoAutoStart, string(page)).Err == nil
+// handOff asks a running window to show page (and tab). ok is true when
+// one did.
+func handOff(conn *dbus.Conn, page Page, tab string) bool {
+	return conn.Object(instanceName, instancePath).Call(instanceIface+".ShowPage", dbus.FlagNoAutoStart, strings.TrimSpace(string(page)+" "+tab)).Err == nil
 }
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "ask" {
 		os.Exit(runAsk(os.Args[2:]))
 	}
-	page, ok := ParseArgs(os.Args[1:])
+	page, tab, ok := ParseTarget(os.Args[1:])
 	if !ok {
 		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(2)
@@ -64,7 +67,7 @@ func main() {
 	if err == nil {
 		reply, rerr := session.RequestName(instanceName, dbus.NameFlagDoNotQueue)
 		if rerr == nil && reply == dbus.RequestNameReplyExists {
-			if handOff(session, page) {
+			if handOff(session, page, tab) {
 				os.Exit(0)
 			}
 		}
@@ -96,11 +99,15 @@ func main() {
 	if f, err := dialFirmware(); err == nil {
 		hooks.Firmware = f
 	}
+	hooks.Apps = newFlatpakApps()
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate
 	win.Option(app.Title("Isotope System"), app.Size(unit.Dp(1100), unit.Dp(720)), app.Decorated(true))
 	u := newUI(readSystem(), guikit.NewShaper(), hooks, page)
+	if tab != "" {
+		u.showTab(page, tab)
+	}
 	if session != nil {
 		_ = session.Export(instance{u}, instancePath, instanceIface)
 	}

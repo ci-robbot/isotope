@@ -1,0 +1,19 @@
+
+GNU Image Manipulation Program - High-end image creation and manipulation
+
+        ID: org.gimp.GIMP
+       Ref: app/org.gimp.GIMP/x86_64/stable
+      Arch: x86_64
+    Branch: stable
+   Version: 3.2.8
+   License: GPL-3.0+ AND LGPL-3.0+
+Collection: org.flathub.Stable
+  Download: 102.5 MB
+ Installed: 268.6 MB
+   Runtime: org.gnome.Platform/x86_64/51
+       Sdk: org.gnome.Sdk/x86_64/51
+
+    Commit: b1acd452acc9f3436e3cf520390c66c8a2f02ade9f879f14dfd55c402684f03e
+    Parent: dda2d119339eb0712d3c197ddcd125bf4bbad87b11b45ba9ac17bc08613484db
+   Subject: graphviz: Update graphviz-16.1.1.tar.gz to 16.1.2 (#789) (feee22b88af5)
+      Date: 2026-11-21 19:42:49 +0000

@@ -235,6 +235,13 @@ RUN rm -f /usr/bin/isotope-welcome /usr/bin/isotope-first-run-apps \
 RUN rm -f /usr/bin/isotope-system /usr/share/applications/isotope-system.desktop && \
     sed -i -e '/isotope-system/d' /etc/i3/config && \
     ! grep -rhsv '^[[:space:]]*#' /etc/i3 | grep -q 'isotope-system'
+# No automatic app updates: the Apps page went with Isotope System, and an
+# appliance's apps change only when its operator changes them. The user
+# timer, its service and the link that enables it for every user go.
+RUN rm -f /usr/lib/systemd/user/isotope-app-updates.timer \
+      /usr/lib/systemd/user/isotope-app-updates.service \
+      /usr/lib/systemd/user/timers.target.wants/isotope-app-updates.timer && \
+    ! find /usr/lib/systemd/user /etc/systemd/user -name 'isotope-app-updates*' 2>/dev/null | grep -q .
 # No glibc programs: an agent that starts a downloaded glibc binary or an
 # AppImage must not get an Ubuntu container pulled from the network and set up
 # behind its back. The stand-in loader, the AppImage binfmt rule and its

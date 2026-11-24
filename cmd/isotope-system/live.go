@@ -31,8 +31,10 @@ const liveText = "Not available on the live system. Install Isotope first."
 // memory. Extensions is one of them: an extension installed there would
 // be gone at the next boot. So is Compatibility: the glibc container
 // needs Docker on the installed system, and `isotope glibc` refuses on the
-// live one. Network, Bluetooth, Printers, Disks and About still work.
+// live one. So is Apps: an app installed there is gone at the restart.
+// Network, Bluetooth, Printers, Disks and About still work.
 var liveOnly = map[Page]bool{
+	PageApps:       true,
 	PageUpdates:    true,
 	PageDesktop:    true,
 	PageExtensions: true,

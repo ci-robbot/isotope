@@ -1,0 +1,19 @@
+[Unit]
+Description=Isotope automatic app updates, once a day
+Documentation=https://github.com/kairos-community/isotope
+# Every user's: the link in timers.target.wants enables it. The service
+# does nothing while `isotope apps auto off` (or Isotope System's Apps
+# page) turned automatic app updates off.
+ConditionPathExists=!/run/cos/live_mode
+ConditionPathExists=!/run/cos/install_mode
+ConditionPathExists=!/run/cos/uki_install_mode
+ConditionPathExists=!/run/isotope/live-desktop
+
+[Timer]
+OnCalendar=daily
+# A machine that was off at midnight updates soon after the user logs in.
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

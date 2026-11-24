@@ -1,0 +1,12 @@
+[Runtime]
+name = org.freedesktop.Platform.openh264
+runtime = org.freedesktop.Platform/x86_64/20.08
+sdk = org.freedesktop.Sdk/x86_64/20.08
+
+[Extra Data]
+name = libopenh264-2.3.1-linux64.7.so.bz2
+checksum = 114b9cf8903351ead2b041a11b3012668312180f281cf27bfac7e20c05a721fc
+size = 630002
+uri = http://ciscobinary.openh264.org/libopenh264-2.3.1-linux64.7.so.bz2
+NoRuntime = true
+

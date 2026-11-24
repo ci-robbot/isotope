@@ -1,0 +1,11 @@
+Looking for updates…
+
+
+ 1.	   	org.freedesktop.Platform.openh264	2.2.0	u	flathub	< 944.3 kB
+
+
+Updating…
+Updating…                        0%  0 bytes/s
+Updating… █▌                     8%
+Updating… ████████████████████ 100%  616.9 kB/s
+Updates complete.

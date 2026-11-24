@@ -1,0 +1,3 @@
+org.freedesktop.Platform	x86_64	25.08	Freedesktop Platform	25.08.6	620.1 MB		flathub
+org.gnome.Platform	x86_64	46	GNOME Application Platform version 46		951.3 MB		flathub	eol=The GNOME 46 runtime is no longer supported as of April 17, 2025. Please ask your application developer to migrate to a supported platform.
+org.gnome.Platform	x86_64	51	GNOME Application Platform version 51		1.1 GB		flathub

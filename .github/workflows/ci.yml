@@ -113,8 +113,8 @@ jobs:
         env:
           ISOTOPE_REQUIRE_MKSQUASHFS: "1"
         run: |
-          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/...
-          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/...
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/...
 
       - name: install-ui tests
         run: |
@@ -158,9 +158,9 @@ jobs:
 
       # Isotope System: its models and pages against a fake daemon, a fake
       # NetworkManager, a fake CUPS and a fake Avahi (on a private
-      # dbus-daemon), and the Compatibility and Printers pages' screenshots
-      # (cmd/isotope-system/testdata/compat-*.png and printers-*.png), on the
-      # same Mesa as the install-gui tests.
+      # dbus-daemon), a fake Flatpak installation, and the pages'
+      # screenshots (cmd/isotope-system/testdata/*.png: compat-*, printers-*,
+      # apps-* and the others), on the same Mesa as the install-gui tests.
       - name: system tests
         env:
           CGO_ENABLED: "1"
@@ -344,6 +344,13 @@ jobs:
       # removals. The images are checked in desktop-images.yml and release.yml.
       - name: Firmware update files
         run: test/firmware/check-firmware.sh --repo
+
+      # Apps: the user timer and service of automatic app updates, the link
+      # that enables them, the menu entry, the Go stages, the agent's
+      # removals. The images are checked in desktop-images.yml and
+      # release.yml.
+      - name: Apps files and wiring
+        run: test/apps/check-apps.sh --repo
 
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle

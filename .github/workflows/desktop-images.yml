@@ -67,6 +67,8 @@ on:
       - "pkg/recoverykey/**"
       - "pkg/shares/**"
       - "pkg/fwupd/**"
+      - "pkg/flatpak/**"
+      - "test/apps/**"
       - "cmd/isotope-install-ui/**"
       - "cmd/isotope-install-gui/**"
       - "scripts/ci-containerd-store.sh"
@@ -147,7 +149,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|test/glibc/*|tools/isotope-glibc-loader.c|tools/isotope-appimage.c|docs/glibc-programs.md|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/apps/*|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -458,3 +460,10 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/firmware/check-firmware.sh "${DESKTOP}-desktop:dev"
+
+      # Apps: the daily user timer of automatic app updates and its link,
+      # `isotope apps`, the Isotope menu's Install apps entry.
+      - name: Check apps
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/apps/check-apps.sh "${DESKTOP}-desktop:dev"

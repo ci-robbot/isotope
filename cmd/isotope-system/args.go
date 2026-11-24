@@ -5,6 +5,7 @@ package main
 type Page string
 
 const (
+	PageApps       Page = "apps"
 	PageUpdates    Page = "updates"
 	PageDesktop    Page = "desktop"
 	PageExtensions Page = "extensions"
@@ -20,7 +21,7 @@ const (
 )
 
 // Pages is the sidebar, in order.
-var Pages = []Page{PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageBluetooth, PagePrinters, PageUsers, PageDisks, PageCompat, PageAbout}
+var Pages = []Page{PageApps, PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageBluetooth, PagePrinters, PageUsers, PageDisks, PageCompat, PageAbout}
 
 // later are the pages listed but not there yet: none today.
 var later = map[Page]bool{}
@@ -28,6 +29,8 @@ var later = map[Page]bool{}
 // Title is the page's name in the sidebar and its heading.
 func (p Page) Title() string {
 	switch p {
+	case PageApps:
+		return "Apps"
 	case PageUpdates:
 		return "Updates"
 	case PageDesktop:
@@ -66,7 +69,22 @@ func (p Page) index() int {
 	return 0
 }
 
-const usage = "usage: isotope-system [updates | desktop | extensions | backup | security | network | bluetooth | printers | users | disks | compatibility | about]"
+const usage = "usage: isotope-system [apps [browse | installed | updates] | updates | desktop | extensions | backup | security | network | bluetooth | printers | users | disks | compatibility | about]"
+
+// ParseTarget is ParseArgs with a tab of the Apps page after it:
+// `isotope system apps updates`.
+func ParseTarget(args []string) (Page, string, bool) {
+	if len(args) == 2 && args[0] == string(PageApps) {
+		for _, t := range appTabs {
+			if args[1] == t {
+				return PageApps, t, true
+			}
+		}
+		return "", "", false
+	}
+	p, ok := ParseArgs(args)
+	return p, "", ok
+}
 
 // ParseArgs maps the command line to the page to open on; ok is false for
 // anything else. No argument is Updates.

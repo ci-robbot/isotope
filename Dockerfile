@@ -6885,8 +6885,8 @@ FROM welcome-${DESKTOP} AS welcome
 # Isotope System (cmd/isotope-system), the window for the system's jobs (updates,
 # desktop, extensions, backup, the disk's keys, network), built like Isotope
 # Welcome: the same two builds, system-${DESKTOP} picks one. It imports
-# pkg/isorelease, pkg/recoverykey, pkg/firewall, pkg/shares and pkg/fwupd,
-# shared with the isotope CLI.
+# pkg/isorelease, pkg/recoverykey, pkg/firewall, pkg/shares, pkg/fwupd and
+# pkg/flatpak, shared with the isotope CLI.
 FROM welcome-build AS system-build
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
@@ -6894,6 +6894,7 @@ COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
 COPY pkg/fwupd/ pkg/fwupd/
+COPY pkg/flatpak/ pkg/flatpak/
 COPY cmd/isotope-system/ cmd/isotope-system/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
@@ -6937,14 +6938,17 @@ COPY pkg/installer/testdata/oem-locale-de_DE.golden pkg/installer/testdata/local
 COPY rootfs/common/usr/share/isotope/firewall-default.nft rootfs/common/usr/share/isotope/
 # TestShippedCatalogsConfIsTheDefault reads the shipped catalog list.
 COPY rootfs/common/etc/isotope/extensions.conf rootfs/common/etc/isotope/
+# TestReadPicks reads Isotope Welcome's app list, the Apps page's picks.
+COPY rootfs/common/usr/share/isotope/first-run-apps.list rootfs/common/usr/share/isotope/
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
 COPY pkg/fwupd/ pkg/fwupd/
+COPY pkg/flatpak/ pkg/flatpak/
 COPY cmd/isotope/ cmd/isotope/
-RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... \
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 

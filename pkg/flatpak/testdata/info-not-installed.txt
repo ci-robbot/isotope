@@ -1,0 +1,1 @@
+error: org.gimp.GIMP/*unspecified*/*unspecified* not installed

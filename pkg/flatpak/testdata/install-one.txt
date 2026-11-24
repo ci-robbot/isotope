@@ -1,0 +1,12 @@
+Looking for matches…
+
+
+ 1.	   	org.freedesktop.Platform.openh264	2.2.0	i	flathub	< 944.3 kB
+
+
+Installing…
+Installing…                        0%  0 bytes/s
+Installing… █████▏                26%
+Installing… ███████▏              36%
+Installing… ████████████████████ 100%  886.7 kB/s
+Installation complete.

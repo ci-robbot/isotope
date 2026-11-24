@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 )
 
@@ -35,9 +36,10 @@ var systemAppInstalled = func() bool {
 	return err == nil
 }
 
-// openSystem starts Isotope System on page and does not wait for it.
+// openSystem starts Isotope System on page and does not wait for it. page
+// may name a tab after the page ("apps updates").
 func openSystem(page string) error {
-	cmd := exec.Command(systemBinary, page)
+	cmd := exec.Command(systemBinary, strings.Fields(page)...)
 	if err := cmd.Start(); err != nil {
 		return err
 	}

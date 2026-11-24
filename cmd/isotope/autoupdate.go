@@ -400,14 +400,22 @@ func (d *Daemon) autoEnvSkip() string {
 	if d.autoEnv == nil {
 		return ""
 	}
-	metered, err := d.autoEnv.Metered()
+	return envSkip(d.autoEnv)
+}
+
+// envSkip is why an automatic job should wait for a better moment: a
+// metered connection, or a battery below autoBatteryMin while on battery.
+// "" means go ahead. Automatic system updates and automatic app updates
+// (apps.go) share it.
+func envSkip(env autoEnvironment) string {
+	metered, err := env.Metered()
 	switch {
 	case err != nil:
 		return "could not tell whether the connection is metered (" + err.Error() + ")"
 	case metered:
 		return "the connection is metered"
 	}
-	onBattery, pct, err := d.autoEnv.Battery()
+	onBattery, pct, err := env.Battery()
 	switch {
 	case err != nil:
 		return "could not read the battery (" + err.Error() + ")"

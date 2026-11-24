@@ -9,8 +9,8 @@
 # fakes for isotope, isotope-system, isotope-pick and the terminal. It
 # checks:
 #   1. with isotope-system installed, Update, Extensions, Backup, Recovery
-#      key and System open `isotope system PAGE`, and the menu lists
-#      "System";
+#      key, Install apps and System open `isotope system PAGE`, and the
+#      menu lists "System";
 #   2. without it (the agent image), Update still opens the terminal flow
 #      and "System" is not listed;
 #   3. the wiring: the Dockerfile builds and copies it for every variant,
@@ -62,6 +62,7 @@ expect "Extensions opens its page" "$(entry Extensions)" "isotope system extensi
 expect "Backup opens its page" "$(entry Backup)" "isotope system backup"
 expect "Recovery key opens the Security page" "$(entry 'Recovery key')" "isotope system security"
 expect "System opens the app" "$(entry System)" "isotope system updates"
+expect "Install apps opens the Apps page" "$(entry 'Install apps')" "isotope system apps"
 # Bluetooth: Isotope System's page on sway, i3 and COSMIC; niri keeps the
 # Noctalia panel as its quick path.
 fake isotope-bluetooth-menu 'echo "bluetooth-menu" > "$T/ran"'
@@ -85,6 +86,7 @@ sed -n "$(cat "$T/choice")p" "$T/pick.in"'
 rm -f "$T/choice"
 "$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "the menu lists System" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 1
+expect "the menu lists Install apps with the app alone" "$(cut -f1 "$T/pick.in" | grep -c '^Install apps$')" 1
 
 # The live desktop: "Install Isotope" is the first entry, and opens the
 # launcher. Not live: no such entry.
@@ -110,6 +112,7 @@ expect "without the app, Update checks in a terminal" "$(sed 's/;.*//' "$T/term"
 rm -f "$T/choice"
 "$repo/rootfs/common/usr/bin/isotope-menu" >/dev/null 2>&1
 expect "without the app, no System entry" "$(cut -f1 "$T/pick.in" | grep -c '^System$')" 0
+expect "without the app or Isotope Welcome (the agent), no Install apps" "$(cut -f1 "$T/pick.in" | grep -c '^Install apps$')" 0
 
 # --- wiring -----------------------------------------------------------------
 D=/src/Dockerfile

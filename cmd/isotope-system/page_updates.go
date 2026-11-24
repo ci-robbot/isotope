@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"strings"
 
 	"gioui.org/layout"
@@ -43,6 +44,8 @@ type updatesPage struct {
 
 	// firm is the FIRMWARE section (firmware.go), under u.mu.
 	firm firmwareState
+	// appsLink opens the Apps page's Updates tab.
+	appsLink widget.Clickable
 }
 
 func (p *updatesPage) Shown() {
@@ -53,6 +56,47 @@ func (p *updatesPage) Shown() {
 	p.loadHistory()
 	p.loadAuto()
 	p.loadFirmware()
+	p.loadAppUpdates()
+}
+
+// loadAppUpdates counts the pending app updates for the line under the
+// other sections, unless the Apps page already did.
+func (p *updatesPage) loadAppUpdates() {
+	u, a := p.u, p.u.hooks.Apps
+	if a == nil {
+		return
+	}
+	u.mu.Lock()
+	known := u.appUpdatesKnown
+	u.mu.Unlock()
+	if known {
+		return
+	}
+	u.async(func() {
+		if !a.Available() || !a.FlathubReady() {
+			return
+		}
+		ups, err := a.Updates()
+		if err != nil {
+			return
+		}
+		u.mu.Lock()
+		if !u.appUpdatesKnown {
+			u.appUpdates, u.appUpdatesKnown = len(ups), true
+		}
+		u.mu.Unlock()
+	})
+}
+
+// appUpdatesLine is "N app updates", "" for none.
+func appUpdatesLine(n int) string {
+	switch {
+	case n <= 0:
+		return ""
+	case n == 1:
+		return "1 app update"
+	}
+	return strconv.Itoa(n) + " app updates"
 }
 
 // loadAuto reads the automatic update setting and its last run. Anyone
@@ -170,6 +214,9 @@ func (p *updatesPage) Update(gtx layout.Context) {
 	if p.check.Clicked(gtx) {
 		p.refresh(true)
 	}
+	if p.appsLink.Clicked(gtx) {
+		u.showTab(PageApps, tabUpdates)
+	}
 	if p.install.Clicked(gtx) && o.Latest != "" && o.CanInstall {
 		p.installTag(o.Latest)
 	}
@@ -266,6 +313,10 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 	u.mu.Lock()
 	checkErr := p.checkErr
 	history := append([]HistoryEntry(nil), p.history...)
+	appsN := 0
+	if u.appUpdatesKnown {
+		appsN = u.appUpdates
+	}
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -381,6 +432,18 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(10)
 			c.add(u.row("Restart into the previous system", "For the next boot only: the system you had before the last update.",
 				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: "Restart…", Disabled: !u.sys.Admin || u.writingFirmware()})))
+		}
+		// Isotope's own releases stay here; the apps update on their page.
+		if l := appUpdatesLine(appsN); l != "" && u.hooks.Apps != nil {
+			c.gap(28)
+			c.add(func(gtx layout.Context) layout.Dimensions {
+				return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+						return u.Label(gtx, guikit.StSmall, guikit.ColDim, "Your apps from Flathub: ")
+					}),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.appsLink, l) }),
+				)
+			})
 		}
 		return c.layout(gtx)
 	})

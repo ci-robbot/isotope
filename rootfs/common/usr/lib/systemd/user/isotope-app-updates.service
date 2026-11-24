@@ -1,0 +1,21 @@
+[Unit]
+Description=Isotope automatic app updates
+Documentation=https://github.com/kairos-community/isotope
+# Started by isotope-app-updates.timer, as the user. `isotope apps update
+# --auto` skips a metered connection, a low battery and a setting that is
+# off, updates the user's Flatpak apps and runtimes from Flathub except an
+# update that asks for more permissions, removes the runtimes nothing uses,
+# and records the run for Isotope System's Apps page.
+# Never on the live media, during an install, on the Trusted Boot medium or
+# on the live desktop: an app installed there is gone at the restart.
+ConditionPathExists=!/run/cos/live_mode
+ConditionPathExists=!/run/cos/install_mode
+ConditionPathExists=!/run/cos/uki_install_mode
+ConditionPathExists=!/run/isotope/live-desktop
+ConditionPathExists=/usr/bin/flatpak
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/isotope apps update --auto
+Nice=10
+IOSchedulingClass=idle

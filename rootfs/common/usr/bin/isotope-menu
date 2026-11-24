@@ -180,9 +180,10 @@ power() {
 # An entry name as the argument opens it directly (`isotope-menu Help` is what
 # Isotope Welcome's Shortcuts page runs).
 # Each entry is "Label<TAB>icon"; isotope-pick shows the icon in fuzzel only.
-# "Install apps" opens Isotope Welcome's Apps page, "Welcome" the whole flow
-# again. The agent image ships neither Isotope Welcome, the clipboard history
-# nor isotope-ext (Dockerfile.agent removes them).
+# "Install apps" opens Isotope System's Apps page (Isotope Welcome's Apps
+# page where there is no Isotope System), "Welcome" the whole flow again. The
+# agent image ships neither Isotope System, Isotope Welcome, the clipboard
+# history nor isotope-ext (Dockerfile.agent removes them).
 tab=$(printf '\t')
 entries="Apps${tab}󰀻"
 # On the live desktop the installer comes first.
@@ -190,8 +191,10 @@ if [ -e "${ISOTOPE_LIVE_MARKER:-/run/isotope/live-desktop}" ] && command -v isot
     entries="Install Isotope${tab}󰋊
 $entries"
 fi
-command -v isotope-welcome >/dev/null 2>&1 && entries="$entries
+if command -v isotope-system >/dev/null 2>&1 || command -v isotope-welcome >/dev/null 2>&1; then
+    entries="$entries
 Install apps${tab}󰏗"
+fi
 entries="$entries
 Wi-Fi${tab}󰖩
 Bluetooth${tab}󰂯
@@ -234,7 +237,7 @@ fi
 case "$sel" in
     "Install Isotope") exec isotope-live-install ;;
     Apps)      apps ;;
-    "Install apps") exec isotope welcome apps ;;
+    "Install apps") system_page apps || exec isotope welcome apps ;;
     Welcome)   exec isotope welcome ;;
     Wi-Fi)     panel wifi ;;
     Bluetooth) bluetooth ;;

@@ -46,6 +46,12 @@ func runTray(noIcon bool, stderr io.Writer) int {
 	if !noIcon && systemAppInstalled() {
 		go watchFirmware(app.log, openSystem)
 	}
+	// App updates from Flathub: with automatic app updates off, one
+	// notification per set of pending updates; with them on, only the ones
+	// that ask for more permissions. Their button opens the Apps page.
+	if !noIcon && systemAppInstalled() {
+		go watchApps(app.log, openSystem)
+	}
 	if noIcon {
 		app.noIcon = true
 		app.run(context.Background())

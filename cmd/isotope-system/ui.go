@@ -49,6 +49,9 @@ type Hooks struct {
 	// Firmware is fwupd; nil leaves the Updates page without its FIRMWARE
 	// section (no system bus).
 	Firmware Firmware
+	// Apps is the user's Flatpak installation (apps.go); nil says Flatpak
+	// is not on this system.
+	Apps Apps
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the
@@ -102,6 +105,12 @@ type UI struct {
 	toShow Page
 	// choosing is true while the file picker is open.
 	choosing bool
+	// appUpdates is how many app updates the Apps page found, for the
+	// Updates page's line; appUpdatesKnown once it has looked.
+	appUpdates      int
+	appUpdatesKnown bool
+	// toTab is the tab of toShow ("apps updates").
+	toTab string
 }
 
 const maxLines = 200
@@ -143,11 +152,27 @@ func (u *UI) show(p Page) {
 
 // ShowPage is the request of another `isotope system PAGE`, from any
 // goroutine.
-func (u *UI) ShowPage(p Page) {
+func (u *UI) ShowPage(p Page) { u.ShowTab(p, "") }
+
+// ShowTab is ShowPage with a tab of the page ("apps updates").
+func (u *UI) ShowTab(p Page, tab string) {
 	u.mu.Lock()
-	u.toShow = p
+	u.toShow, u.toTab = p, tab
 	u.mu.Unlock()
 	u.hooks.Invalidate()
+}
+
+// tabbed is a page with tabs.
+type tabbed interface{ SetTab(tab string) }
+
+// showTab shows p on its tab, on the UI goroutine.
+func (u *UI) showTab(p Page, tab string) {
+	if tab != "" {
+		if t, ok := u.view(p).(tabbed); ok {
+			t.SetTab(tab)
+		}
+	}
+	u.show(p)
 }
 
 func (u *UI) view(p Page) pageView {
@@ -260,11 +285,11 @@ func (u *UI) Layout(gtx layout.Context) layout.Dimensions {
 	gtx = guikit.Scaled(gtx, u.scale)
 	event.Op(gtx.Ops, u)
 	u.mu.Lock()
-	dlg, want := u.dlg, u.toShow
-	u.toShow = ""
+	dlg, want, tab := u.dlg, u.toShow, u.toTab
+	u.toShow, u.toTab = "", ""
 	u.mu.Unlock()
 	if want != "" {
-		u.show(want)
+		u.showTab(want, tab)
 	}
 	guikit.WindowKeys(gtx, &u.scale, func() {
 		if dlg != nil && dlg.cancel >= 0 {
