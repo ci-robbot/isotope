@@ -5296,7 +5296,9 @@ RUN DESTDIR=/fwupd ninja -C buildDir install && \
 # fwupd's runtime files (its private libraries are in
 # /usr/lib/fwupd-<version>, through RUNPATH), and the libraries it needs that
 # the images may not have: libusb, libsqlite3 and libxmlb, as the fwupd stage
-# copied them from their stages (the desktops copy the same libxmlb for
+# copied them from their stages. libsqlite3 includes the bare libsqlite3.so:
+# sqlite-gnupg builds it without a soname, so fwupd's libraries need it by
+# that name, and the server has no other copy (the desktops copy the same libxmlb for
 # Flatpak; the server has none). fwupdx64.efi from fwupd-efi. No headers,
 # pkg-config, static libraries or installed tests; the licences of fwupd,
 # fwupd-efi and libusb (LGPL-2.1+) in /usr/share/licenses. Fails when a library the
@@ -5309,7 +5311,7 @@ RUN rm -rf /fwupd/usr/include /fwupd/usr/lib/pkgconfig /fwupd/usr/share/installe
       /fwupd/etc/fwupd/remotes.d/fwupd-tests.conf /fwupd/usr/share/doc /fwupd/etc/grub.d && \
     find /fwupd -name '*.a' -delete && \
     mkdir -p /fwupd-runtime && cp -a /fwupd/. /fwupd-runtime/ && \
-    cp -a /usr/lib/libusb-1.0.so.* /usr/lib/libsqlite3.so.* /usr/lib/libxmlb.so.* /fwupd-runtime/usr/lib/ && \
+    cp -a /usr/lib/libusb-1.0.so.* /usr/lib/libsqlite3.so /usr/lib/libsqlite3.so.* /usr/lib/libxmlb.so.* /fwupd-runtime/usr/lib/ && \
     mkdir -p /fwupd-runtime/usr/share/licenses && cp -a /usr/share/licenses/libusb /fwupd-runtime/usr/share/licenses/ && \
     for l in fwupd fwupd-efi libusb; do test -s /fwupd-runtime/usr/share/licenses/$l/COPYING || exit 1; done && \
     test -f /fwupd-runtime/usr/lib/fwupd/efi/fwupdx64.efi && \
