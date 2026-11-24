@@ -269,8 +269,8 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://download.gnome
 # libtool files, the services the image runs itself (at-spi2-core's bus and
 # registry), ATK and its bridge (the image's), pip and setuptools, the
 # standard library's tests, IDLE, Tk and ensurepip, the typelibs of
-# libraries Orca never loads (D-Bus GLib, GL, Vulkan, X extensions), and what a system
-# extension must not carry. Then the Python modules that link a library the
+# libraries Orca never loads (D-Bus GLib, GL, Vulkan, X extensions; DBus-1.0
+# stays, Atspi-2.0 includes it), and what a system extension must not carry. Then the Python modules that link a library the
 # image may not have (readline, curses, sqlite, ssl, ...; Orca uses none),
 # found by their DT_NEEDED. The standard library and every package are
 # compiled to bytecode once, checked by hash rather than by file time (the
@@ -293,7 +293,7 @@ RUN set -eu; \
       $S/site-packages/pip $S/site-packages/pip-* $S/site-packages/setuptools $S/site-packages/setuptools-* \
       $S/site-packages/_distutils_hack $S/site-packages/distutils-precedence.pth $S/site-packages/pkg_resources; \
     rm -f bin/g-ir-* bin/idle3* bin/pydoc3* bin/pip* bin/python3*-config bin/2to3*; \
-    for t in DBus-1.0 DBusGLib-1.0 fontconfig-2.0 GL-1.0 libxml2-2.0 xft-2.0 xfixes-4.0 xrandr-1.3 Vulkan-1.0 win32-1.0; do \
+    for t in DBusGLib-1.0 fontconfig-2.0 GL-1.0 libxml2-2.0 xft-2.0 xfixes-4.0 xrandr-1.3 Vulkan-1.0 win32-1.0; do \
       rm -f lib/girepository-1.0/$t.typelib; done; \
     find share/locale -name 'atk10.mo' -delete -o -name 'at-spi2-core.mo' -delete 2>/dev/null || true; \
     find . \( -name '*.la' -o -name '*.a' \) -delete; \
