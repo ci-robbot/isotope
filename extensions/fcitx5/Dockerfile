@@ -63,6 +63,29 @@ RUN for m in https://mirrors.kernel.org/gnu https://ftpmirror.gnu.org https://ft
     cd gperf-${GPERF_VERSION} && ./configure ${COMMON_CONFIGURE_ARGS} --disable-dependency-tracking && \
     make -j"$(nproc)" CFLAGS="-std=gnu17 -O2 -g" && make install && cd .. && rm -rf gperf-${GPERF_VERSION}
 
+# libucontext: the toolchain's libsystemd needs libucontext.so.1, which the
+# toolchain does not have, so every program linked against it (fcitx5's
+# sd-bus and sd-event, and the tools libime and fcitx5 run during their
+# builds) fails to link without it. Into /usr/lib of this stage only, as
+# in the root Dockerfile and the smartcards extension: the Hadron base
+# ships its own copy, which is what runs. Same version and Renovate rule as
+# the root Dockerfile.
+# renovate: datasource=github-tags depName=kaniini/libucontext extractVersion=^libucontext-(?<version>\d+(\.\d+)*)$
+ARG LIBUCONTEXT_VERSION=1.5.1
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/kaniini/libucontext/archive/refs/tags/libucontext-${LIBUCONTEXT_VERSION}.tar.gz -o u.tar.gz && \
+    tar -xf u.tar.gz && rm u.tar.gz && cd libucontext-libucontext-${LIBUCONTEXT_VERSION} && \
+    make -j"$(nproc)" ARCH=x86_64 && make ARCH=x86_64 install && cd .. && rm -rf libucontext-libucontext-${LIBUCONTEXT_VERSION} && \
+    test -e /usr/lib/libucontext.so.1
+
+# The toolchain compiles C with -flto (CFLAGS) and sets AR=gcc-ar and
+# RANLIB=gcc-ranlib, which Autotools and Meson use. CMake does not read AR
+# or RANLIB: it finds plain ar, which cannot index LTO objects ("plugin
+# needed to handle lto object"), and fcitx5's static Wayland protocol
+# libraries come out with no symbols. CMAKE_PRIVATE below names gcc-ar and
+# gcc-ranlib by these paths.
+RUN for t in gcc-ar gcc-ranlib; do [ -x /usr/bin/$t ] || ln -s "$(command -v $t)" /usr/bin/$t; done && \
+    /usr/bin/gcc-ar --version | head -n 1
+
 # KDE's extra-cmake-modules: fcitx5, xcb-imdkit, libime and the engines
 # build with it.
 # renovate: datasource=github-tags depName=KDE/extra-cmake-modules extractVersion=^v(?<version>\d+(\.\d+)*)$
@@ -192,7 +215,7 @@ RUN curl -fL --retry 5 --retry-delay 3 --retry-all-errors https://gitlab.freedes
 ENV P=/usr/lib/isotope-ext/fcitx5
 ENV PKG_CONFIG_PATH=/usr/lib/isotope-ext/fcitx5/pkgconfig
 ENV MESON_PRIVATE="--prefix=/usr --libdir=lib/isotope-ext/fcitx5 --libexecdir=lib/isotope-ext/fcitx5/libexec --buildtype=minsize -Dstrip=true"
-ENV CMAKE_PRIVATE="-G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/isotope-ext/fcitx5 -DCMAKE_INSTALL_LIBEXECDIR=lib/isotope-ext/fcitx5/libexec -DCMAKE_INSTALL_SYSCONFDIR=/etc -DCMAKE_INSTALL_RPATH=/usr/lib/isotope-ext/fcitx5 -DCMAKE_PREFIX_PATH=/usr/lib/isotope-ext/fcitx5/cmake -DBUILD_TESTING=OFF"
+ENV CMAKE_PRIVATE="-G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib/isotope-ext/fcitx5 -DCMAKE_INSTALL_LIBEXECDIR=lib/isotope-ext/fcitx5/libexec -DCMAKE_INSTALL_SYSCONFDIR=/etc -DCMAKE_INSTALL_RPATH=/usr/lib/isotope-ext/fcitx5 -DCMAKE_PREFIX_PATH=/usr/lib/isotope-ext/fcitx5/cmake -DBUILD_TESTING=OFF -DCMAKE_AR=/usr/bin/gcc-ar -DCMAKE_RANLIB=/usr/bin/gcc-ranlib"
 
 # X11: the protocol headers and xtrans to build with (never shipped), then
 # libXau, libxcb, the xcb utilities, libX11 (for libxkbfile) and
