@@ -59,7 +59,7 @@ repo_mode() {
         grep -qF '[]string{\"relax_encryption\", \"allow_broken_crypto\", \"enable_pam\"}' cmd/isotope/remote_desktop_test.go"
     check "the firewall is changed through isotope-updated's allowed ports" sh -c "
         grep -q 'c.AllowPort(remotedesktop.Port' cmd/isotope/remote_desktop.go && grep -q 'c.DenyPort(remotedesktop.Port' cmd/isotope/remote_desktop.go"
-    check "the Network page has the section" grep -q 'u.caps("REMOTE DESKTOP")' cmd/isotope-system/remote.go
+    check "the Network page has the section" grep -q 'u.caps(i18n.T("REMOTE DESKTOP"))' cmd/isotope-system/remote.go
     check "Isotope System runs the CLI" grep -q 'hooks.RemoteDesktop = remoteCLI{bin: "isotope"}' cmd/isotope-system/main.go
     stage Dockerfile update-build
     stage Dockerfile system-build
