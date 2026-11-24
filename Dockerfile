@@ -4969,7 +4969,11 @@ RUN rm -rf usr/include usr/lib/pkgconfig usr/share/pkgconfig usr/lib/cmake usr/s
              usr/share/cups/data/testprint; do \
       test -e "$f" || { echo "printing: $f is missing" >&2; exit 1; }; \
     done && \
-    ! find . \( -name '*.h' -o -name '*.pc' \) | grep -q .
+    # No headers or pkg-config files are left. The .h files under ppdc/ are
+    # not C headers: they are the PPD compiler's includes (hp.h, epson.h ...)
+    # that CUPS's .drv driver files read at run time.
+    left=$(find . \( -name '*.h' -o -name '*.pc' \) ! -path '*/ppdc/*') && \
+    { [ -z "$left" ] || { echo "printing: development files left: $left" >&2; exit 1; }; }
 
 FROM scratch AS printing
 COPY --from=printing-files /p/ /
