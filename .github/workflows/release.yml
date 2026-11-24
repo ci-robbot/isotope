@@ -454,6 +454,15 @@ jobs:
         shell: bash
         run: test/update/check-autoupdate.sh "${DESKTOP}-desktop:dev"
 
+      # Printing: CUPS, cups-browsed, Avahi, ipp-usb, Ghostscript and GTK's
+      # CUPS backend are there and resolve, the units are linked, cupsd's
+      # configuration parses, and the printers live in the persistent
+      # /var/lib/cups.
+      - name: Check printing
+        if: matrix.desktop != 'server'
+        shell: bash
+        run: test/printing/check-printing.sh "${DESKTOP}-desktop:dev"
+
       # The firewall: its files and the daemon's output parse (nft -c) and the
       # unit is enabled; then, privileged on this throwaway runner, the
       # ruleset loads next to Docker's tables, a published port still answers
@@ -985,6 +994,11 @@ jobs:
       - name: Check there are no glibc programs
         shell: bash
         run: test/glibc/check-glibc.sh "$AGENT_IMAGE"
+
+      # The appliance has no printing (Dockerfile.agent removes it).
+      - name: Check printing is gone
+        shell: bash
+        run: test/printing/check-printing.sh "$AGENT_IMAGE"
 
       # The gates below re-wrap the freshly built appliance image with their own
       # `cidata` seeds, so the appliance is built exactly once here and every

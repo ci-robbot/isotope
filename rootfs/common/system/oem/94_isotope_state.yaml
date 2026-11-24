@@ -18,11 +18,15 @@
 #   /var/lib/systemd/backlight              screen brightness, restored at boot
 #   /var/lib/systemd/rfkill                 Wi-Fi and Bluetooth on/off
 #                                           (airplane mode)
+#   /var/lib/cups                           the printers (CUPS's ServerRoot,
+#                                           set in cups-files.conf, so the
+#                                           settings in /etc/cups still come
+#                                           from the image)
 #
 # Without this, a Wi-Fi network joined in Isotope Welcome, the panel or nmtui
-# was forgotten at the next boot, and so was every paired headset. A path
-# that is not on an image (no Bluetooth on the server) is only an empty
-# directory on the persistent partition.
+# was forgotten at the next boot, and so was every paired headset and every
+# added printer. A path that is not on an image (no Bluetooth or printing on
+# the server) is only an empty directory on the persistent partition.
 #
 # The paths are added to CUSTOM_BIND_MOUNTS, which cos-setup's rootfs.after
 # stage reads once. 92_docker.yaml sets that variable with a plain
@@ -33,7 +37,7 @@
 name: "Isotope machine state"
 stages:
   rootfs:
-    - name: "persist the saved networks, Bluetooth pairings and device settings"
+    - name: "persist the saved networks, Bluetooth pairings, printers and device settings"
       commands:
         - |
           layout=/run/cos/cos-layout.env
@@ -44,7 +48,8 @@ stages:
           for p in /etc/NetworkManager/system-connections /var/lib/NetworkManager \
                    /var/lib/bluetooth /var/lib/AccountsService \
                    /var/lib/power-profiles-daemon \
-                   /var/lib/systemd/backlight /var/lib/systemd/rfkill; do
+                   /var/lib/systemd/backlight /var/lib/systemd/rfkill \
+                   /var/lib/cups; do
             case " $merged " in
               *" $p "*) ;;
               *) merged="$merged $p" ;;

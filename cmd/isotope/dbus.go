@@ -49,6 +49,9 @@ const (
 	// actionFirewall covers turning the firewall on and off and the ports
 	// it lets in.
 	actionFirewall = "io.kairos.isotope-update.firewall"
+	// actionPrinters covers adding, removing and choosing the default
+	// printer: lpadmin as root. Reading the queues and printing need none.
+	actionPrinters = "io.kairos.isotope-update.printers"
 )
 
 // busIntrospection describes the interface for busctl, d-feet and friends.
@@ -170,6 +173,14 @@ const busIntrospection = introspect.IntrospectDeclarationString + `<node>
       <arg name="version" type="s" direction="out"/>
       <arg name="detail" type="s" direction="out"/>
     </method>
+    <method name="AddPrinter">
+      <arg name="name" type="s" direction="in"/>
+      <arg name="uri" type="s" direction="in"/>
+      <arg name="info" type="s" direction="in"/>
+      <arg name="location" type="s" direction="in"/>
+    </method>
+    <method name="RemovePrinter"><arg name="name" type="s" direction="in"/></method>
+    <method name="SetDefaultPrinter"><arg name="name" type="s" direction="in"/></method>
     <signal name="StateChanged"><arg name="status" type="a{sv}"/></signal>
     <signal name="Progress"><arg name="line" type="s"/></signal>
   </interface>` + introspect.IntrospectDataString + `</node>`
@@ -290,7 +301,8 @@ func busError(err error) *dbus.Error {
 		errors.Is(err, errMachineInUse), errors.Is(err, errExportNeedsPassword),
 		errors.Is(err, ErrKeyUnchanged), errors.Is(err, errFirewallNotThisBoot),
 		errors.Is(err, errFirewallBroken), errors.Is(err, errFirewallNotBroken),
-		errors.Is(err, errShareRefused):
+		errors.Is(err, errShareRefused),
+		errors.Is(err, errPrinterInput):
 		name = "Refused"
 	default:
 		name = "Failed"

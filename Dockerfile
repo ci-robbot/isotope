@@ -956,8 +956,144 @@ RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} -Dintrospection=false
 RUN DESTDIR=/atk ninja -C buildDir install
 
-# GTK3 itself — wayland-only.
+# gettext's tools (msgfmt, autopoint): polkit and accountsservice merge
+# translations into their policy files at build time even with translations
+# off, and Avahi's autoreconf needs autopoint and gettext's m4 macros.
+# Build-only; nothing from this stage ships. Defined here, before the
+# printing stages that GTK copies.
+FROM toolchain AS gettext-tools
+ARG GETTEXT_VERSION=0.22.5
+WORKDIR /build
+RUN for m in https://mirrors.kernel.org/gnu https://ftpmirror.gnu.org https://ftp.gnu.org/gnu; do curl -fL --connect-timeout 30 --retry 3 --retry-delay 3 --retry-all-errors "$m/gettext/gettext-${GETTEXT_VERSION}.tar.xz" -o g.tar.xz && break; rm -f g.tar.xz; done && test -s g.tar.xz && tar -xf g.tar.xz && \
+    cd gettext-${GETTEXT_VERSION} && \
+    ./configure --prefix=/usr --disable-java --disable-csharp --disable-libasprintf \
+      --disable-openmp --disable-acl --disable-curses --without-emacs --without-git \
+      --disable-static --enable-shared && \
+    make -j"$(nproc)" && make install DESTDIR=/gettext-tools
+
+# ---------------------------------------------------------------------------
+# Printing, part one: what GTK's CUPS print backend links (libcups) and what
+# CUPS needs to find printers (Avahi) and to talk to USB printers (libusb).
+# Defined before gtk3, which copies cups. The rest (the filters, Ghostscript,
+# cups-browsed, ipp-usb) and the `printing` stage that desktop-default copies
+# are after lcms2, below. None of these stages is reached by the COSMIC
+# prebuilt halves (tools/stage-key.py), so they do not rekey them. See
+# docs/superpowers/specs/2026-11-24-printing-design.md.
+# ---------------------------------------------------------------------------
+
+# libusb: CUPS's usb backend and ipp-usb.
+FROM toolchain AS libusb
+COPY --from=libucontext /libucontext /
+# renovate: datasource=github-releases depName=libusb/libusb extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG LIBUSB_VERSION=1.0.30
+RUN mkdir -p /libusb
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/libusb/libusb/releases/download/v${LIBUSB_VERSION}/libusb-${LIBUSB_VERSION}.tar.bz2 -o u.tar.bz2 && \
+    tar -xjf u.tar.bz2 && mv libusb-${LIBUSB_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --enable-udev && \
+    make -j"$(nproc)" && make DESTDIR=/libusb install && \
+    L=/libusb/usr/share/licenses/libusb && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -e /libusb/usr/lib/libusb-1.0.so.0
+
+# libdaemon: avahi-daemon is not built without it. Its last release is from
+# 2012 (a tarball only, so its checksum is pinned and the version is updated
+# by hand); its config.sub predates musl, so automake's replaces it.
+FROM toolchain AS libdaemon
+ARG LIBDAEMON_VERSION=0.14
+ARG LIBDAEMON_SHA256=fd23eb5f6f986dcc7e708307355ba3289abe03cc381fc47a80bca4a50aa6b834
+RUN mkdir -p /libdaemon
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://0pointer.de/lennart/projects/libdaemon/libdaemon-${LIBDAEMON_VERSION}.tar.gz -o d.tar.gz && \
+    echo "${LIBDAEMON_SHA256}  d.tar.gz" | sha256sum -c - && \
+    tar -xzf d.tar.gz && mv libdaemon-${LIBDAEMON_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --disable-lynx --disable-examples && \
+    make -j"$(nproc)" && make DESTDIR=/libdaemon install && \
+    L=/libdaemon/usr/share/licenses/libdaemon && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -e /libdaemon/usr/lib/libdaemon.so.0
+
+# Avahi: mDNS/DNS-SD. avahi-daemon on the system bus; libavahi-client for
+# CUPS, cups-browsed and ipp-usb; libavahi-glib for cups-browsed. Isotope
+# System's Printers page browses through its D-Bus API. 0.9-rc5, as Alpine
+# ships it: 0.8 (2020) has a dozen CVEs fixed only on the 0.9 line. A git
+# tag, so autoreconf (with gettext-tools' autopoint). No nss-mdns: musl has
+# no NSS (see the design note). No Python, Qt, GTK, GObject, gdbm,
+# libevent, autoipd, compat libraries or man pages.
+FROM toolchain AS avahi
+COPY --from=libucontext /libucontext /
+COPY --from=pcre2 /pcre2 /
+COPY --from=glib2 /glib2 /
+COPY --from=gettext-tools /gettext-tools /
+COPY --from=libdaemon /libdaemon /
+# renovate: datasource=github-tags depName=avahi/avahi extractVersion=^v(?<version>\d+\.\d+(\.\d+)?(-rc\d+)?)$
+ARG AVAHI_VERSION=0.9-rc5
+RUN mkdir -p /avahi
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/avahi/avahi/archive/refs/tags/v${AVAHI_VERSION}.tar.gz -o a.tar.gz && \
+    tar -xzf a.tar.gz && mv avahi-${AVAHI_VERSION} src
+WORKDIR /build/src
+RUN autoreconf -vif
+RUN ./configure ${COMMON_CONFIGURE_ARGS} --sysconfdir=/etc --localstatedir=/var --runstatedir=/run \
+      --with-distro=none --disable-nls --enable-glib --disable-gobject --disable-libevent \
+      --disable-qt3 --disable-qt4 --disable-qt5 --disable-gtk --disable-gtk3 \
+      --disable-python --disable-pygobject --disable-python-dbus --disable-mono --disable-monodoc \
+      --disable-doxygen-doc --disable-manpages --disable-xmltoman --disable-gdbm --disable-dbm \
+      --disable-autoipd --disable-compat-libdns_sd --disable-compat-howl --disable-tests \
+      --with-xml=expat --with-avahi-user=avahi --with-avahi-group=avahi \
+      --with-dbus-sys=/usr/share/dbus-1/system.d \
+      --with-systemdsystemunitdir=/usr/lib/systemd/system
+RUN make -j"$(nproc)" && make DESTDIR=/avahi install && \
+    L=/avahi/usr/share/licenses/avahi && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -x /avahi/usr/sbin/avahi-daemon && \
+    test -e /avahi/usr/lib/libavahi-client.so.3 && test -e /avahi/usr/lib/libavahi-glib.so.1 && \
+    test -f /avahi/usr/lib/systemd/system/avahi-daemon.service && \
+    test -f /avahi/usr/lib/systemd/system/avahi-daemon.socket && \
+    test -f /avahi/usr/share/dbus-1/system.d/avahi-dbus.conf && \
+    rm -rf /avahi/run
+
+# CUPS: the scheduler (cupsd, socket-activated by systemd), lpadmin and the
+# other tools, libcups, the ipp, ipps, dnssd and usb backends. OpenSSL for
+# ipps, Avahi for dnssd:// URIs and DNS-SD, PAM for the web interface's admin
+# pages. Isotope's settings are rootfs/common/etc/cups (ServerRoot
+# /var/lib/cups); the lpd server units are not wanted.
+FROM toolchain AS cups
+COPY --from=libucontext /libucontext /
+COPY --from=libusb /libusb /
+COPY --from=avahi /avahi /
+# renovate: datasource=github-releases depName=OpenPrinting/cups extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG CUPS_VERSION=2.4.20
+RUN mkdir -p /cups
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/cups/releases/download/v${CUPS_VERSION}/cups-${CUPS_VERSION}-source.tar.gz -o c.tar.gz && \
+    tar -xzf c.tar.gz && mv cups-${CUPS_VERSION} src
+WORKDIR /build/src
+RUN ./configure --prefix=/usr --libdir=/usr/lib --sysconfdir=/etc --localstatedir=/var \
+      --with-rundir=/run/cups --with-logdir=/var/log/cups --with-docdir=/usr/share/cups/doc \
+      --with-domainsocket=/run/cups/cups.sock --with-cups-user=lp --with-cups-group=lp \
+      --with-system-groups=root --with-tls=openssl --with-dnssd=avahi \
+      --enable-libusb --enable-dbus --with-dbusdir=/usr/share/dbus-1 \
+      --with-ondemand=systemd --with-systemd=/usr/lib/systemd/system \
+      --enable-pam --disable-libpaper --disable-static --without-rcdir
+RUN make -j"$(nproc)" && make BUILDROOT=/cups install && \
+    L=/cups/usr/share/licenses/cups && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    rm -rf /cups/run /cups/usr/lib/systemd/system/cups-lpd* && \
+    test -x /cups/usr/sbin/cupsd && test -x /cups/usr/sbin/lpadmin && \
+    test -e /cups/usr/lib/libcups.so.2 && test -x /cups/usr/lib/cups/backend/dnssd && \
+    test -x /cups/usr/lib/cups/backend/ipp && test -e /cups/usr/lib/cups/backend/usb && \
+    test -f /cups/usr/lib/systemd/system/cups.service && test -f /cups/usr/lib/systemd/system/cups.socket && \
+    grep -q '^ListenStream=/run/cups/cups.sock' /cups/usr/lib/systemd/system/cups.socket
+
+# GTK3 itself — wayland-only. With the CUPS print backend
+# (libprintbackend-cups.so), so the print dialog lists the CUPS queues and
+# the IPP printers on the network: print_backends is also compiled into
+# libgtk as the default gtk-print-backends setting, so the module alone
+# would not be loaded. gtk3 is not reached by the COSMIC prebuilt halves.
 FROM toolchain AS gtk3
+COPY --from=cups /cups /
+COPY --from=avahi /avahi /
 COPY --from=glib2 /glib2 /
 COPY --from=pcre2 /pcre2 /
 COPY --from=cairo /cairo /
@@ -984,8 +1120,9 @@ RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} \
     -Dx11_backend=false -Dwayland_backend=true -Dbroadway_backend=false \
     -Dintrospection=false -Dgtk_doc=false -Dman=false -Ddemos=false -Dexamples=false -Dtests=false \
-    -Dprint_backends=file -Dcolord=no
-RUN DESTDIR=/gtk3 ninja -C buildDir install
+    -Dprint_backends=file,cups -Dcolord=no
+RUN DESTDIR=/gtk3 ninja -C buildDir install && \
+    test -f /gtk3/usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so
 
 # --- gtkmm3 C++ wrappers (waybar links these) ------------------------------
 FROM toolchain AS libsigcpp
@@ -3733,19 +3870,6 @@ RUN make -f Makefile.sharedlibrary INSTALL_PREFIX=/usr CC=cc && \
     printf 'prefix=/usr\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\n\nName: duktape\nDescription: Embeddable Javascript engine\nVersion: %s\nLibs: -L${libdir} -lduktape\nLibs.private: -lm\nCflags: -I${includedir}\n' "${DUKTAPE_VERSION}" \
       > /duktape/usr/lib/pkgconfig/duktape.pc
 
-# gettext's tools (msgfmt): polkit and accountsservice merge translations into
-# their policy files at build time even with translations off. Build-only;
-# nothing from this stage ships.
-FROM toolchain AS gettext-tools
-ARG GETTEXT_VERSION=0.22.5
-WORKDIR /build
-RUN for m in https://mirrors.kernel.org/gnu https://ftpmirror.gnu.org https://ftp.gnu.org/gnu; do curl -fL --connect-timeout 30 --retry 3 --retry-delay 3 --retry-all-errors "$m/gettext/gettext-${GETTEXT_VERSION}.tar.xz" -o g.tar.xz && break; rm -f g.tar.xz; done && test -s g.tar.xz && tar -xf g.tar.xz && \
-    cd gettext-${GETTEXT_VERSION} && \
-    ./configure --prefix=/usr --disable-java --disable-csharp --disable-libasprintf \
-      --disable-openmp --disable-acl --disable-curses --without-emacs --without-git \
-      --disable-static --enable-shared && \
-    make -j"$(nproc)" && make install DESTDIR=/gettext-tools
-
 # polkit: lets an unprivileged desktop session ask for privileged actions
 # (date and time, language, users) with a password prompt. cosmic-osd is the
 # agent that shows the prompt. Without it, COSMIC Settings' system panels
@@ -4539,6 +4663,270 @@ RUN curl --retry-all-errors -fL --retry 5 https://github.com/mm2/Little-CMS/rele
 WORKDIR /build/src
 RUN ./configure ${COMMON_CONFIGURE_ARGS} && make -j"$(nproc)" && make DESTDIR=/lcms2 install
 
+# ---------------------------------------------------------------------------
+# Printing, part two: the filters that turn a document into what a driverless
+# printer takes (PDF, PWG raster, Apple raster), cups-browsed, ipp-usb, and
+# the `printing` stage that desktop-default copies (part one, Avahi and CUPS,
+# is before gtk3). Each stage puts its licence in
+# /usr/share/licenses/<name>. See
+# docs/superpowers/specs/2026-11-24-printing-design.md.
+# ---------------------------------------------------------------------------
+
+# libjpeg-turbo: QPDF needs it. No SIMD: the toolchain has no NASM, and a
+# printer's JPEG decode is not where printing spends its time.
+FROM toolchain AS libjpeg-turbo
+# renovate: datasource=github-releases depName=libjpeg-turbo/libjpeg-turbo extractVersion=^(?<version>\d+\.\d+\.\d+)$
+ARG LIBJPEG_TURBO_VERSION=3.2.1
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/${LIBJPEG_TURBO_VERSION}/libjpeg-turbo-${LIBJPEG_TURBO_VERSION}.tar.gz -o j.tar.gz && \
+    tar -xzf j.tar.gz && mv libjpeg-turbo-${LIBJPEG_TURBO_VERSION} src
+WORKDIR /build/src
+RUN cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+      -DENABLE_STATIC=OFF -DWITH_SIMD=OFF -DWITH_TURBOJPEG=OFF && \
+    cmake --build build -j"$(nproc)" && DESTDIR=/libjpeg-turbo cmake --install build && \
+    L=/libjpeg-turbo/usr/share/licenses/libjpeg-turbo && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -e /libjpeg-turbo/usr/lib/libjpeg.so.62
+
+# QPDF: libcupsfilters' PDF library (pdftopdf, bannertopdf). C++; OpenSSL for
+# its crypto. Only libqpdf ships.
+FROM toolchain AS qpdf
+COPY --from=libjpeg-turbo /libjpeg-turbo /
+# renovate: datasource=github-releases depName=qpdf/qpdf extractVersion=^v(?<version>\d+(\.\d+)*)$
+ARG QPDF_VERSION=12.4.2
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/qpdf/qpdf/releases/download/v${QPDF_VERSION}/qpdf-${QPDF_VERSION}.tar.gz -o q.tar.gz && \
+    tar -xzf q.tar.gz && mv qpdf-${QPDF_VERSION} src
+WORKDIR /build/src
+RUN cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=MinSizeRel \
+      -DBUILD_STATIC_LIBS=OFF -DBUILD_DOC=OFF -DINSTALL_MANUAL=OFF -DINSTALL_EXAMPLES=OFF \
+      -DREQUIRE_CRYPTO_OPENSSL=ON -DUSE_IMPLICIT_CRYPTO=OFF && \
+    cmake --build build -j"$(nproc)" && DESTDIR=/qpdf cmake --install build && \
+    L=/qpdf/usr/share/licenses/qpdf && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    ls /qpdf/usr/lib/libqpdf.so.* >/dev/null
+
+# Ghostscript: renders a PDF to PWG raster or Apple raster for the printers
+# that take no PDF (most cheap inkjets), through its cups, pwgraster and
+# appleraster devices (gdevcups, linked to libcups). The one renderer: no
+# Poppler, no MuPDF. Its own copies of its third-party libraries, linked in,
+# and its init files compiled into the binary. AGPL-3.0. The release tags
+# spell the version without dots (gs10080), which Renovate cannot map, so the
+# version and the tarball's checksum are updated by hand. C17: GCC 15 defaults
+# to C23, which some of the bundled sources do not build with.
+FROM toolchain AS ghostscript
+COPY --from=libucontext /libucontext /
+COPY --from=avahi /avahi /
+COPY --from=cups /cups /
+ARG GHOSTSCRIPT_VERSION=10.08.0
+ARG GHOSTSCRIPT_SHA256=c20492bc8ebb96c87fa2e52a0926e1cda8cde95d66145e018ac713fed5da38cf
+WORKDIR /build
+RUN tag="gs$(echo "${GHOSTSCRIPT_VERSION}" | tr -d .)" && \
+    curl --retry-all-errors -fL --retry 5 https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/${tag}/ghostscript-${GHOSTSCRIPT_VERSION}.tar.xz -o gs.tar.xz && \
+    echo "${GHOSTSCRIPT_SHA256}  gs.tar.xz" | sha256sum -c - && \
+    tar -xJf gs.tar.xz && mv ghostscript-${GHOSTSCRIPT_VERSION} src
+WORKDIR /build/src
+RUN CFLAGS="${CFLAGS} -std=gnu17" ./configure --prefix=/usr --sysconfdir=/etc \
+      --without-x --disable-gtk --disable-dbus --disable-fontconfig --without-libpaper \
+      --without-tesseract --without-ijs --without-versioned-path --enable-cups && \
+    make -j"$(nproc)" && make DESTDIR=/ghostscript install && \
+    rm -rf /ghostscript/usr/share/doc /ghostscript/usr/share/man /ghostscript/usr/share/ghostscript/doc && \
+    L=/ghostscript/usr/share/licenses/ghostscript && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    devs="$(/ghostscript/usr/bin/gs -h)" && \
+    for d in cups pwgraster appleraster pdfwrite ps2write; do \
+      echo "$devs" | grep -qw "$d" || { echo "ghostscript: no $d device" >&2; exit 1; }; \
+    done
+
+# libcupsfilters 2.1: the filter functions. Not 2.2.x: its release notes say
+# 2.2.0 does not build and 2.2.1 has regressions from the move to PDFio, and
+# send users to 2.1.2 (renovate.json holds it below 2.2). Ghostscript renders;
+# no Poppler, no MuPDF, no TIFF, JPEG XL or EXIF input.
+FROM toolchain AS libcupsfilters
+COPY --from=libucontext /libucontext /
+COPY --from=avahi /avahi /
+COPY --from=cups /cups /
+COPY --from=libjpeg-turbo /libjpeg-turbo /
+COPY --from=qpdf /qpdf /
+COPY --from=libpng /libpng /
+COPY --from=freetype /freetype /
+COPY --from=fontconfig /fontconfig /
+COPY --from=lcms2 /lcms2 /
+# renovate: datasource=github-releases depName=OpenPrinting/libcupsfilters extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG LIBCUPSFILTERS_VERSION=2.1.2
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/libcupsfilters/releases/download/${LIBCUPSFILTERS_VERSION}/libcupsfilters-${LIBCUPSFILTERS_VERSION}.tar.xz -o l.tar.xz && \
+    tar -xJf l.tar.xz && mv libcupsfilters-${LIBCUPSFILTERS_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --disable-poppler --disable-mutool \
+      --with-gs-path=/usr/bin/gs --with-ippfind-path=/usr/bin/ippfind \
+      --without-tiff --without-jpegxl --disable-exif --disable-werror && \
+    make -j"$(nproc)" && make DESTDIR=/libcupsfilters install && \
+    L=/libcupsfilters/usr/share/licenses/libcupsfilters && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    ls /libcupsfilters/usr/lib/libcupsfilters.so.* >/dev/null
+
+# libppd: the PPD library cups-filters and cups-browsed link. Ghostscript is
+# here so configure finds its ps2write device.
+FROM toolchain AS libppd
+COPY --from=libucontext /libucontext /
+COPY --from=avahi /avahi /
+COPY --from=cups /cups /
+COPY --from=ghostscript /ghostscript /
+COPY --from=libjpeg-turbo /libjpeg-turbo /
+COPY --from=qpdf /qpdf /
+COPY --from=libpng /libpng /
+COPY --from=freetype /freetype /
+COPY --from=fontconfig /fontconfig /
+COPY --from=lcms2 /lcms2 /
+COPY --from=libcupsfilters /libcupsfilters /
+# renovate: datasource=github-releases depName=OpenPrinting/libppd extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG LIBPPD_VERSION=2.1.1
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/libppd/releases/download/${LIBPPD_VERSION}/libppd-${LIBPPD_VERSION}.tar.xz -o l.tar.xz && \
+    tar -xJf l.tar.xz && mv libppd-${LIBPPD_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --with-pdftops=gs --disable-pdftops --disable-mutool \
+      --disable-pdftocairo --disable-acroread --with-ippfind-path=/usr/bin/ippfind --disable-werror && \
+    make -j"$(nproc)" && make DESTDIR=/libppd install && \
+    L=/libppd/usr/share/licenses/libppd && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    ls /libppd/usr/lib/libppd.so.* >/dev/null
+
+# cups-filters 2: the CUPS filters (the universal filter that runs
+# libcupsfilters' functions) and their MIME conversion rules, and the
+# driverless PPD generator. No Foomatic (it is for drivers).
+FROM toolchain AS cups-filters
+COPY --from=libucontext /libucontext /
+COPY --from=avahi /avahi /
+COPY --from=cups /cups /
+COPY --from=ghostscript /ghostscript /
+COPY --from=libjpeg-turbo /libjpeg-turbo /
+COPY --from=qpdf /qpdf /
+COPY --from=libpng /libpng /
+COPY --from=freetype /freetype /
+COPY --from=fontconfig /fontconfig /
+COPY --from=lcms2 /lcms2 /
+COPY --from=libcupsfilters /libcupsfilters /
+COPY --from=libppd /libppd /
+# renovate: datasource=github-releases depName=OpenPrinting/cups-filters extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG CUPS_FILTERS_VERSION=2.0.1
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/cups-filters/releases/download/${CUPS_FILTERS_VERSION}/cups-filters-${CUPS_FILTERS_VERSION}.tar.xz -o f.tar.xz && \
+    tar -xJf f.tar.xz && mv cups-filters-${CUPS_FILTERS_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --disable-poppler --disable-mutool --disable-foomatic \
+      --with-ippfind-path=/usr/bin/ippfind --with-shell=/bin/sh --disable-werror && \
+    make -j"$(nproc)" && make DESTDIR=/cups-filters install && \
+    L=/cups-filters/usr/share/licenses/cups-filters && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -x /cups-filters/usr/lib/cups/filter/universal && \
+    ls /cups-filters/usr/share/cups/mime/*.convs >/dev/null
+
+# cups-browsed: makes a queue for each driverless printer Avahi finds
+# (rootfs/common/etc/cups/cups-browsed.conf). Its systemd unit is not
+# installed by make; it is copied from the source.
+FROM toolchain AS cups-browsed
+COPY --from=libucontext /libucontext /
+COPY --from=pcre2 /pcre2 /
+COPY --from=glib2 /glib2 /
+COPY --from=avahi /avahi /
+COPY --from=cups /cups /
+COPY --from=libjpeg-turbo /libjpeg-turbo /
+COPY --from=qpdf /qpdf /
+COPY --from=libpng /libpng /
+COPY --from=freetype /freetype /
+COPY --from=fontconfig /fontconfig /
+COPY --from=lcms2 /lcms2 /
+COPY --from=libcupsfilters /libcupsfilters /
+COPY --from=libppd /libppd /
+# renovate: datasource=github-releases depName=OpenPrinting/cups-browsed extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG CUPS_BROWSED_VERSION=2.1.1
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/cups-browsed/releases/download/${CUPS_BROWSED_VERSION}/cups-browsed-${CUPS_BROWSED_VERSION}.tar.xz -o b.tar.xz && \
+    tar -xJf b.tar.xz && mv cups-browsed-${CUPS_BROWSED_VERSION} src
+WORKDIR /build/src
+RUN cp /usr/share/automake-*/config.sub /usr/share/automake-*/config.guess . && \
+    ./configure ${COMMON_CONFIGURE_ARGS} --with-browseremoteprotocols=dnssd --without-rcdir --disable-werror && \
+    make -j"$(nproc)" && make DESTDIR=/cups-browsed install && \
+    install -Dm0644 daemon/cups-browsed.service /cups-browsed/usr/lib/systemd/system/cups-browsed.service && \
+    grep -qx 'ExecStart=/usr/sbin/cups-browsed' /cups-browsed/usr/lib/systemd/system/cups-browsed.service && \
+    L=/cups-browsed/usr/share/licenses/cups-browsed && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null && \
+    test -x /cups-browsed/usr/sbin/cups-browsed
+
+# ipp-usb: an IPP-over-USB printer (most USB printers since about 2015)
+# becomes an IPP printer on localhost, published through Avahi on loopback,
+# so it prints driverless too. Go with cgo (libusb, libavahi-client); its
+# dependencies are vendored. Its udev rule starts ipp-usb.service when such a
+# printer is plugged in, which is upstream's design: `ipp-usb udev` exits
+# when the last one is gone, so the unit is not linked into a target.
+FROM toolchain AS ipp-usb
+COPY --from=libucontext /libucontext /
+COPY --from=libusb /libusb /
+COPY --from=avahi /avahi /
+COPY --from=golang:1.25.0-alpine3.22 /usr/local/go /usr/local/go
+ENV PATH=/usr/local/go/bin:$PATH GOTOOLCHAIN=local
+# renovate: datasource=github-tags depName=OpenPrinting/ipp-usb extractVersion=^(?<version>\d+(\.\d+)*)$
+ARG IPP_USB_VERSION=0.9.34
+WORKDIR /build
+RUN curl --retry-all-errors -fL --retry 5 https://github.com/OpenPrinting/ipp-usb/archive/refs/tags/${IPP_USB_VERSION}.tar.gz -o i.tar.gz && \
+    tar -xzf i.tar.gz && mv ipp-usb-${IPP_USB_VERSION} src
+WORKDIR /build/src
+RUN CGO_ENABLED=1 go build -mod=vendor -trimpath -ldflags="-s -w" -tags nethttpomithttp2 -o ipp-usb . && \
+    install -Dm0755 ipp-usb /ipp-usb/usr/sbin/ipp-usb && \
+    install -Dm0644 systemd-udev/71-ipp-usb.rules /ipp-usb/usr/lib/udev/rules.d/71-ipp-usb.rules && \
+    install -Dm0644 systemd-udev/ipp-usb.service /ipp-usb/usr/lib/systemd/system/ipp-usb.service && \
+    sed -i 's#^ExecStart=/sbin/ipp-usb#ExecStart=/usr/sbin/ipp-usb#' /ipp-usb/usr/lib/systemd/system/ipp-usb.service && \
+    grep -qx 'ExecStart=/usr/sbin/ipp-usb udev' /ipp-usb/usr/lib/systemd/system/ipp-usb.service && \
+    install -Dm0644 ipp-usb.conf /ipp-usb/etc/ipp-usb/ipp-usb.conf && \
+    install -d /ipp-usb/usr/share/ipp-usb/quirks && cp -p ipp-usb-quirks/* /ipp-usb/usr/share/ipp-usb/quirks/ && \
+    L=/ipp-usb/usr/share/licenses/ipp-usb && install -d "$L" && cp -p $(ls -d LICENSE* COPYING* NOTICE* 2>/dev/null) "$L"/ && ls "$L"/* >/dev/null
+
+# The printing payload: the runtime files of the stages above and of part one
+# (Avahi, CUPS, libusb, libdaemon), with no headers, pkg-config, static
+# libraries, man pages or docs, stripped. desktop-default copies it; the
+# server does not. /usr/share/isotope/printing.files lists every file, so
+# Dockerfile.agent can remove exactly these.
+FROM toolchain AS printing-files
+COPY --from=libusb /libusb /p/
+COPY --from=libdaemon /libdaemon /p/
+COPY --from=avahi /avahi /p/
+COPY --from=cups /cups /p/
+COPY --from=ghostscript /ghostscript /p/
+COPY --from=libjpeg-turbo /libjpeg-turbo /p/
+COPY --from=qpdf /qpdf /p/
+COPY --from=lcms2 /lcms2 /p/
+COPY --from=libcupsfilters /libcupsfilters /p/
+COPY --from=libppd /libppd /p/
+COPY --from=cups-filters /cups-filters /p/
+COPY --from=cups-browsed /cups-browsed /p/
+COPY --from=ipp-usb /ipp-usb /p/
+WORKDIR /p
+RUN rm -rf usr/include usr/lib/pkgconfig usr/share/pkgconfig usr/lib/cmake usr/share/man usr/share/doc usr/share/info \
+      usr/share/locale usr/share/aclocal usr/share/gtk-doc usr/bin/cups-config \
+      usr/bin/cjpeg usr/bin/djpeg usr/bin/jpegtran usr/bin/rdjpgcom usr/bin/wrjpgcom usr/bin/tjbench \
+      usr/bin/qpdf usr/bin/fix-qdf usr/bin/zlib-flate \
+      usr/bin/jpgicc usr/bin/linkicc usr/bin/psicc usr/bin/tificc usr/bin/transicc \
+      run var/run && \
+    # Avahi's example services announce SSH and SFTP on the network.
+    rm -f etc/avahi/services/ssh.service etc/avahi/services/sftp-ssh.service && \
+    find . \( -name '*.a' -o -name '*.la' \) -delete && \
+    for f in $(find usr -type f \( -name '*.so*' -o -perm -u+x \)); do \
+      case "$(head -c 4 "$f" | od -An -c | tr -d ' ')" in *ELF*) strip --strip-unneeded "$f" ;; esac; \
+    done && \
+    mkdir -p var/lib/cups usr/share/isotope && \
+    # The list leaves out lcms2 and libjpeg: general libraries another
+    # component of an image may link (niri's has lcms2), which the agent's
+    # removal must not take away.
+    { find . ! -type d | sed 's#^\.##' | grep -v -e '^/usr/lib/liblcms2\.so' -e '^/usr/lib/libjpeg\.so'; \
+      echo /usr/share/isotope/printing.files; } | sort -u > usr/share/isotope/printing.files && \
+    for f in usr/sbin/cupsd usr/sbin/lpadmin usr/sbin/cups-browsed usr/sbin/avahi-daemon usr/sbin/ipp-usb usr/bin/gs \
+             usr/lib/cups/filter/universal usr/lib/cups/backend/dnssd usr/lib/cups/backend/ipp \
+             usr/share/cups/data/testprint; do \
+      test -e "$f" || { echo "printing: $f is missing" >&2; exit 1; }; \
+    done && \
+    ! find . \( -name '*.h' -o -name '*.pc' \) | grep -q .
+
+FROM scratch AS printing
+COPY --from=printing-files /p/ /
+
 FROM toolchain AS libjxl
 COPY --from=brotli /brotli /
 COPY --from=highway /highway /
@@ -5129,7 +5517,10 @@ RUN meson setup buildDir ${COMMON_MESON_FLAGS} --libexecdir=lib \
 # GTK3 with the X11 backend, for the i3 image only: xdg-desktop-portal-gtk
 # and snixembed need a GTK that can open a window on XLibre. The Wayland variants keep the
 # Wayland-only gtk3 stage, so they gain no X11 libraries.
+# The X11 GTK for i3, with the CUPS print backend as gtk3 above.
 FROM toolchain AS gtk3-x11
+COPY --from=cups /cups /
+COPY --from=avahi /avahi /
 COPY --from=glib2 /glib2 /
 COPY --from=pcre2 /pcre2 /
 COPY --from=xorgproto /xorgproto /
@@ -5161,8 +5552,9 @@ RUN pip3 install meson ninja
 RUN meson setup buildDir ${COMMON_MESON_FLAGS} \
     -Dx11_backend=true -Dwayland_backend=false -Dbroadway_backend=false \
     -Dintrospection=false -Dgtk_doc=false -Dman=false -Ddemos=false -Dexamples=false -Dtests=false \
-    -Dprint_backends=file -Dcolord=no
-RUN DESTDIR=/gtk3-x11 ninja -C buildDir install
+    -Dprint_backends=file,cups -Dcolord=no
+RUN DESTDIR=/gtk3-x11 ninja -C buildDir install && \
+    test -f /gtk3-x11/usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so
 
 # xdg-desktop-portal-gtk again, built against gtk3-x11 for i3. Same source and
 # options as the stage above.
@@ -6319,6 +6711,7 @@ COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
+COPY pkg/printing/ pkg/printing/
 COPY cmd/isotope-system/ cmd/isotope-system/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
@@ -6366,8 +6759,9 @@ COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/
 COPY pkg/shares/ pkg/shares/
+COPY pkg/printing/ pkg/printing/
 COPY cmd/isotope/ cmd/isotope/
-RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... \
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 
@@ -6454,6 +6848,10 @@ COPY --from=distrobox /distrobox /
 COPY --from=firmware /firmware /
 # Disk health: smartctl and smartd (off) from the hadron-layers layer.
 COPY --from=smartmontools / /
+# Printing: CUPS, cups-filters, cups-browsed, Ghostscript, Avahi and ipp-usb
+# (the printing stage). Before the session config, whose /etc/cups files
+# replace the upstream ones. Avahi keeps upstream's avahi-daemon.conf.
+COPY --from=printing / /
 # Shared + selected session config / launch layer
 COPY --from=desktop-config / /
 # The boot splash, at the path kairos-init's units and dracut module exec. It
@@ -6714,6 +7112,47 @@ RUN systemctl enable isotope-backup.timer isotope-restore-finish.service && \
 # nothing until `isotope update auto on` turns them on.
 RUN systemctl enable isotope-autoupdate.timer && \
     test -L /etc/systemd/system/timers.target.wants/isotope-autoupdate.timer
+# Printing's users and services. lp runs CUPS's filters and backends, avahi
+# runs avahi-daemon; the base image has the lp group but no lp user. The
+# printing stage was built where lp is another gid, so CUPS's directories get
+# the image's lp group. cups.service and cups-browsed.service are linked into
+# multi-user.target (cups-browsed keeps a connection to cupsd, so cupsd runs
+# from boot) and the sockets into sockets.target, as the other services here;
+# avahi-daemon also gets its D-Bus activation alias. ipp-usb is started by
+# its udev rule. They run on the live desktop too: printing from the live
+# session touches nothing on the disk. /var/lib/cups is CUPS's ServerRoot
+# (rootfs/common/etc/cups/cups-files.conf), kept on the persistent partition
+# by 94_isotope_state.yaml.
+# cups-files.conf names the admin group as SystemGroup, and cupsd refuses to
+# start on a group that does not exist, so the image has it, as the server's
+# does (the installer and the live boot add their user to it). GID 900, the
+# one kairos-init's 10_accounting.yaml gives it at every boot.
+RUN set -e; \
+    groupadd -f -g 900 admin; \
+    groupadd -f lp; \
+    getent passwd lp >/dev/null || useradd -r -M -d /var/spool/cups -g lp -s /usr/sbin/nologin -c "Printing" lp; \
+    groupadd -rf avahi; \
+    getent passwd avahi >/dev/null || useradd -r -M -d /run/avahi-daemon -g avahi -s /usr/sbin/nologin -c "Avahi mDNS/DNS-SD" avahi; \
+    mkdir -p /var/lib/cups /var/spool/cups/tmp /var/cache/cups /etc/cups/ppd /etc/cups/ssl; \
+    chgrp -R lp /etc/cups /var/spool/cups /var/cache/cups; \
+    chown root:lp /var/lib/cups; chmod 0755 /var/lib/cups; chmod 0710 /var/spool/cups; \
+    chmod 0640 /etc/cups/cupsd.conf /etc/cups/cups-files.conf; \
+    systemctl enable cups.socket cups.service cups-browsed.service avahi-daemon.socket avahi-daemon.service 2>/dev/null || true; \
+    mkdir -p /etc/systemd/system/multi-user.target.wants /etc/systemd/system/sockets.target.wants; \
+    for u in cups cups-browsed avahi-daemon; do \
+      ln -sf /usr/lib/systemd/system/$u.service /etc/systemd/system/multi-user.target.wants/$u.service; \
+    done; \
+    for u in cups avahi-daemon; do \
+      ln -sf /usr/lib/systemd/system/$u.socket /etc/systemd/system/sockets.target.wants/$u.socket; \
+    done; \
+    ln -sf /usr/lib/systemd/system/avahi-daemon.service /etc/systemd/system/dbus-org.freedesktop.Avahi.service; \
+    for l in multi-user.target.wants/cups.service multi-user.target.wants/cups-browsed.service \
+             multi-user.target.wants/avahi-daemon.service sockets.target.wants/cups.socket \
+             sockets.target.wants/avahi-daemon.socket dbus-org.freedesktop.Avahi.service; do \
+      test -e /etc/systemd/system/$l || { echo "printing: /etc/systemd/system/$l does not resolve" >&2; exit 1; }; \
+    done; \
+    grep -qx 'ServerRoot /var/lib/cups' /etc/cups/cups-files.conf; \
+    cupsd -t -c /etc/cups/cupsd.conf -s /etc/cups/cups-files.conf
 
 
 # The server edition's image. Keep the binaries at the end in step with
@@ -6752,7 +7191,8 @@ COPY --from=bootvine /bootvine/ /
 # installed system, on the persistent /var/lib/docker.
 RUN chmod 1777 /tmp; \
     ldconfig 2>/dev/null || true; \
-    for g in admin audio video render input bluetooth seat docker; do groupadd -f "$g"; done; \
+    groupadd -f -g 900 admin; \
+    for g in audio video render input bluetooth seat docker; do groupadd -f "$g"; done; \
     mkdir -p /var/lib/docker; \
     systemctl disable docker.socket docker.service 2>/dev/null || true; \
     rm -f /etc/systemd/system/sockets.target.wants/docker.socket \

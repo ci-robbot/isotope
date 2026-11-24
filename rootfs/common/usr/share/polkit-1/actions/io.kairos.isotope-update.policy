@@ -89,6 +89,16 @@
     </defaults>
   </action>
 
+  <action id="io.kairos.isotope-update.printers">
+    <description>Add or remove printers, or choose the default printer</description>
+    <message>Only members of the admin group can add or remove printers.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>no</allow_active>
+    </defaults>
+  </action>
+
   <action id="io.kairos.isotope-update.restore">
     <description>Restore a whole backup onto this new machine</description>
     <message>Only members of the admin group can restore a backup onto this machine.</message>

@@ -232,6 +232,13 @@
         "docker.io/library/ubuntu"
       ],
       "allowedVersions": "/^\\d*[02468]\\.04$/"
+    },
+    {
+      "description": "libcupsfilters 2.2.0 does not build and 2.2.1 has regressions from the PDFio move; upstream points to 2.1.x until a later 2.2 release",
+      "matchDepNames": [
+        "OpenPrinting/libcupsfilters"
+      ],
+      "allowedVersions": "<2.2"
     }
   ]
 }

@@ -363,3 +363,27 @@ RUN rm -rf /usr/lib/NetworkManager/VPN/nm-openconnect-service.name \
     left=$(grep -rls 'org.bluez.obex' /usr/share/dbus-1/services /usr/lib/systemd/user || true); \
     [ -z "$left" ] || fail "obex files left: $left"; \
     test -x /usr/bin/openconnect || fail "the openconnect CLI is missing"
+# No printing. An agent prints nothing, and CUPS, cups-browsed, Avahi and
+# ipp-usb are services that listen, browse the network and take documents
+# from anyone on the machine. Every file of the i3 image's printing stage
+# goes (its list, /usr/share/isotope/printing.files), then the unit links,
+# the D-Bus activation alias, /etc/cups, /etc/avahi and GTK's CUPS print
+# backend (the GTK built above has print_backends=file only, so it would not
+# load it, but it links libcups, which is gone).
+RUN while IFS= read -r f; do rm -f "$f"; done < /usr/share/isotope/printing.files && \
+    rm -rf /etc/cups /etc/avahi /etc/ipp-usb /usr/lib/cups /usr/share/cups /usr/share/ipp-usb \
+      /usr/share/ghostscript /var/lib/cups /var/spool/cups /var/cache/cups \
+      /etc/systemd/system/multi-user.target.wants/cups.service \
+      /etc/systemd/system/multi-user.target.wants/cups-browsed.service \
+      /etc/systemd/system/multi-user.target.wants/avahi-daemon.service \
+      /etc/systemd/system/sockets.target.wants/cups.socket \
+      /etc/systemd/system/sockets.target.wants/avahi-daemon.socket \
+      /etc/systemd/system/dbus-org.freedesktop.Avahi.service \
+      /usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so && \
+    fail() { echo "agent: $*" >&2; exit 1; } && \
+    for b in /usr/sbin/cupsd /usr/sbin/cups-browsed /usr/sbin/avahi-daemon /usr/sbin/ipp-usb /usr/bin/gs /usr/sbin/lpadmin; do \
+      ! test -e "$b" || fail "$b is left"; \
+    done && \
+    ! ls /usr/lib/libcups.so* /usr/lib/libavahi-*.so* >/dev/null 2>&1 || fail "printing libraries are left" && \
+    ! find /etc/systemd /usr/lib/systemd /usr/lib/udev -name 'cups*' -o -name 'avahi*' -o -name '*ipp-usb*' | grep -q . || fail "printing units are left" && \
+    ! test -e /usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so || fail "GTK's CUPS backend is left"

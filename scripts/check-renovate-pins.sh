@@ -18,10 +18,13 @@ cd "$(dirname "$0")/.."
 #     (libnl3_11_0, hostap_2_11, master-2024-10-07).
 #   GPERF, NCURSES, GETTEXT, SBC, GMP, MPFR: tarball-only releases.
 #   UNICODE_EMOJI: unicode.org files, no tags Renovate can read.
+#   LIBDAEMON: a 2012 tarball with no repository tags; its SHA256 is pinned.
+#   GHOSTSCRIPT: the release tags spell the version without dots (gs10080),
+#     and the tarball is checked against a pinned SHA256.
 unmanaged="HADRON FREETYPE LIBGPGERROR LIBASSUAN GPGME LIBGCRYPT LIBKSBA NPTH
 SQLITE NTBTLS GNUPG ZIG DEJAVU LIBDBUSMENU STARTUP_NOTIFICATION ATK LIBEV LIBNL
 WPA HOSTAPD WIRELESS_REGDB GPERF NCURSES GETTEXT SBC GMP MPFR LINUX_FIRMWARE SOF_BIN
-INTEL_UCODE UNICODE_EMOJI SLANG NEWT"
+INTEL_UCODE UNICODE_EMOJI SLANG NEWT LIBDAEMON GHOSTSCRIPT"
 # Images updated by hand (the _IMAGE suffix dropped):
 #   BASE: Hadron's image, moved with HADRON (Dockerfile), or the local i3
 #     image the agent overlays (Dockerfile.agent).

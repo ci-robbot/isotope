@@ -32,6 +32,9 @@ type Hooks struct {
 	// Glibc is `isotope glibc`, run as the user (compat.go); nil when the
 	// Compatibility page cannot reach it.
 	Glibc Glibc
+	// Printing is CUPS and Avahi, as the user. main always sets it (a CUPS
+	// that is not running is errNoCUPS); the tests may leave it nil.
+	Printing Printing
 	// Files is the file picker; nil asks for a typed path.
 	Files FileChooser
 	// Start runs a program and does not wait (the desktop's own settings,

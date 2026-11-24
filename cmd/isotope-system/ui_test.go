@@ -67,6 +67,8 @@ type fakeDaemon struct {
 	// MountShare calls (the call strings never hold a password).
 	mounted    []MountedShare
 	shareCreds []shares.Credentials
+	// queues is the CUPS the printer methods change, when a test gives one.
+	queues *fakePrinting
 }
 
 func newFakeDaemon() *fakeDaemon {
@@ -333,6 +335,30 @@ func (f *fakeDaemon) DenyPort(port uint16, proto string) error {
 		}
 		return &DaemonError{Name: "Failed", Msg: "not allowed"}
 	}, fmt.Sprint(port), proto)
+}
+func (f *fakeDaemon) AddPrinter(name, uri, info, location string) error {
+	return f.change("AddPrinter", false, func() error {
+		if f.queues != nil {
+			f.queues.add(Printer{Name: name, Info: info, Location: location, DeviceURI: uri, State: printerIdle, Accepting: true})
+		}
+		return nil
+	}, name, uri, info, location)
+}
+func (f *fakeDaemon) RemovePrinter(name string) error {
+	return f.change("RemovePrinter", false, func() error {
+		if f.queues != nil {
+			f.queues.remove(name)
+		}
+		return nil
+	}, name)
+}
+func (f *fakeDaemon) SetDefaultPrinter(name string) error {
+	return f.change("SetDefaultPrinter", false, func() error {
+		if f.queues != nil {
+			f.queues.setDefault(name)
+		}
+		return nil
+	}, name)
 }
 func (f *fakeDaemon) keepCred(c Credentials) {
 	f.mu.Lock()

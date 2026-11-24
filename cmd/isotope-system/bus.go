@@ -208,6 +208,11 @@ type Daemon interface {
 	ResetFirewall() error
 	AutoUpdateStatus() (AutoStatus, error)
 	SetAutoUpdate(on bool) error
+	// AddPrinter, RemovePrinter and SetDefaultPrinter change the CUPS
+	// queues through lpadmin, behind polkit's printers action.
+	AddPrinter(name, uri, info, location string) error
+	RemovePrinter(name string) error
+	SetDefaultPrinter(name string) error
 	BackupInit(target string, opt TargetOptions, cred Credentials) error
 	BackupSSHKey() (string, error)
 	BackupHostKey(host string, port uint32) ([]string, error)
@@ -566,6 +571,22 @@ func autoFromDict(m map[string]dbus.Variant) AutoStatus {
 }
 
 func (d *busDaemon) SetAutoUpdate(on bool) error { return d.call(0, "SetAutoUpdate", nil, on) }
+
+// printerTimeout covers AddPrinter, which waits while lpadmin asks the
+// printer what it can do (the daemon gives up after 90 s).
+const printerTimeout = 100 * time.Second
+
+func (d *busDaemon) AddPrinter(name, uri, info, location string) error {
+	return d.callTimeout(printerTimeout, "AddPrinter", nil, name, uri, info, location)
+}
+
+func (d *busDaemon) RemovePrinter(name string) error {
+	return d.callTimeout(printerTimeout, "RemovePrinter", nil, name)
+}
+
+func (d *busDaemon) SetDefaultPrinter(name string) error {
+	return d.callTimeout(printerTimeout, "SetDefaultPrinter", nil, name)
+}
 
 // optionsDict is TargetOptions as the daemon's a{sv}, without the zero
 // values: BackupList and Restore refuse a key they do not take.

@@ -84,6 +84,7 @@ func main() {
 	hooks.Bluetooth = newBluez()
 	hooks.Files = newPortalFiles()
 	hooks.Glibc = glibcCLI{bin: "isotope"}
+	hooks.Printing = newCUPSPrinting()
 	if d, err := dialDisks(); err == nil {
 		hooks.Disks = d
 	} else {

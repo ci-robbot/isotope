@@ -23,8 +23,8 @@ polkit.addRule(function(action, subject) {
 
 // Everything else: members of admin may install updates and system
 // extensions, reboot, manage the disk recovery key, back up, restore a
-// backup on a new machine, manage users, change system settings and the
-// firewall; nobody else may, whatever the session.
+// backup on a new machine, manage users, change system settings, the
+// firewall and the printers; nobody else may, whatever the session.
 polkit.addRule(function(action, subject) {
     if (action.id.indexOf("io.kairos.isotope-update.") == 0) {
         return subject.isInGroup("admin") ? polkit.Result.YES : polkit.Result.NO;
