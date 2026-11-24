@@ -374,6 +374,14 @@ jobs:
       - name: Input method hooks and the fcitx5 extension
         run: test/input-method/check-input-methods.sh --repo
 
+      # Fingerprint: the extension's files, every fingerprint PAM line
+      # starts with "-" (skipped while the extension is not merged), which
+      # services take a finger and which keep the password, /var/lib/fprint
+      # kept, the agent's removals. The images run PAM for real in
+      # desktop-images.yml and release.yml.
+      - name: Fingerprint files and PAM lines
+        run: test/fingerprint/check-fingerprint.sh --repo
+
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle
         run: test/night-light/check-night-light.sh

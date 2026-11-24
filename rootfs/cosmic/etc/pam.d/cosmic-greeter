@@ -1,15 +1,20 @@
 #%PAM-1.0
-# The user's session, started by greetd after cosmic-greeter authenticates them.
-# Same stack as ly's: Hadron's `login` service, plus a logind session of class
-# user so the desktop gets a seat, a runtime dir and the user's systemd.
+# cosmic-greeter's lock screen: the service name is fixed in its binary
+# (src/locker.rs). It runs as the user, authenticates and checks the account.
+# The login screen is another service, cosmic-greeter-login (greetd's
+# `service` in /etc/greetd/cosmic-greeter.toml), so that a finger can unlock
+# the screen but never logs in.
+#
+# Fingerprint (the fingerprint system extension, see
+# docs/superpowers/specs/2026-11-24-fingerprint-design.md): the lock screen
+# shows PAM's messages, so the finger comes first ("Place your finger on the
+# reader"), and the password prompt follows after 10 s or three tries, at
+# once for a user with no finger enrolled or a machine with no reader.
+# pam_fprintd.so comes only with the extension, and a line that starts with
+# "-" is skipped when its module is missing: without the extension the stack
+# is the login one, as before.
+-auth      sufficient   pam_fprintd.so  timeout=10
 auth       include      login
 -auth      optional     pam_gnome_keyring.so
 
 account    include      login
-
-password   include      login
--password  optional     pam_gnome_keyring.so use_authtok
-
--session   optional     pam_systemd.so       class=user
-session    include      login
--session   optional     pam_gnome_keyring.so auto_start

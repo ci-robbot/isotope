@@ -52,6 +52,10 @@ type Hooks struct {
 	// Apps is the user's Flatpak installation (apps.go); nil says Flatpak
 	// is not on this system.
 	Apps Apps
+	// Fingers is fprintd for the user's own fingerprints (fprint.go); nil
+	// when the system bus cannot be reached (the Users page then offers the
+	// fingerprint extension, as when fprintd is not installed).
+	Fingers Fingerprints
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the

@@ -7370,6 +7370,26 @@ RUN set -e; \
 RUN systemctl enable fwupd-refresh.timer && \
     test -L /etc/systemd/system/timers.target.wants/fwupd-refresh.timer && \
     test -f /usr/lib/systemd/system/fwupd-refresh.timer.d/10-isotope.conf
+# Fingerprint (the fingerprint system extension, extensions/fingerprint): a
+# finger may authorize sudo and polkit (their password prompts), as it
+# unlocks the lock screens (rootfs/<variant>/etc/pam.d). The line goes first
+# in Hadron's sudo service and polkit's polkit-1 (/usr/lib/pam.d, unless an
+# /etc copy wins), and starts with "-": PAM skips it while pam_fprintd.so is
+# missing, which it is until the extension is merged. A user with no finger
+# enrolled, or a machine with no reader, gets the password prompt at once.
+# The login screens never get it (the login keyring needs the password).
+# test/fingerprint/check-fingerprint.sh runs every PAM service of the image
+# with and without the module.
+RUN set -e; \
+    line='-auth      sufficient   pam_fprintd.so  timeout=10'; \
+    for svc in sudo polkit-1; do \
+      f=/etc/pam.d/$svc; [ -f "$f" ] || f=/usr/lib/pam.d/$svc; \
+      [ -f "$f" ] || { echo "fingerprint: no PAM service $svc" >&2; exit 1; }; \
+      grep -q pam_fprintd "$f" && continue; \
+      awk -v l="$line" 'NR == 1 && /^#%PAM/ { print; print l; next } NR == 1 { print l } { print }' "$f" >"$f.new"; \
+      cat "$f.new" >"$f"; rm -f "$f.new"; \
+      test "$(grep -m1 -E '^-?auth' "$f")" = "$line"; \
+    done
 
 
 # The server edition's image. Keep the binaries at the end in step with

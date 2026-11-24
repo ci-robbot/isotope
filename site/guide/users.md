@@ -1,6 +1,6 @@
 # Users
 
-The **Users** page adds and removes the people who use the computer. It also changes passwords and who is an administrator.
+The **Users** page adds and removes the people who use the computer. It also changes passwords and who is an administrator, and adds your fingerprints.
 
 Open the page: press [[Super+Escape]], choose **System**, then choose **Users**.
 
@@ -39,3 +39,19 @@ An administrator can install updates, change the system, and add and remove user
 3. Click **Remove** and the name of the user.
 
 The user can no longer log in.
+
+## Sign in with a fingerprint
+
+With a fingerprint reader, your finger can unlock the screen. It can also approve `sudo` and administrator prompts. Logging in still asks for your password, because your password also unlocks your keyring.
+
+The **FINGERPRINTS** section is at the bottom of the **Users** page. It shows only your own fingerprints.
+
+1. If the section says **Fingerprint sign-in is not installed**, click **Install the fingerprint extension**. Only an administrator can install it. See [Extensions](extensions.md).
+2. Click **Add a fingerprint…**.
+3. Select a finger, then click **Next**.
+4. Type your password in **Confirm it is you**, then click **OK**.
+5. Touch the reader again and again until the scans are done.
+
+To remove a finger, click **Remove…** next to it, then **Remove**.
+
+On sway and i3, type any key and press [[Enter]] on the lock screen, then touch the reader. Your password still unlocks the screen at once. On COSMIC, touch the reader first. The password field comes after 10 seconds.

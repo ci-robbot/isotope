@@ -221,6 +221,17 @@ RUN rm -f /etc/systemd/user/sockets.target.wants/gnome-keyring-daemon.socket \
       /usr/share/xdg-desktop-portal/portals/gnome-keyring.portal \
       /usr/lib/security/pam_gnome_keyring.so && \
     ! ls /usr/share/dbus-1/services | grep -q -e secrets -e keyring
+# No fingerprint sign-in: an appliance driven by an agent has no person to
+# touch a reader, and its sudo must stay the password the operator set. The
+# fingerprint lines of the i3 image's PAM services (sudo, polkit-1 and
+# i3lock, each a "-auth" line that would wake up if the fingerprint extension
+# were installed) go, and no PAM file names pam_fprintd or the extension's
+# pam_unix alias afterwards.
+RUN for f in /etc/pam.d/* /usr/lib/pam.d/*; do \
+      [ -f "$f" ] && sed -i -e '/pam_fprintd\.so/d' -e '/pam_isotope_unix\.so/d' "$f"; \
+    done; \
+    ! grep -rqs -e pam_fprintd -e pam_isotope_unix /etc/pam.d /usr/lib/pam.d && \
+    grep -q '^auth' /etc/pam.d/sudo
 # No Isotope Welcome: the appliance is driven by an agent, not a person
 # setting it up at first login. Remove the app, its app list, the old picker's
 # name and the i3 lines that start and float it; isotope-menu hides its

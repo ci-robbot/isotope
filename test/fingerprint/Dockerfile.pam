@@ -1,0 +1,11 @@
+# Builds pam-check and the pam_fprintd stand-in for
+# test/fingerprint/check-fingerprint.sh with the Hadron toolchain the image is
+# built with, so they run on the image's musl and libpam.
+ARG HADRON_VERSION
+FROM ghcr.io/kairos-io/hadron-toolchain:${HADRON_VERSION} AS build
+COPY pam-check.c pam-fprintd-stub.c /src/
+RUN cc -O2 -Wall -Werror -o /pam-check /src/pam-check.c -lpam && \
+    cc -O2 -Wall -Werror -shared -fPIC -o /pam_fprintd.so /src/pam-fprintd-stub.c -lpam
+
+FROM scratch
+COPY --from=build /pam-check /pam_fprintd.so /

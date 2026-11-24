@@ -51,6 +51,12 @@ extensions/<name>/
 - A user unit (`/usr/lib/systemd/user`) is never started or enabled by
   `isotope ext`: the session starts it (`screen-reader/` ships Orca's
   `orca.service`, which `isotope-screen-reader` starts on niri).
+- Configuration in `/etc` cannot come with an extension. When the image must
+  name something an extension brings, such as a PAM module, the image
+  carries the line in a form that is inert without the extension:
+  `fingerprint/`'s PAM lines start with `-`, which PAM skips while the
+  module is missing (`test/fingerprint/check-fingerprint.sh` runs every
+  PAM service of the image with and without the modules).
 - The `test` stage runs on `ghcr.io/kairos-io/hadron:${HADRON_VERSION}`. It
   must fail when a file of the extension already exists in the base. A file
   over the base's copy is what `isotope ext` refuses, and in the worst case it

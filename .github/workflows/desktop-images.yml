@@ -151,7 +151,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|test/glibc/*|tools/isotope-glibc-loader.c|tools/isotope-appimage.c|docs/glibc-programs.md|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/firmware/check-firmware.sh|test/apps/*|test/input-method/*|extensions/fcitx5/image-libs.txt|test/smartcards/*|test/accessibility/*|extensions/screen-reader/image-libs.txt|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/fingerprint/*|test/firmware/check-firmware.sh|test/apps/*|test/input-method/*|extensions/fcitx5/image-libs.txt|test/smartcards/*|test/accessibility/*|extensions/screen-reader/image-libs.txt|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -493,3 +493,12 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/input-method/check-input-methods.sh "${DESKTOP}-desktop:dev"
+
+      # Fingerprint: PAM run for real in the image (pam-check and a stand-in
+      # pam_fprintd): every service works without the fingerprint extension
+      # and with it, and a finger opens only sudo, polkit and the lock
+      # screens; the server's services take no finger.
+      - name: Check fingerprint PAM
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/fingerprint/check-fingerprint.sh "${DESKTOP}-desktop:dev"

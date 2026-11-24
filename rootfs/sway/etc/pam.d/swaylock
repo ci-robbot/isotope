@@ -3,4 +3,14 @@
 # upstream's own file does. pam_unix runs as the user here, so it reads
 # /etc/shadow through the setuid unix_chkpwd helper (Dockerfile `default`
 # stage). Without this file PAM falls back to `other`, which denies everything.
+#
+# Fingerprint (the fingerprint system extension, see
+# docs/superpowers/specs/2026-11-24-fingerprint-design.md): swaylock reads the
+# password before it runs PAM, so a typed password is checked first and
+# unlocks at once; a wrong one, or any single key and Enter, asks for a finger.
+# Both modules come only with the extension, and a line that starts with "-"
+# is skipped when its module is missing: without the extension this file is
+# `auth include login` alone.
+-auth      [success=done default=ignore]  pam_isotope_unix.so  nullok
+-auth      sufficient   pam_fprintd.so  timeout=10
 auth       include      login

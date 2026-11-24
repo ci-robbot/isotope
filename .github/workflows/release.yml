@@ -539,6 +539,13 @@ jobs:
         shell: bash
         run: test/input-method/check-input-methods.sh "${DESKTOP}-desktop:dev"
 
+      # Fingerprint: every PAM service works without the fingerprint
+      # extension and with it, and a finger opens only sudo, polkit and the
+      # lock screens; none on the server.
+      - name: Check fingerprint PAM
+        shell: bash
+        run: test/fingerprint/check-fingerprint.sh "${DESKTOP}-desktop:dev"
+
       # The server edition must have no desktop and must have its network
       # stack, update service and network card firmware.
       - name: Check the server image
@@ -1041,6 +1048,12 @@ jobs:
       - name: Check input method hooks are gone
         shell: bash
         run: test/input-method/check-input-methods.sh "$AGENT_IMAGE"
+
+      # No fingerprint line in the appliance's PAM services (Dockerfile.agent
+      # removes them), and every service still works.
+      - name: Check fingerprint PAM is gone
+        shell: bash
+        run: test/fingerprint/check-fingerprint.sh "$AGENT_IMAGE"
 
       # The agent is an overlay on the i3 vm image, so it has the QEMU guest
       # agent too.

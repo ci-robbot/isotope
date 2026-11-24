@@ -76,6 +76,7 @@ func main() {
 		session = nil
 	}
 
+	sys := readSystem()
 	var hooks Hooks
 	if d, err := dialDaemon(); err == nil {
 		hooks.Daemon = d
@@ -100,11 +101,14 @@ func main() {
 		hooks.Firmware = f
 	}
 	hooks.Apps = newFlatpakApps()
+	if c, err := dbus.ConnectSystemBus(); err == nil {
+		hooks.Fingers = newFprintd(c, sys.User, uint32(os.Getuid()))
+	}
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate
 	win.Option(app.Title("Isotope System"), app.Size(unit.Dp(1100), unit.Dp(720)), app.Decorated(true))
-	u := newUI(readSystem(), guikit.NewShaper(), hooks, page)
+	u := newUI(sys, guikit.NewShaper(), hooks, page)
 	if tab != "" {
 		u.showTab(page, tab)
 	}

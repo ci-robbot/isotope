@@ -27,6 +27,8 @@
 #                                           firmware updates (a UEFI
 #                                           capsule's result is read after
 #                                           the restart that applies it)
+#   /var/lib/fprint                         the enrolled fingerprints (the
+#                                           fingerprint extension's fprintd)
 #
 # Without this, a Wi-Fi network joined in Isotope Welcome, the panel or nmtui
 # was forgotten at the next boot, and so was every paired headset and every
@@ -42,7 +44,7 @@
 name: "Isotope machine state"
 stages:
   rootfs:
-    - name: "persist the saved networks, Bluetooth pairings, printers, device settings and firmware history"
+    - name: "persist the saved networks, Bluetooth pairings, printers, device settings, firmware history and fingerprints"
       commands:
         - |
           layout=/run/cos/cos-layout.env
@@ -54,7 +56,7 @@ stages:
                    /var/lib/bluetooth /var/lib/AccountsService \
                    /var/lib/power-profiles-daemon \
                    /var/lib/systemd/backlight /var/lib/systemd/rfkill \
-                   /var/lib/cups /var/lib/fwupd; do
+                   /var/lib/cups /var/lib/fwupd /var/lib/fprint; do
             case " $merged " in
               *" $p "*) ;;
               *) merged="$merged $p" ;;

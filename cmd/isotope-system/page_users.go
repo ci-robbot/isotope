@@ -49,6 +49,9 @@ type usersPage struct {
 
 	addBtn widget.Clickable
 	rows   map[string]*userClicks
+
+	// fp is the FINGERPRINTS section, the user's own (fprint_section.go).
+	fp *fingerSection
 }
 
 type userClicks struct{ pw, admin, rm widget.Clickable }
@@ -77,6 +80,7 @@ func newUsersPage(u *UI) *usersPage {
 	p.add = addForm{name: guikit.NewField(false), full: guikit.NewField(false), pw: guikit.NewSecret(), pw2: guikit.NewSecret()}
 	p.add.taken = p.exists
 	p.pw = pwForm{cur: guikit.NewSecret(), newPw: guikit.NewSecret(), again: guikit.NewSecret()}
+	p.fp = newFingerSection(u)
 	return p
 }
 
@@ -91,7 +95,10 @@ func (p *usersPage) exists(name string) bool {
 	return false
 }
 
-func (p *usersPage) Shown() { p.load() }
+func (p *usersPage) Shown() {
+	p.load()
+	p.fp.load()
+}
 
 func (p *usersPage) load() {
 	u, d := p.u, p.u.hooks.Daemon
@@ -400,6 +407,7 @@ func (p *usersPage) rowText(x User) (title, sub string) {
 }
 
 func (p *usersPage) Update(gtx layout.Context) {
+	p.fp.update(gtx)
 	if p.addBtn.Clicked(gtx) {
 		p.openAdd()
 	}
@@ -429,7 +437,7 @@ func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
 	users := p.snapshot()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.Heading("Users", "Add and remove the people who use this computer, change their passwords and who is an administrator."))
+		c.add(u.Heading("Users", "Add and remove the people who use this computer, change their passwords and who is an administrator, and add your fingerprints."))
 		c.gap(20)
 		if u.sys.Release.Flavor == "cosmic" {
 			c.add(u.notice("On Isotope, change users here. A change made in COSMIC Settings may not survive a restart."))
@@ -442,20 +450,21 @@ func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
 		switch {
 		case u.hooks.Daemon == nil:
 			c.add(u.errorBox("The update service (isotope-updated) is not available."))
-			return c.layout(gtx)
 		case loadErr != "":
 			c.add(u.errorBox(loadErr))
-			return c.layout(gtx)
 		case !loaded:
 			c.add(u.spinnerLine("Reading the users…"))
-			return c.layout(gtx)
-		}
-		for i, x := range users {
-			if i > 0 {
-				c.gap(10)
+		default:
+			for i, x := range users {
+				if i > 0 {
+					c.gap(10)
+				}
+				c.add(p.userRow(x))
 			}
-			c.add(p.userRow(x))
 		}
+		// The user's own fingerprints, which need fprintd, not the daemon.
+		c.gap(26)
+		c.add(p.fp.body())
 		return c.layout(gtx)
 	})
 }

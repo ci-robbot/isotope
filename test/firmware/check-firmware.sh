@@ -62,7 +62,7 @@ repo_mode() {
         grep -qx 'OnCalendar=' $C/$timer_dropin && grep -qx 'OnCalendar=daily' $C/$timer_dropin &&
         [ \$(grep -c '^OnCalendar=' $C/$timer_dropin) = 2 ] && grep -qx 'Persistent=true' $C/$timer_dropin"
     check "the refresh skips a metered connection" grep -qx 'ExecCondition=/usr/bin/isotope unmetered' "$C/$service_dropin"
-    check "/var/lib/fwupd is kept across reboots" grep -q '/var/lib/fwupd; do' "$C/$state"
+    check "/var/lib/fwupd is kept across reboots" grep -Eq '/var/lib/fwupd( |;)' "$C/$state"
     check "every fwupd stage installs its licence" sh -c "
         grep -q 'L=/libusb/usr/share/licenses/libusb && install -d' Dockerfile &&
         grep -q 'install -Dm644 COPYING /fwupd-efi/usr/share/licenses/fwupd-efi/COPYING' Dockerfile &&
@@ -138,7 +138,7 @@ image_mode() {
     in_image "Isotope's fwupd rule is there" "test -f /$rule"
     in_image "the refresh skips a metered connection" "grep -qx 'ExecCondition=/usr/bin/isotope unmetered' /$service_dropin"
     in_image "the licences of fwupd, fwupd-efi and libusb are there" "test -s /usr/share/licenses/fwupd/COPYING && test -s /usr/share/licenses/fwupd-efi/COPYING && test -s /usr/share/licenses/libusb/COPYING"
-    in_image "/var/lib/fwupd is kept across reboots" "grep -q '/var/lib/fwupd; do' /$state"
+    in_image "/var/lib/fwupd is kept across reboots" "grep -Eq '/var/lib/fwupd( |;)' /$state"
     if [ "$flavor" = server ] || [ "$trusted" = true ]; then
         in_image "the capsule plugin is off (no ESP for fwupd here)" "grep -qx 'DisabledPlugins=uefi_capsule' /etc/fwupd/fwupd.conf"
     else

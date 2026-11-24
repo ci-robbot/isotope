@@ -20,7 +20,7 @@ printf 'OVERLAY="tmpfs:25%%"\nCUSTOM_BIND_MOUNTS="/var/lib/docker"\n' > "$tmp/la
 sh "$tmp/stage.sh"
 sh "$tmp/stage.sh"
 
-want="/var/lib/docker /etc/NetworkManager/system-connections /var/lib/NetworkManager /var/lib/bluetooth /var/lib/AccountsService /var/lib/power-profiles-daemon /var/lib/systemd/backlight /var/lib/systemd/rfkill /var/lib/cups /var/lib/fwupd"
+want="/var/lib/docker /etc/NetworkManager/system-connections /var/lib/NetworkManager /var/lib/bluetooth /var/lib/AccountsService /var/lib/power-profiles-daemon /var/lib/systemd/backlight /var/lib/systemd/rfkill /var/lib/cups /var/lib/fwupd /var/lib/fprint"
 . "$tmp/layout.env"
 fail=0
 [ "$CUSTOM_BIND_MOUNTS" = "$want" ] || { echo "FAIL: CUSTOM_BIND_MOUNTS=\"$CUSTOM_BIND_MOUNTS\""; echo "      want \"$want\""; fail=1; }
