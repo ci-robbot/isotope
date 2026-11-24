@@ -6349,6 +6349,8 @@ FROM system-${DESKTOP} AS system
 # user's upgrade; the ones that need a dbus-daemon skip, as this stage has none.
 # ---------------------------------------------------------------------------
 FROM golang:1.25.0-alpine3.22 AS update-build
+# The glibc tests run the program as the box does, through bash -c 'exec -a ...'.
+RUN apk add --no-cache bash
 # The tree sits at /src as in the repo, because the locale tests read the
 # installer's golden files at ../../pkg/installer/testdata: both writers of
 # /oem/91_isotope_locale.yaml are held to the same bytes.
@@ -6358,6 +6360,8 @@ RUN go mod download
 COPY pkg/installer/testdata/oem-locale-de_DE.golden pkg/installer/testdata/locale.conf-de_DE.golden pkg/installer/testdata/
 # TestFirewallDefaultsMatchTheImage holds pkg/firewall's defaults to the shipped file.
 COPY rootfs/common/usr/share/isotope/firewall-default.nft rootfs/common/usr/share/isotope/
+# TestShippedCatalogsConfIsTheDefault reads the shipped catalog list.
+COPY rootfs/common/etc/isotope/extensions.conf rootfs/common/etc/isotope/
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
 COPY pkg/firewall/ pkg/firewall/

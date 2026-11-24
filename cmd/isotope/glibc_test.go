@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -993,6 +994,9 @@ func TestDetachedJobNotifiesItsEnd(t *testing.T) {
 // written from; the Go fallback must move with it.
 func TestGlibcDefaultImageIsTheDockerfilePin(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("..", "..", "Dockerfile"))
+	if errors.Is(err, fs.ErrNotExist) {
+		t.Skip("no Dockerfile here (the update-build stage); CI's unit job and check-glibc.sh --repo hold the pin")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

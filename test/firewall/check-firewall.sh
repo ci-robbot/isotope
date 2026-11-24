@@ -315,6 +315,10 @@ load_mode() {
     if has 'inet isotope' "$after"; then bad "unload deletes table inet isotope"; else pass "unload deletes table inet isotope"; fi
     if [ "$after" = "$before" ]; then pass "unload keeps every other table"; else bad "unload keeps every other table"; fi
     check "after unload the host port answers again" from_lan 18081
+    # Clean up here, not at exit: cleanup reads this function's locals, which
+    # are gone by then, and set -u makes an unbound one fail the script.
+    cleanup
+    trap - EXIT
 }
 
 case "${1:-}" in

@@ -331,12 +331,13 @@ func TestTraySkipsTheCheckDuringAJob(t *testing.T) {
 
 func TestTrayLogsAFailedNotificationRecord(t *testing.T) {
 	f := &trayFake{st: Status{State: StateIdle}, afterCheck: available()}
-	// The first check waits long enough for the state dir to be broken below.
-	h := startTray(t, dialFake(f), 50*time.Millisecond, time.Hour)
 	// A file where the state directory should be: markNotified cannot write.
 	blocker := filepath.Join(t.TempDir(), "state")
 	os.WriteFile(blocker, nil, 0o644)
-	t.Setenv("XDG_STATE_HOME", blocker)
+	// Set as an option, after startTray's own XDG_STATE_HOME and before the
+	// tray starts: set after startTray, a slow test host let the first check
+	// record into the working directory and log nothing.
+	h := startTray(t, dialFake(f), 0, time.Hour, func(*trayApp) { t.Setenv("XDG_STATE_HOME", blocker) })
 	deadline := time.Now().Add(5 * time.Second)
 	for !strings.Contains(h.log.String(), "recording that v0.2.0 was announced") {
 		if time.Now().After(deadline) {

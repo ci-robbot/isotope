@@ -72,22 +72,32 @@ for entry in "${stages[@]}"; do
 		$covered || missing="$missing $dir"
 	done
 	# Repository files the tests of those packages read through a relative
-	# path ("../../rootfs/..."), which the stage must copy too. A test that
-	# skips when its file is missing is listed but not required: it says so
-	# with t.Skip next to the read.
+	# path ("../../rootfs/..." or filepath.Join("..", "..", "Dockerfile")),
+	# which the stage must copy too. A test that skips when its file is
+	# missing is listed but not required: it says so with t.Skip next to the
+	# read.
 	for dir in $need; do
-		for lit in $(grep -hoE '"(\.\./)+[^"]+"' "$dir"/*_test.go 2>/dev/null | tr -d '"' | sort -u); do
+		joins="$(grep -hoE 'filepath\.Join\("\.\."(, "[^"]+")+\)' "$dir"/*_test.go 2>/dev/null | sort -u || true)"
+		lits="$(grep -hoE '"(\.\./)+[^"]+"' "$dir"/*_test.go 2>/dev/null | tr -d '"'
+			printf '%s\n' "$joins" | sed -nE 's/^filepath\.Join\((.*)\)$/\1/; s/", "/\//g; s/"//gp')"
+		for lit in $(printf '%s\n' "$lits" | sort -u); do
 			tfile="$(realpath -m --relative-to="$PWD" "$dir/$lit")"
 			[ -f "$tfile" ] || continue
 			case "$tfile" in ../*) continue ;; esac
 			# The read may go through a constant: `name = "../../x"`.
 			refs="\"$lit\""
+			# The Join form, as written: filepath.Join("..", "..", "x").
+			jform="filepath.Join(\"$(printf '%s' "$lit" | sed 's|/|", "|g')\")"
+			jskip=false
+			case "$joins" in *"$jform"*)
+				if grep -h -A4 -F "$jform" "$dir"/*_test.go | grep -q 't.Skip'; then jskip=true; fi ;;
+			esac
 			# shellcheck disable=SC2013 # identifiers have no spaces
 			for name in $(grep -hoE "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*:?=[[:space:]]*\"$lit\"" "$dir"/*_test.go |
 				sed -E 's/[[:space:]]*:?=.*//'); do
 				refs="$refs $name"
 			done
-			skipped=false
+			skipped=$jskip
 			for r in $refs; do
 				if grep -h -A4 -F "$r" "$dir"/*_test.go | grep -q 't.Skip'; then
 					skipped=true
