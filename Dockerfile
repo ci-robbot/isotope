@@ -6907,8 +6907,8 @@ FROM welcome-${DESKTOP} AS welcome
 # Isotope System (cmd/isotope-system), the window for the system's jobs (updates,
 # desktop, extensions, backup, the disk's keys, network), built like Isotope
 # Welcome: the same two builds, system-${DESKTOP} picks one. It imports
-# pkg/isorelease, pkg/recoverykey, pkg/firewall, pkg/shares, pkg/fwupd and
-# pkg/flatpak, shared with the isotope CLI.
+# pkg/isorelease, pkg/recoverykey, pkg/firewall, pkg/shares, pkg/fwupd,
+# pkg/flatpak and pkg/remotedesktop, shared with the isotope CLI.
 FROM welcome-build AS system-build
 COPY pkg/isorelease/ pkg/isorelease/
 COPY pkg/recoverykey/ pkg/recoverykey/
@@ -6917,6 +6917,7 @@ COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
 COPY pkg/fwupd/ pkg/fwupd/
 COPY pkg/flatpak/ pkg/flatpak/
+COPY pkg/remotedesktop/ pkg/remotedesktop/
 COPY cmd/isotope-system/ cmd/isotope-system/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-system && \
     CGO_ENABLED=1 go build -tags nox11,novulkan -trimpath -ldflags="-s -w" -o /out/wayland/isotope-system ./cmd/isotope-system && \
@@ -6969,8 +6970,9 @@ COPY pkg/shares/ pkg/shares/
 COPY pkg/printing/ pkg/printing/
 COPY pkg/fwupd/ pkg/fwupd/
 COPY pkg/flatpak/ pkg/flatpak/
+COPY pkg/remotedesktop/ pkg/remotedesktop/
 COPY cmd/isotope/ cmd/isotope/
-RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... \
+RUN CGO_ENABLED=0 go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... ./pkg/remotedesktop/... \
     && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/isotope ./cmd/isotope \
     && { /out/isotope --nonsense >/dev/null 2>&1; [ $? -eq 2 ]; }
 

@@ -11,6 +11,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/kairos-community/isotope/pkg/guikit"
+	"github.com/kairos-community/isotope/pkg/remotedesktop"
 )
 
 func init() {
@@ -58,6 +59,13 @@ type networkPage struct {
 	fwReset         widget.Clickable
 	fwClicks        map[string]*fwClicks
 	fwForm          *fwForm // the open "Allow incoming" dialog
+
+	// Remote desktop (remote.go). rd, rdLoaded and rdErr are under u.mu.
+	rd          remotedesktop.Status
+	rdLoaded    bool
+	rdErr       string
+	rdk         rdClicks
+	rdPw, rdPw2 *guikit.Field // of the open password dialog
 }
 
 type apClicks struct{ connect, forget widget.Clickable }
@@ -143,6 +151,7 @@ func (p *networkPage) Shown() {
 	}
 	p.load()
 	p.loadFirewall()
+	p.loadRemote()
 }
 
 func (p *networkPage) load() {
@@ -241,9 +250,11 @@ func (p *networkPage) Update(gtx layout.Context) {
 		}
 	}
 	p.updateFirewall(gtx)
+	p.updateRemote(gtx)
 	if p.refresh.Clicked(gtx) {
 		p.load()
 		p.loadFirewall()
+		p.loadRemote()
 	}
 	if p.wifi.Clicked(gtx) {
 		on := !st.WifiOn
@@ -513,7 +524,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 	u := p.u
 	u.mu.Lock()
 	st, aps, err, working, chosen, loading, vpns := p.state, p.aps, p.err, p.working, p.chosen, p.loading, p.vpns
-	fw := p.fwInput()
+	fw, rd := p.fwInput(), p.rdInput()
 	u.mu.Unlock()
 	return u.scrolled(gtx, &p.list, func(gtx layout.Context) layout.Dimensions {
 		var c col
@@ -604,6 +615,10 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			))
 			return rows.layout(gtx)
 		}))
+		if u.hooks.RemoteDesktop != nil {
+			c.gap(26)
+			c.add(func(gtx layout.Context) layout.Dimensions { return p.remoteSection(gtx, rd, working) })
+		}
 		c.gap(26)
 		c.add(func(gtx layout.Context) layout.Dimensions { return p.firewallSection(gtx, fw, working) })
 		if !st.HasWifi {

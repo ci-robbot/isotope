@@ -1,6 +1,6 @@
 # Network
 
-The **Network** page of Isotope System manages wired and Wi-Fi connections, VPNs, the firewall and mobile broadband. It uses NetworkManager: the network menu of your desktop shows the same connections.
+The **Network** page of Isotope System manages wired and Wi-Fi connections, VPNs, remote desktop, the firewall and mobile broadband. It uses NetworkManager: the network menu of your desktop shows the same connections.
 
 Open the page: press [[Super+Escape]], choose **System**, then choose **Network**.
 
@@ -51,6 +51,34 @@ Isotope connects to Cisco AnyConnect, Palo Alto GlobalProtect, Fortinet, Juniper
 When you connect, a window asks for your password. If the VPN uses a second factor, such as a code from an app, the window asks for it too.
 
 > A company VPN that logs in through a web page (single sign-on, SAML) does not work.
+
+## Remote desktop
+
+With remote desktop, a person at another computer can see and control your desktop with a VNC viewer, for example TigerVNC, Remmina or RealVNC Viewer. It works on Sway and niri. It does not work on i3 or COSMIC yet, or on the live desktop.
+
+Remote desktop is off until you turn it on. It stays on until you turn it off or log out. While it is on, the firewall allows port 5900 (TCP). Every connection is encrypted.
+
+First, install the `remote-desktop` extension. Only an administrator can do this. Open the **Extensions** page of Isotope System, or click **Open Extensions** in the **REMOTE DESKTOP** section. See [Extensions](extensions.md).
+
+To turn it on:
+
+1. In the **REMOTE DESKTOP** section, click **Turn on**.
+2. The first time, type a remote desktop password twice. Use a new password, not your login password. It has 8 to 64 characters.
+3. Click **Save and turn on**.
+
+When the firewall is on, only an administrator can turn on remote desktop.
+
+The section then shows what the other person needs:
+
+- **Connect to**: the address and port to type in the viewer, for example `192.168.1.20:5900`.
+- **User name**: your user name. The viewer also asks for the remote desktop password.
+- **Certificate (SHA-256)**: the first time the viewer connects, it shows a fingerprint. Make sure that it is the same.
+
+Click **Turn off** to stop it. The firewall then blocks port 5900 again. Click **Change password…** to set a new password.
+
+![The remote desktop section: on, with the address, the user name and the certificate.](../../cmd/isotope-system/testdata/remote-on.png)
+
+In a terminal, use `isotope remote-desktop password`, `isotope remote-desktop on`, `isotope remote-desktop off` and `isotope remote-desktop status`.
 
 ## Firewall
 

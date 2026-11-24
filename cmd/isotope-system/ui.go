@@ -56,6 +56,10 @@ type Hooks struct {
 	// when the system bus cannot be reached (the Users page then offers the
 	// fingerprint extension, as when fprintd is not installed).
 	Fingers Fingerprints
+	// RemoteDesktop is `isotope remote-desktop`, run as the user
+	// (remote.go); nil leaves the Network page without its REMOTE
+	// DESKTOP section.
+	RemoteDesktop RemoteDesktop
 }
 
 // pageView is one page. Body draws it above the footer; Footer returns the

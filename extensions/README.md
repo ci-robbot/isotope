@@ -57,6 +57,10 @@ extensions/<name>/
   `fingerprint/`'s PAM lines start with `-`, which PAM skips while the
   module is missing (`test/fingerprint/check-fingerprint.sh` runs every
   PAM service of the image with and without the modules).
+- A server a user starts on demand from Isotope System can keep its user
+  unit in the image instead, with `ConditionPathExists=` on the
+  extension's program, so a user manager that started before the merge
+  still knows the unit (`remote-desktop/`: `isotope-remote-desktop.service`).
 - The `test` stage runs on `ghcr.io/kairos-io/hadron:${HADRON_VERSION}`. It
   must fail when a file of the extension already exists in the base. A file
   over the base's copy is what `isotope ext` refuses, and in the worst case it

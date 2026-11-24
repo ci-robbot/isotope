@@ -113,8 +113,8 @@ jobs:
         env:
           ISOTOPE_REQUIRE_MKSQUASHFS: "1"
         run: |
-          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/...
-          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/...
+          go vet ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... ./pkg/remotedesktop/...
+          go test ./cmd/isotope/... ./pkg/isorelease/... ./pkg/recoverykey/... ./pkg/firewall/... ./pkg/shares/... ./pkg/printing/... ./pkg/fwupd/... ./pkg/flatpak/... ./pkg/remotedesktop/...
 
       - name: install-ui tests
         run: |
@@ -381,6 +381,13 @@ jobs:
       # desktop-images.yml and release.yml.
       - name: Fingerprint files and PAM lines
         run: test/fingerprint/check-fingerprint.sh --repo
+
+      # Remote desktop: the user unit (never enabled, never on live), the
+      # firewall through isotope-updated, the extension's pins and test
+      # stage, the Go stages, the agent's removal. The images are checked in
+      # desktop-images.yml and release.yml; the extension in extensions.yml.
+      - name: Remote desktop files and wiring
+        run: test/remote-desktop/check-remote-desktop.sh --repo
 
       # Docker runs it in a throwaway Alpine container, with fake tools.
       - name: isotope-night-light state and toggle

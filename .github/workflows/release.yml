@@ -546,6 +546,12 @@ jobs:
         shell: bash
         run: test/fingerprint/check-fingerprint.sh "${DESKTOP}-desktop:dev"
 
+      # Remote desktop: the user unit (never enabled) and `isotope
+      # remote-desktop`; on the server, no unit.
+      - name: Check remote desktop
+        shell: bash
+        run: test/remote-desktop/check-remote-desktop.sh "${DESKTOP}-desktop:dev"
+
       # The server edition must have no desktop and must have its network
       # stack, update service and network card firmware.
       - name: Check the server image
@@ -1054,6 +1060,12 @@ jobs:
       - name: Check fingerprint PAM is gone
         shell: bash
         run: test/fingerprint/check-fingerprint.sh "$AGENT_IMAGE"
+
+      # No remote desktop on the appliance (Dockerfile.agent removes the
+      # user unit).
+      - name: Check remote desktop is gone
+        shell: bash
+        run: test/remote-desktop/check-remote-desktop.sh "$AGENT_IMAGE"
 
       # The agent is an overlay on the i3 vm image, so it has the QEMU guest
       # agent too.

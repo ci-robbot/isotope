@@ -52,6 +52,11 @@ func runTray(noIcon bool, stderr io.Writer) int {
 	if !noIcon && systemAppInstalled() {
 		go watchApps(app.log, openSystem)
 	}
+	// A port that remote desktop left open when the last session ended
+	// without stopping its server (a power cut): closed at login.
+	if !noIcon {
+		go rdCleanup(io.Discard)
+	}
 	if noIcon {
 		app.noIcon = true
 		app.run(context.Background())

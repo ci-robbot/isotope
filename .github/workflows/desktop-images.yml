@@ -151,7 +151,7 @@ jobs:
               case "$f" in
                 Dockerfile|Makefile|rootfs/common/*|test/graphics/*|test/boot-ux/check-boot-units.sh|test/live/check-live.sh|tools/stage-key.py|test/glibc/*|tools/isotope-glibc-loader.c|tools/isotope-appimage.c|docs/glibc-programs.md|\
                 test/welcome/*|cmd/isotope-welcome/*|cmd/isotope-system/*|cmd/isotope-install-ui/*|cmd/isotope-install-gui/*|\
-                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|test/shares/*|test/printing/*|test/fingerprint/*|test/firmware/check-firmware.sh|test/apps/*|test/input-method/*|extensions/fcitx5/image-libs.txt|test/smartcards/*|test/accessibility/*|extensions/screen-reader/image-libs.txt|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
+                go.mod|go.sum|pkg/guikit/*|pkg/installer/*|pkg/isorelease/*|pkg/recoverykey/*|pkg/shares/*|pkg/printing/*|pkg/fwupd/*|pkg/flatpak/*|pkg/remotedesktop/*|test/remote-desktop/*|test/shares/*|test/printing/*|test/fingerprint/*|test/firmware/check-firmware.sh|test/apps/*|test/input-method/*|extensions/fcitx5/image-libs.txt|test/smartcards/*|test/accessibility/*|extensions/screen-reader/image-libs.txt|test/system/*|test/bluetooth/*|test/network/*|test/vm/*|\
                 scripts/ci-containerd-store.sh|.github/workflows/desktop-images.yml)
                   for d in "${all[@]}"; do want[$d]=1; done ;;
                 rootfs/sway/*) want[sway]=1 ;;
@@ -502,3 +502,10 @@ jobs:
         if: steps.prebuilt.outputs.skip != 'true'
         shell: bash
         run: test/fingerprint/check-fingerprint.sh "${DESKTOP}-desktop:dev"
+
+      # Remote desktop: the user unit (never enabled) and `isotope
+      # remote-desktop`; wayvnc itself is the extension's, never the image's.
+      - name: Check remote desktop
+        if: steps.prebuilt.outputs.skip != 'true'
+        shell: bash
+        run: test/remote-desktop/check-remote-desktop.sh "${DESKTOP}-desktop:dev"

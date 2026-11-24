@@ -1,0 +1,23 @@
+[Unit]
+Description=Isotope remote desktop (wayvnc) for this session
+Documentation=https://github.com/kairos-community/isotope
+# Started and stopped only by `isotope remote-desktop on|off` (also Isotope
+# System's Network page), as the user; never enabled, so it never starts by
+# itself and ends with the session. `serve` checks the desktop (Sway or
+# niri) and the configuration, then runs wayvnc from the remote-desktop
+# system extension. `stopped` removes the firewall rule `on` added, however
+# the server ends: turned off, crashed, or at logout.
+# Never on the live media, during an install, on the Trusted Boot medium or
+# on the live desktop.
+ConditionPathExists=!/run/cos/live_mode
+ConditionPathExists=!/run/cos/install_mode
+ConditionPathExists=!/run/cos/uki_install_mode
+ConditionPathExists=!/run/isotope/live-desktop
+ConditionPathExists=/usr/bin/wayvnc
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/isotope remote-desktop serve
+ExecStopPost=/usr/bin/isotope remote-desktop stopped
+Restart=no
+NoNewPrivileges=yes

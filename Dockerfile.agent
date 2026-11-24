@@ -253,6 +253,11 @@ RUN rm -f /usr/lib/systemd/user/isotope-app-updates.timer \
       /usr/lib/systemd/user/isotope-app-updates.service \
       /usr/lib/systemd/user/timers.target.wants/isotope-app-updates.timer && \
     ! find /usr/lib/systemd/user /etc/systemd/user -name 'isotope-app-updates*' 2>/dev/null | grep -q .
+# No remote desktop: the appliance is driven through its MCP gateway, never
+# shown to a VNC viewer (`isotope remote-desktop` also refuses on the agent
+# flavor). The user unit that would run wayvnc goes.
+RUN rm -f /usr/lib/systemd/user/isotope-remote-desktop.service && \
+    ! find /usr/lib/systemd/user /etc/systemd/user -name 'isotope-remote-desktop*' 2>/dev/null | grep -q .
 # No glibc programs: an agent that starts a downloaded glibc binary or an
 # AppImage must not get an Ubuntu container pulled from the network and set up
 # behind its back. The stand-in loader, the AppImage binfmt rule and its

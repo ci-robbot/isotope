@@ -78,6 +78,9 @@ Commands:
                     typing Chinese, Japanese and Korean (the fcitx5
                     extension): status, set NAME...; see
                     "isotope input-method help"
+  remote-desktop [command]
+                    let a VNC viewer on another computer use this desktop
+                    (Sway and niri); see "isotope remote-desktop help"
   welcome [PAGE]   Isotope Welcome, the first-login setup, again; or one
                     of its pages: apps, language, network, appearance,
                     accessibility, shortcuts
@@ -178,6 +181,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return cmdApps(args, stdout, stderr)
 	case "input-method":
 		return cmdInputMethod(args, stdout, stderr)
+	case "remote-desktop":
+		return cmdRemoteDesktop(args, stdin, stdout, stderr)
 	case "welcome":
 		return cmdWelcome(args, stderr)
 	case "wallpaper-follow":
