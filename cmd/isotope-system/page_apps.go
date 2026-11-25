@@ -869,26 +869,21 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 		c.add(u.caps(i18n.T("Isotope picks")))
 		c.gap(10)
 		lines := pickLines(sn.cat, sn.picks, sn.installedIDs)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			for i := 0; i < len(lines); i += 2 {
-				i := i
-				if i > 0 {
-					rows.gap(14)
+		var picks []layout.Widget
+		for i := 0; i < len(lines); i += 2 {
+			i := i
+			picks = append(picks, func(gtx layout.Context) layout.Dimensions {
+				right := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{} }
+				if i+1 < len(lines) {
+					right = p.appRow(lines[i+1], sn.job != nil, sn.flathub, true)
 				}
-				rows.add(func(gtx layout.Context) layout.Dimensions {
-					right := func(gtx layout.Context) layout.Dimensions { return layout.Dimensions{} }
-					if i+1 < len(lines) {
-						right = p.appRow(lines[i+1], sn.job != nil, sn.flathub, true)
-					}
-					return guikit.TwoCols(gtx, p.appRow(lines[i], sn.job != nil, sn.flathub, true), right)
-				})
-			}
-			if len(lines) == 0 {
-				rows.add(u.dim(i18n.T("None of Isotope's picks is in the catalog.")))
-			}
-			return rows.layout(gtx)
-		}))
+				return guikit.TwoCols(gtx, p.appRow(lines[i], sn.job != nil, sn.flathub, true), right)
+			})
+		}
+		if len(lines) == 0 {
+			picks = append(picks, u.note(i18n.T("None of Isotope's picks is in the catalog.")))
+		}
+		c.add(u.group(picks...))
 		c.gap(10)
 		c.add(u.dim(i18n.T("The picks are Isotope Welcome's list. Search reaches all of Flathub.")))
 		if sn.refreshing {
@@ -943,16 +938,11 @@ func (p *appsPage) appList(sn appsSnap, apps []flatpak.App, busy bool) layout.Wi
 	if len(apps) > appsMaxRows {
 		apps = apps[:appsMaxRows]
 	}
-	return u.panel(func(gtx layout.Context) layout.Dimensions {
-		var rows col
-		for i, a := range apps {
-			if i > 0 {
-				rows.gap(12)
-			}
-			rows.add(p.appRow(lineOf(a, sn.installedIDs), busy, sn.flathub, false))
-		}
-		return rows.layout(gtx)
-	})
+	var rows []layout.Widget
+	for _, a := range apps {
+		rows = append(rows, p.appRow(lineOf(a, sn.installedIDs), busy, sn.flathub, false))
+	}
+	return u.group(rows...)
 }
 
 // appRow is an app: its icon, name (and Verified), line, and Install or
@@ -991,7 +981,7 @@ func (p *appsPage) appRow(l appLine, busy, flathub, compact bool) layout.Widget 
 				})
 			}),
 			layout.Rigid(layout.Spacer{Width: 12}.Layout),
-			layout.Rigid(u.buttons(btn)),
+			layout.Rigid(u.rowButtons(btn)),
 		)
 	}
 }
@@ -1098,7 +1088,7 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 			c.add(u.caps(title))
 			c.gap(10)
 			if len(res) == 0 {
-				c.add(u.panel(u.dim(i18n.Tf("No app on Flathub matches “%s”.", q))))
+				c.add(u.group(u.note(i18n.Tf("No app on Flathub matches “%s”.", q))))
 			} else {
 				c.add(p.appList(sn, res, sn.job != nil))
 				if len(res) > appsMaxRows {
@@ -1111,23 +1101,18 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 			c.gap(22)
 			c.add(u.caps(i18n.T("System extensions")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, e := range exts {
-					if i > 0 {
-						rows.gap(12)
-					}
-					e := e
-					rows.add(func(gtx layout.Context) layout.Dimensions {
-						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.extTile(gtx) }),
-							layout.Rigid(layout.Spacer{Width: 12}.Layout),
-							layout.Flexed(1, u.row(e.Title, e.Sub, u.buttons(guikit.Action{Click: p.extClick(e.Name), Kind: guikit.ButtonSecondary, Label: i18n.T("Open in Extensions")}))),
-						)
-					})
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, e := range exts {
+				e := e
+				rows = append(rows, func(gtx layout.Context) layout.Dimensions {
+					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+						layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.extTile(gtx) }),
+						layout.Rigid(layout.Spacer{Width: 12}.Layout),
+						layout.Flexed(1, u.row(e.Title, e.Sub, u.rowButtons(guikit.Action{Click: p.extClick(e.Name), Kind: guikit.ButtonSecondary, Label: i18n.T("Open in Extensions")}))),
+					)
+				})
+			}
+			c.add(u.group(rows...))
 		}
 		return c.layout(gtx)
 	}
@@ -1167,7 +1152,8 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 		var c col
 		c.add(u.caps(i18n.T("In progress")))
 		c.gap(10)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+		c.add(u.group(func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.icon(gtx, j.ID, j.Name, j.Icon, 40) }),
 				layout.Rigid(layout.Spacer{Width: 12}.Layout),
@@ -1185,7 +1171,7 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 					return rows.layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Width: 16}.Layout),
-				layout.Rigid(u.buttons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")})),
+				layout.Rigid(u.rowButtons(guikit.Action{Click: &p.cancel, Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")})),
 			)
 		}))
 		return c.layout(gtx)
@@ -1211,18 +1197,13 @@ func (p *appsPage) installedBody(sn appsSnap) layout.Widget {
 			c.add(u.caps(i18n.Tf("Installed · %s", countApps(len(rows)))))
 			c.gap(10)
 			if len(rows) == 0 {
-				c.add(u.panel(u.dim(i18n.T("No app yet. Browse or search Flathub to install one."))))
+				c.add(u.group(u.note(i18n.T("No app yet. Browse or search Flathub to install one."))))
 			} else {
-				c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-					var list col
-					for i, r := range rows {
-						if i > 0 {
-							list.gap(12)
-						}
-						list.add(p.installedRow(r, sn.job != nil))
-					}
-					return list.layout(gtx)
-				}))
+				var list []layout.Widget
+				for _, r := range rows {
+					list = append(list, p.installedRow(r, sn.job != nil))
+				}
+				c.add(u.group(list...))
 			}
 		}
 		if l := installedExtsLine(sn.exts); l != "" {
@@ -1268,9 +1249,9 @@ func (p *appsPage) installedRow(r installedRow, busy bool) layout.Widget {
 				})
 			}),
 			layout.Rigid(layout.Spacer{Width: 12}.Layout),
-			layout.Rigid(u.buttons(
+			layout.Rigid(u.rowButtons(
 				guikit.Action{Click: &k.open, Kind: guikit.ButtonSecondary, Label: i18n.T("Open")},
-				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: busy},
+				guikit.Action{Click: &k.remove, Kind: guikit.ButtonSecondary, Label: i18n.T("Remove…"), Disabled: busy},
 			)),
 		)
 	}
@@ -1285,8 +1266,8 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 	busy := sn.job != nil
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.panel(u.row(i18n.T("Update apps automatically"), av.Sub,
-			u.buttons(guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: av.Toggle}))))
+		c.add(u.group(u.actionRow("apps:auto", i18n.T("Update apps automatically"), av.Sub, nil,
+			guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: av.Toggle})))
 		c.gap(18)
 		if sn.job != nil {
 			c.add(p.jobPanel(sn.job))
@@ -1301,15 +1282,10 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 			return c.layout(gtx)
 		}
 		if len(uv.Ready) == 0 && len(uv.Held) == 0 {
-			c.add(u.panel(u.dim(i18n.T("Your apps are up to date."))))
+			c.add(u.group(u.note(i18n.T("Your apps are up to date."))))
 		}
 		if len(uv.Ready) > 0 {
-			c.add(func(gtx layout.Context) layout.Dimensions {
-				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-					layout.Flexed(1, u.caps(uv.ReadyTitle)),
-					layout.Rigid(u.buttons(guikit.Action{Click: &p.updateAll, Kind: guikit.ButtonPrimary, Label: i18n.T("Update all"), Disabled: busy})),
-				)
-			})
+			c.add(u.section(uv.ReadyTitle, guikit.Action{Click: &p.updateAll, Kind: guikit.ButtonPrimary, Label: i18n.T("Update all"), Disabled: busy}))
 			c.gap(10)
 			c.add(p.updateList(uv.Ready, busy))
 		}
@@ -1332,46 +1308,41 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 
 func (p *appsPage) updateList(rows []updateRow, busy bool) layout.Widget {
 	u := p.u
-	return u.panel(func(gtx layout.Context) layout.Dimensions {
-		var list col
-		for i, r := range rows {
-			if i > 0 {
-				list.gap(12)
-			}
-			r := r
-			k := p.clicks("u:" + r.Ref)
-			btn := guikit.Action{Click: &k.update, Kind: guikit.ButtonSecondary, Label: i18n.T("Update"), Disabled: busy}
-			if r.NeedsOK {
-				btn = guikit.Action{Click: &k.review, Kind: guikit.ButtonSecondary, Label: i18n.T("Review…"), Disabled: busy}
-			}
-			list.add(func(gtx layout.Context) layout.Dimensions {
-				gtx.Constraints.Min.X = gtx.Constraints.Max.X
-				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.icon(gtx, r.ID, r.Name, r.Icon, 36) }),
-					layout.Rigid(layout.Spacer{Width: 12}.Layout),
-					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-						var c col
-						c.add(func(gtx layout.Context) layout.Dimensions { return p.nameLine(gtx, r.Name, false, r.Change) })
-						if r.Notes != "" {
-							c.gap(2)
-							notes := r.Notes
-							c.add(func(gtx layout.Context) layout.Dimensions {
-								if r.NeedsOK {
-									lead := i18n.T("Asks for more:")
-									return p.warnLead(gtx, lead, strings.TrimPrefix(notes, lead))
-								}
-								return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 2, notes)
-							})
-						}
-						return c.layout(gtx)
-					}),
-					layout.Rigid(layout.Spacer{Width: 12}.Layout),
-					layout.Rigid(u.buttons(btn)),
-				)
-			})
+	var list []layout.Widget
+	for _, r := range rows {
+		r := r
+		k := p.clicks("u:" + r.Ref)
+		btn := guikit.Action{Click: &k.update, Kind: guikit.ButtonSecondary, Label: i18n.T("Update"), Disabled: busy}
+		if r.NeedsOK {
+			btn = guikit.Action{Click: &k.review, Kind: guikit.ButtonSecondary, Label: i18n.T("Review…"), Disabled: busy}
 		}
-		return list.layout(gtx)
-	})
+		list = append(list, func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min.X = gtx.Constraints.Max.X
+			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return p.icon(gtx, r.ID, r.Name, r.Icon, 36) }),
+				layout.Rigid(layout.Spacer{Width: 12}.Layout),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					var c col
+					c.add(func(gtx layout.Context) layout.Dimensions { return p.nameLine(gtx, r.Name, false, r.Change) })
+					if r.Notes != "" {
+						c.gap(2)
+						notes := r.Notes
+						c.add(func(gtx layout.Context) layout.Dimensions {
+							if r.NeedsOK {
+								lead := i18n.T("Asks for more:")
+								return p.warnLead(gtx, lead, strings.TrimPrefix(notes, lead))
+							}
+							return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 2, notes)
+						})
+					}
+					return c.layout(gtx)
+				}),
+				layout.Rigid(layout.Spacer{Width: 12}.Layout),
+				layout.Rigid(u.rowButtons(btn)),
+			)
+		})
+	}
+	return u.group(list...)
 }
 
 // warnLead is a small line whose first words are amber.
