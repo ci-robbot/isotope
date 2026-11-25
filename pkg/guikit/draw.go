@@ -206,29 +206,56 @@ func glowImage(px int, c color.NRGBA, peak float32) *image.NRGBA {
 
 // CheckIcon is the mocks' done check: a filled circle with a tick.
 func CheckIcon(gtx layout.Context, size float32) layout.Dimensions {
+	return checkIcon(gtx, size, &InstallerPalette)
+}
+
+// CheckIcon is the done check in the theme's palette.
+func (th *Theme) CheckIcon(gtx layout.Context, size float32) layout.Dimensions {
+	return checkIcon(gtx, size, th.Colors())
+}
+
+func checkIcon(gtx layout.Context, size float32, pal *Palette) layout.Dimensions {
 	px := Fdp(gtx, size)
 	s := int(px + 0.5)
-	FillRRect(gtx, image.Rect(0, 0, s, s), s/2, ColCheck)
+	FillRRect(gtx, image.Rect(0, 0, s, s), s/2, pal.Check)
 	k := px / 10
 	var p clip.Path
 	p.Begin(gtx.Ops)
 	p.MoveTo(f32.Pt(2.8*k, 5.2*k))
 	p.LineTo(f32.Pt(4.3*k, 6.6*k))
 	p.LineTo(f32.Pt(7.2*k, 3.6*k))
-	paint.FillShape(gtx.Ops, ColText, clip.Stroke{Path: p.End(), Width: 1.3 * k}.Op())
+	paint.FillShape(gtx.Ops, pal.Text, clip.Stroke{Path: p.End(), Width: 1.3 * k}.Op())
 	return layout.Dimensions{Size: image.Pt(s, s)}
 }
 
 // RingIcon is a step still to come: an empty circle.
 func RingIcon(gtx layout.Context, size float32) layout.Dimensions {
+	return ringIcon(gtx, size, &InstallerPalette)
+}
+
+// RingIcon is a step to come in the theme's palette.
+func (th *Theme) RingIcon(gtx layout.Context, size float32) layout.Dimensions {
+	return ringIcon(gtx, size, th.Colors())
+}
+
+func ringIcon(gtx layout.Context, size float32, pal *Palette) layout.Dimensions {
 	s := Dp(gtx, size)
-	StrokeRRect(gtx, image.Rect(0, 0, s, s), s/2, Fdp(gtx, 1.5), ColRing)
+	StrokeRRect(gtx, image.Rect(0, 0, s, s), s/2, Fdp(gtx, 1.5), pal.Ring)
 	return layout.Dimensions{Size: image.Pt(s, s)}
 }
 
 // Spinner is work in progress: a track and an arc that turns with phase
 // (0..1).
 func Spinner(gtx layout.Context, size float32, phase float32) layout.Dimensions {
+	return spinner(gtx, size, phase, &InstallerPalette)
+}
+
+// Spinner is the spinner in the theme's palette.
+func (th *Theme) Spinner(gtx layout.Context, size float32, phase float32) layout.Dimensions {
+	return spinner(gtx, size, phase, th.Colors())
+}
+
+func spinner(gtx layout.Context, size float32, phase float32, pal *Palette) layout.Dimensions {
 	px := Fdp(gtx, size)
 	s := int(px + 0.5)
 	k := px / 12
@@ -238,13 +265,13 @@ func Spinner(gtx layout.Context, size float32, phase float32) layout.Dimensions 
 	t.Begin(gtx.Ops)
 	t.MoveTo(f32.Pt(c.X+r, c.Y))
 	t.ArcTo(c, c, 2*math.Pi)
-	paint.FillShape(gtx.Ops, ColField, clip.Stroke{Path: t.End(), Width: 2 * k}.Op())
+	paint.FillShape(gtx.Ops, pal.Field, clip.Stroke{Path: t.End(), Width: 2 * k}.Op())
 	a0 := float64(phase)*2*math.Pi - math.Pi/2
 	var p clip.Path
 	p.Begin(gtx.Ops)
 	p.MoveTo(f32.Pt(c.X+r*float32(math.Cos(a0)), c.Y+r*float32(math.Sin(a0))))
 	p.ArcTo(c, c, math.Pi/2)
-	paint.FillShape(gtx.Ops, ColAccent, clip.Stroke{Path: p.End(), Width: 2 * k}.Op())
+	paint.FillShape(gtx.Ops, pal.Accent, clip.Stroke{Path: p.End(), Width: 2 * k}.Op())
 	return layout.Dimensions{Size: image.Pt(s, s)}
 }
 
@@ -285,15 +312,24 @@ func Tick(gtx layout.Context, size float32, c color.NRGBA) {
 // ProgressBar is the 8 dp bar, filled to f (0..1): green to glow, as the
 // mocks' gradient.
 func ProgressBar(gtx layout.Context, f float32) layout.Dimensions {
+	return progressBar(gtx, f, &InstallerPalette)
+}
+
+// ProgressBar is the progress bar in the theme's palette.
+func (th *Theme) ProgressBar(gtx layout.Context, f float32) layout.Dimensions {
+	return progressBar(gtx, f, th.Colors())
+}
+
+func progressBar(gtx layout.Context, f float32, pal *Palette) layout.Dimensions {
 	w, h := gtx.Constraints.Max.X, Dp(gtx, 8)
 	r := Dp(gtx, 4)
-	FillRRect(gtx, image.Rect(0, 0, w, h), r, ColField)
+	FillRRect(gtx, image.Rect(0, 0, w, h), r, pal.Field)
 	fw := int(float32(w) * f)
 	if fw > 0 {
 		cl := clip.UniformRRect(image.Rect(0, 0, fw, h), r).Push(gtx.Ops)
 		paint.LinearGradientOp{
-			Stop1: f32.Pt(0, 0), Color1: ColCheck,
-			Stop2: f32.Pt(float32(fw)*0.7, 0), Color2: ColAccent,
+			Stop1: f32.Pt(0, 0), Color1: pal.Check,
+			Stop2: f32.Pt(float32(fw)*0.7, 0), Color2: pal.Glow,
 		}.Add(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
 		cl.Pop()

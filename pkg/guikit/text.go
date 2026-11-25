@@ -95,6 +95,10 @@ var (
 // NewTheme and keeps it for the life of the window.
 type Theme struct {
 	Shaper *text.Shaper
+	// Pal is the palette the widgets draw with; nil is InstallerPalette.
+	Pal *Palette
+	// TitleStyle is a page title's style; zero is StTitle.
+	TitleStyle Style
 	// scrim is the tag of Confirm's pointer area.
 	scrim bool
 }
@@ -128,4 +132,19 @@ func (th *Theme) Centered(gtx layout.Context, s Style, c color.NRGBA, scale floa
 // LabelMax is Label cut to maxLines lines.
 func (th *Theme) LabelMax(gtx layout.Context, s Style, c color.NRGBA, maxLines int, txt string) layout.Dimensions {
 	return widget.Label{MaxLines: maxLines}.Layout(gtx, th.Shaper, s.Font(), s.Size, txt, Material(gtx, c))
+}
+
+// Colors is the theme's palette.
+func (th *Theme) Colors() *Palette {
+	if th.Pal == nil {
+		return &InstallerPalette
+	}
+	return th.Pal
+}
+
+func (th *Theme) titleStyle() Style {
+	if th.TitleStyle == (Style{}) {
+		return StTitle
+	}
+	return th.TitleStyle
 }

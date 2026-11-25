@@ -208,6 +208,13 @@ RULES = {
     # The update tray icon: the mark in the panel's text colour, a badge per
     # daemon state, the badge glyph in on_accent. One set for dark panels
     # (night), then one for light panels (day).
+    # Isotope System's palette where no COSMIC theme is read (sway, i3, niri):
+    # each role once for night, then once for day.
+    "pkg/guikit/isotope_palette.go": (None, "kdl", [
+        (r"^\t" + role + r":\s+0x{hex},$", [role, "day." + role])
+        for role in ("crust", "base", "surface", "overlay", "border", "muted", "dim", "subtext",
+                     "text", "accent", "success", "warning", "error", "on_accent")
+    ]),
     "cmd/isotope/icons.go": (None, "kdl", [
         (r"^\t\tmark:\s+rgb\(0x{hex}\),$", ["text", "day.text"]),
         (r'^\t\t\t"update":\s+rgb\(0x{hex}\),$', ["accent", "day.accent"]),

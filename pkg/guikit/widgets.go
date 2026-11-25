@@ -31,28 +31,29 @@ const (
 // Button draws a 40 dp button. A disabled button is drawn greyed and
 // ignores clicks and keys.
 func (th *Theme) Button(gtx layout.Context, c *widget.Clickable, kind ButtonKind, txt string, enabled bool) layout.Dimensions {
+	p := th.Colors()
 	if !enabled {
 		gtx = gtx.Disabled()
 	}
 	padX := float32(22)
-	st, fg := StButton, ColOnAccent
-	b := Box{Radius: 8, Fill: ColAccent}
+	st, fg := StButton, p.OnSuggested
+	b := Box{Radius: p.RadiusS, Fill: p.Suggested}
 	switch {
 	case !enabled:
-		b.Fill, fg = ColDisabled, ColDim
+		b.Fill, fg = p.Disabled, p.OnDisabled
 	case kind == ButtonSecondary:
-		padX, st, fg = 18, StButton500, ColText
-		b.Fill, b.Border, b.BorderWidth = ColField, Over(ColFooter, ColText, 0.1), 1
+		padX, st, fg = 18, StButton500, p.OnButton
+		b.Fill, b.Border, b.BorderWidth = p.Button, p.ButtonBorder, 1
 	case kind == ButtonGhost:
-		padX, st, fg = 16, StButton500, ColDim
+		padX, st, fg = 16, StButton500, p.Dim
 		b.Fill = color.NRGBA{}
 	case kind == ButtonDanger:
-		b.Fill = ColError
+		b.Fill, fg = p.Destructive, p.OnDestructive
 	}
 	if enabled && gtx.Focused(c) {
-		b.Ring, b.RingWidth = FocusRingStrong, 3
+		b.Ring, b.RingWidth = p.Focus, 3
 		if kind == ButtonGhost {
-			fg = ColText
+			fg = p.Text
 		}
 	}
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -119,17 +120,18 @@ func (f *Field) Submitted(gtx layout.Context) bool {
 // normal field). prefix, when set, is drawn in the box before the text
 // (the "github.com/" of an SSH key field); trailing, when set, at its end.
 func (th *Theme) Input(gtx layout.Context, f *Field, s Style, height float32, prefix string, trailing layout.Widget) layout.Dimensions {
+	p := th.Colors()
 	focused := gtx.Focused(&f.Editor)
 	if focused && !f.hadFocus && f.SelectOnFocus {
 		f.Editor.SetCaret(f.Editor.Len(), 0)
 	}
 	f.hadFocus = focused
-	b := Box{Fill: ColField, Border: Over(ColField, ColText, 0.08), BorderWidth: 1, Radius: 8}
+	b := Box{Fill: p.Field, Border: Over(p.Field, p.Text, 0.08), BorderWidth: 1, Radius: p.RadiusS}
 	if focused {
-		b.Border, b.Ring, b.RingWidth = ColAccent, FocusRing, 3
+		b.Border, b.Ring, b.RingWidth = p.Accent, p.FocusSoft, 3
 	}
 	if f.Err != "" {
-		b.Border = ColError
+		b.Border = p.Error
 	}
 	gtx.Constraints.Min.Y = Dp(gtx, height)
 	gtx.Constraints.Max.Y = Dp(gtx, height)
@@ -143,7 +145,7 @@ func (th *Theme) Input(gtx layout.Context, f *Field, s Style, height float32, pr
 					gtx.Constraints.Min.Y = gtx.Constraints.Max.Y
 					return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						gtx.Constraints.Min.Y = 0
-						return th.Label(gtx, s, ColDim, prefix)
+						return th.Label(gtx, s, p.Dim, prefix)
 					})
 				}))
 			}
@@ -153,7 +155,7 @@ func (th *Theme) Input(gtx layout.Context, f *Field, s Style, height float32, pr
 				// centred rather than drawn at the top of the box.
 				return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min = image.Pt(gtx.Constraints.Max.X, 0)
-					return f.Editor.Layout(gtx, th.Shaper, s.Font(), s.Size, Material(gtx, ColText), Material(gtx, Alpha(ColAccent, 0.35)))
+					return f.Editor.Layout(gtx, th.Shaper, s.Font(), s.Size, Material(gtx, p.Text), Material(gtx, Alpha(p.Accent, 0.35)))
 				})
 			}))
 			if trailing != nil {
@@ -173,14 +175,15 @@ func (th *Theme) Input(gtx layout.Context, f *Field, s Style, height float32, pr
 // Labelled stacks a label, the input in and a hint, or f's error when it has
 // one. f may be nil.
 func (th *Theme) Labelled(gtx layout.Context, title string, f *Field, hint string, in layout.Widget) layout.Dimensions {
+	p := th.Colors()
 	kids := []layout.FlexChild{
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StLabel, ColText2, title) }),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StLabel, p.Text2, title) }),
 		layout.Rigid(layout.Spacer{Height: 6}.Layout),
 		layout.Rigid(in),
 	}
-	msg, col := hint, ColDim
+	msg, col := hint, p.Dim
 	if f != nil && f.Err != "" {
-		msg, col = f.Err, ColError
+		msg, col = f.Err, p.Error
 	}
 	if msg != "" {
 		kids = append(kids,
@@ -191,44 +194,61 @@ func (th *Theme) Labelled(gtx layout.Context, title string, f *Field, hint strin
 }
 
 // Radio is the round marker of a choice card.
-func Radio(gtx layout.Context, on bool) layout.Dimensions {
+func Radio(gtx layout.Context, on bool) layout.Dimensions { return radio(gtx, on, &InstallerPalette) }
+
+// Radio is the radio marker in the theme's palette.
+func (th *Theme) Radio(gtx layout.Context, on bool) layout.Dimensions {
+	return radio(gtx, on, th.Colors())
+}
+
+func radio(gtx layout.Context, on bool, p *Palette) layout.Dimensions {
 	s := Dp(gtx, 18)
 	r := image.Rect(0, 0, s, s)
 	if on {
-		StrokeRRect(gtx, r, s/2, Fdp(gtx, 5), ColAccent)
+		StrokeRRect(gtx, r, s/2, Fdp(gtx, 5), p.Accent)
 	} else {
-		StrokeRRect(gtx, r, s/2, Fdp(gtx, 1.5), ColRing)
+		StrokeRRect(gtx, r, s/2, Fdp(gtx, 1.5), p.Ring)
 	}
 	return layout.Dimensions{Size: r.Max}
 }
 
 // Checkbox is the square box: accent filled with a tick when on.
 func Checkbox(gtx layout.Context, on bool) layout.Dimensions {
+	return checkbox(gtx, on, &InstallerPalette)
+}
+
+// Checkbox is the checkbox in the theme's palette.
+func (th *Theme) Checkbox(gtx layout.Context, on bool) layout.Dimensions {
+	return checkbox(gtx, on, th.Colors())
+}
+
+func checkbox(gtx layout.Context, on bool, p *Palette) layout.Dimensions {
 	s := Dp(gtx, 18)
 	r := image.Rect(0, 0, s, s)
 	if on {
-		FillRRect(gtx, r, Dp(gtx, 4), ColAccent)
+		FillRRect(gtx, r, Dp(gtx, 4), p.Accent)
 		m := op.Offset(image.Pt(Dp(gtx, 1), Dp(gtx, 1))).Push(gtx.Ops)
-		Tick(gtx, 16, ColOnAccent)
+		Tick(gtx, 16, p.OnAccent)
 		m.Pop()
 	} else {
-		FillRRect(gtx, r, Dp(gtx, 4), ColField)
-		StrokeRRect(gtx, r, Dp(gtx, 4), Fdp(gtx, 1.5), ColRing)
+		FillRRect(gtx, r, Dp(gtx, 4), p.Field)
+		StrokeRRect(gtx, r, Dp(gtx, 4), Fdp(gtx, 1.5), p.Ring)
 	}
 	return layout.Dimensions{Size: r.Max}
 }
 
 // Card is a selectable card, w inside it with padding pad.
 func (th *Theme) Card(gtx layout.Context, c *widget.Clickable, selected bool, pad layout.Inset, w layout.Widget) layout.Dimensions {
-	b := Box{Radius: 12, Fill: ColSidebar, Border: Over(ColSidebar, ColText, 0.08), BorderWidth: 1}
+	p := th.Colors()
+	b := Box{Radius: 12, Fill: p.Group, Border: Over(p.Group, p.Text, 0.08), BorderWidth: 1}
 	if selected {
-		b.Fill, b.Border, b.BorderWidth = Over(ColWindow, ColAccent, 0.08), ColAccent, 2
-		b.Ring, b.RingWidth = Over(ColWindow, ColAccent, 0.12), 4
+		b.Fill, b.Border, b.BorderWidth = Over(p.Window, p.Accent, 0.08), p.Accent, 2
+		b.Ring, b.RingWidth = Over(p.Window, p.Accent, 0.12), 4
 	}
 	if gtx.Focused(c) {
-		b.Ring, b.RingWidth = FocusRingStrong, 3
+		b.Ring, b.RingWidth = p.Focus, 3
 		if !selected {
-			b.Border = Over(ColWindow, ColAccent, 0.6)
+			b.Border = Over(p.Window, p.Accent, 0.6)
 		}
 	}
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -242,18 +262,19 @@ func (th *Theme) Card(gtx layout.Context, c *widget.Clickable, selected bool, pa
 // ChoiceCard is one card of a choice between cards: a radio marker, a title
 // and a line under it. It fills the width it is given.
 func (th *Theme) ChoiceCard(gtx layout.Context, c *widget.Clickable, on bool, title, sub string) layout.Dimensions {
+	p := th.Colors()
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	return th.Card(gtx, c, on, layout.Inset{Top: 16, Bottom: 16, Left: 18, Right: 18}, func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return layout.Inset{Top: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return Radio(gtx, on) })
+				return layout.Inset{Top: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return th.Radio(gtx, on) })
 			}),
 			layout.Rigid(layout.Spacer{Width: 14}.Layout),
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StCard, ColText, title) }),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StCard, p.Text, title) }),
 					VGap(4),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StSmall, ColDim, sub) }),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StSmall, p.Dim, sub) }),
 				)
 			}),
 		)
@@ -264,10 +285,11 @@ func (th *Theme) ChoiceCard(gtx layout.Context, c *widget.Clickable, on bool, ti
 // under it. A click on the box toggles it; the app flips on when c is
 // clicked. It fills the width it is given.
 func (th *Theme) CheckCard(gtx layout.Context, c *widget.Clickable, on bool, title, sub string) layout.Dimensions {
+	p := th.Colors()
 	gtx.Constraints.Min.X = gtx.Constraints.Max.X
-	b := Box{Radius: 10, Fill: ColSidebar, Border: Over(ColSidebar, ColText, 0.06), BorderWidth: 1}
+	b := Box{Radius: 10, Fill: p.Group, Border: p.GroupBorder, BorderWidth: 1}
 	if gtx.Focused(c) {
-		b.Border, b.Ring, b.RingWidth = ColAccent, FocusRing, 3
+		b.Border, b.Ring, b.RingWidth = p.Accent, p.FocusSoft, 3
 	}
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -275,17 +297,17 @@ func (th *Theme) CheckCard(gtx layout.Context, c *widget.Clickable, on bool, tit
 			return layout.Inset{Top: 14, Bottom: 14, Left: 16, Right: 16}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return layout.Inset{Top: 1}.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return Checkbox(gtx, on) })
+						return layout.Inset{Top: 1}.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return th.Checkbox(gtx, on) })
 					}),
 					layout.Rigid(layout.Spacer{Width: 12}.Layout),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return th.Label(gtx, StBody600, ColText, title)
+								return th.Label(gtx, StBody600, p.Text, title)
 							}),
 							VGap(4),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return th.LabelLines(gtx, StSmall, ColDim, 1.45, sub)
+								return th.LabelLines(gtx, StSmall, p.Dim, 1.45, sub)
 							}),
 						)
 					}),
@@ -298,20 +320,30 @@ func (th *Theme) CheckCard(gtx layout.Context, c *widget.Clickable, on bool, tit
 // Panel is the mocks' dark inset box (a key box, a list), with corner
 // radius dp and w inside it with padding pad.
 func Panel(gtx layout.Context, radius float32, pad layout.Inset, w layout.Widget) layout.Dimensions {
-	b := Box{Radius: radius, Fill: ColSidebar, Border: Over(ColSidebar, ColText, 0.06), BorderWidth: 1}
+	return panel(gtx, radius, pad, w, &InstallerPalette)
+}
+
+// Panel is the inset box in the theme's palette: a group of rows.
+func (th *Theme) Panel(gtx layout.Context, radius float32, pad layout.Inset, w layout.Widget) layout.Dimensions {
+	return panel(gtx, radius, pad, w, th.Colors())
+}
+
+func panel(gtx layout.Context, radius float32, pad layout.Inset, w layout.Widget, p *Palette) layout.Dimensions {
+	b := Box{Radius: radius, Fill: p.Group, Border: p.GroupBorder, BorderWidth: 1}
 	return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions { return pad.Layout(gtx, w) })
 }
 
 // Warning is the red box with an icon and words, the full width.
 func (th *Theme) Warning(gtx layout.Context, txt string) layout.Dimensions {
-	b := Box{Radius: 10, Fill: Over(ColWindow, ColError, 0.1), Border: Over(ColWindow, ColError, 0.35), BorderWidth: 1}
+	p := th.Colors()
+	b := Box{Radius: 10, Fill: Over(p.Window, p.Error, 0.1), Border: Over(p.Window, p.Error, 0.35), BorderWidth: 1}
 	return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		return layout.Inset{Top: 12, Bottom: 12, Left: 16, Right: 16}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return WarnIcon(gtx, 18, ColError) }),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return WarnIcon(gtx, 18, p.Error) }),
 				layout.Rigid(layout.Spacer{Width: 12}.Layout),
-				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StBody, ColErrorText, txt) }),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StBody, p.ErrorText, txt) }),
 			)
 		})
 	})
@@ -319,15 +351,16 @@ func (th *Theme) Warning(gtx layout.Context, txt string) layout.Dimensions {
 
 // Link is a text button in the glow colour, underlined when focused.
 func (th *Theme) Link(gtx layout.Context, c *widget.Clickable, txt string) layout.Dimensions {
-	col := ColGlow
+	p := th.Colors()
+	col := p.Link
 	if c.Hovered() || gtx.Focused(c) {
-		col = ColText
+		col = p.Text
 	}
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		pointer.CursorPointer.Add(gtx.Ops)
 		dims := th.Label(gtx, StSmall, col, txt)
 		if gtx.Focused(c) {
-			FillRect(gtx, image.Rect(0, dims.Size.Y-Dp(gtx, 1), dims.Size.X, dims.Size.Y), ColAccent)
+			FillRect(gtx, image.Rect(0, dims.Size.Y-Dp(gtx, 1), dims.Size.X, dims.Size.Y), p.Accent)
 		}
 		return dims
 	})
@@ -335,13 +368,14 @@ func (th *Theme) Link(gtx layout.Context, c *widget.Clickable, txt string) layou
 
 // Heading is a page title and the paragraph under it.
 func (th *Theme) Heading(title, sub string) layout.Widget {
+	p := th.Colors()
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StTitle, ColText, title) }),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, th.titleStyle(), p.Text, title) }),
 			layout.Rigid(layout.Spacer{Height: 6}.Layout),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, Dp(gtx, 580))
-				return th.LabelLines(gtx, StBody, ColDim, 1.5, sub)
+				return th.LabelLines(gtx, StBody, p.Dim, 1.5, sub)
 			}),
 		)
 	}
@@ -402,12 +436,13 @@ func (r *Row) Hovered() bool { return r.c.Hovered() }
 // not like shown). text gives an entry's name and an optional code drawn on
 // the right.
 func (th *Theme) PickList(gtx layout.Context, l *widget.List, shown []int, sel int, rows []Row, text func(int) (string, string)) layout.Dimensions {
+	p := th.Colors()
 	gtx.Constraints.Min = gtx.Constraints.Max
-	return Panel(gtx, 10, layout.UniformInset(6), func(gtx layout.Context) layout.Dimensions {
+	return th.Panel(gtx, 10, layout.UniformInset(6), func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min = gtx.Constraints.Max
 		if len(shown) == 0 {
 			return layout.Inset{Top: 9, Left: 12}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return th.Label(gtx, StBody, ColDim, i18n.T("Nothing matches."))
+				return th.Label(gtx, StBody, p.Dim, i18n.T("Nothing matches."))
 			})
 		}
 		return l.List.Layout(gtx, len(shown), func(gtx layout.Context, n int) layout.Dimensions {
@@ -419,9 +454,9 @@ func (th *Theme) PickList(gtx layout.Context, l *widget.List, shown []int, sel i
 				return rows[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					m := op.Record(gtx.Ops)
 					dims := layout.Inset{Top: 9, Bottom: 9, Left: 12, Right: 12}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						fg, st, cc := ColText2, StBody, ColDim
+						fg, st, cc := p.Text2, StBody, p.Dim
 						if on {
-							fg, st, cc = ColOnAccent, StBody600, ColOnAccent
+							fg, st, cc = p.OnAccent, StBody600, p.OnAccent
 						}
 						return layout.Flex{Spacing: layout.SpaceBetween, Alignment: layout.Middle}.Layout(gtx,
 							layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -441,9 +476,9 @@ func (th *Theme) PickList(gtx layout.Context, l *widget.List, shown []int, sel i
 					c := m.Stop()
 					switch {
 					case on:
-						FillRRect(gtx, image.Rectangle{Max: dims.Size}, Dp(gtx, 6), ColAccent)
+						FillRRect(gtx, image.Rectangle{Max: dims.Size}, Dp(gtx, 6), p.Accent)
 					case rows[i].Hovered():
-						FillRRect(gtx, image.Rectangle{Max: dims.Size}, Dp(gtx, 6), Over(ColSidebar, ColText, 0.05))
+						FillRRect(gtx, image.Rectangle{Max: dims.Size}, Dp(gtx, 6), p.Hover)
 					}
 					c.Add(gtx.Ops)
 					return dims
@@ -504,11 +539,12 @@ func MoveSelection(shown []int, sel int, down bool, l *widget.List) int {
 // keys in order ("Super", "Shift", "E"). A key may list alternatives joined
 // by " / " ("D / Space"); they are drawn as caps joined by "/".
 func (th *Theme) KeyCaps(gtx layout.Context, keys []string) layout.Dimensions {
+	p := th.Colors()
 	var kids []layout.FlexChild
 	sep := func(s string) layout.FlexChild {
 		return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: 6, Right: 6}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return th.Label(gtx, StSmall, ColDim, s)
+				return th.Label(gtx, StSmall, p.Dim, s)
 			})
 		})
 	}
@@ -528,13 +564,14 @@ func (th *Theme) KeyCaps(gtx layout.Context, keys []string) layout.Dimensions {
 
 // keyCap is one key: its name in the mono face on the key box colour.
 func (th *Theme) keyCap(gtx layout.Context, name string) layout.Dimensions {
-	b := Box{Radius: 6, Fill: ColKeyBox, Border: Over(ColKeyBox, ColText, 0.16), BorderWidth: 1}
+	p := th.Colors()
+	b := Box{Radius: 6, Fill: p.KeyBox, Border: Over(p.KeyBox, p.Text, 0.16), BorderWidth: 1}
 	gtx.Constraints.Min = image.Point{}
 	return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min.X = Dp(gtx, 30)
 		return layout.Inset{Top: 5, Bottom: 5, Left: 10, Right: 10}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return th.Label(gtx, StMono, ColText, name)
+				return th.Label(gtx, StMono, p.Text, name)
 			})
 		})
 	})

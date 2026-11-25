@@ -325,8 +325,9 @@ func (th *Theme) Footer(gtx layout.Context, leading []Action, middle layout.Widg
 		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
 	})
 	c := m.Stop()
-	FillRect(gtx, image.Rectangle{Max: dims.Size}, ColFooter)
-	FillRect(gtx, image.Rect(0, 0, dims.Size.X, Dp(gtx, 1)), Over(ColFooter, ColText, 0.06))
+	p := th.Colors()
+	FillRect(gtx, image.Rectangle{Max: dims.Size}, p.Footer)
+	FillRect(gtx, image.Rect(0, 0, dims.Size.X, Dp(gtx, 1)), Over(p.Footer, p.Text, 0.06))
 	c.Add(gtx.Ops)
 	return dims
 }
@@ -386,9 +387,10 @@ func (th *Theme) Confirm(gtx layout.Context, title, body string, actions []Actio
 // ConfirmForm is Confirm with a form (fields, a list) between the body and
 // the buttons. The box is wider when there is a form.
 func (th *Theme) ConfirmForm(gtx layout.Context, title, body string, form layout.Widget, actions []Action) layout.Dimensions {
+	p := th.Colors()
 	size := gtx.Constraints.Max
 	r := image.Rectangle{Max: size}
-	FillRect(gtx, r, Alpha(ColKeyBox, 0.72))
+	FillRect(gtx, r, p.Shade)
 	area := clip.Rect(r).Push(gtx.Ops)
 	event.Op(gtx.Ops, &th.scrim)
 	for {
@@ -405,14 +407,14 @@ func (th *Theme) ConfirmForm(gtx layout.Context, title, body string, form layout
 		}
 		w := min(Dp(gtx, width), size.X-Dp(gtx, 48))
 		gtx.Constraints = layout.Constraints{Min: image.Pt(w, 0), Max: image.Pt(w, size.Y)}
-		b := Box{Radius: 14, Fill: ColWindow, Border: Over(ColWindow, ColText, 0.12), BorderWidth: 1}
+		b := Box{Radius: p.RadiusM, Fill: p.Window, Border: Over(p.Window, p.Text, 0.12), BorderWidth: 1}
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.UniformInset(24).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = gtx.Constraints.Max.X
 				kids := []layout.FlexChild{
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, StTitle, ColText, title) }),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.Label(gtx, th.titleStyle(), p.Text, title) }),
 					VGap(10),
-					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.LabelLines(gtx, StBody, ColText2, 1.5, body) }),
+					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return th.LabelLines(gtx, StBody, p.Text2, 1.5, body) }),
 				}
 				if form != nil {
 					kids = append(kids, VGap(18), layout.Rigid(form))
