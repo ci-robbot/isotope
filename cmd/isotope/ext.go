@@ -829,7 +829,7 @@ func (kairosBackend) Dissect(path string) (ExtImage, error) {
 		return ExtImage{}, err
 	}
 	var meta struct {
-		SysextRelease map[string]string `json:"sysextRelease"`
+		SysextRelease releaseFields `json:"sysextRelease"`
 	}
 	if err := json.Unmarshal(js, &meta); err != nil {
 		return ExtImage{}, fmt.Errorf("reading systemd-dissect's description of %s: %w", path, err)
@@ -843,6 +843,32 @@ func (kairosBackend) Dissect(path string) (ExtImage, error) {
 		return ExtImage{}, err
 	}
 	return ExtImage{Release: meta.SysextRelease, Entries: entries}, nil
+}
+
+// releaseFields is the extension-release as systemd-dissect --json reports
+// it. systemd up to 261 wrote an object ({"ID":"_any"}); 262 writes a list of
+// KEY=VALUE strings (["ID=_any"]). Both read into the same map. A list item
+// without "=" is skipped, as os-release(5) does with a line it cannot parse.
+type releaseFields map[string]string
+
+func (r *releaseFields) UnmarshalJSON(b []byte) error {
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err == nil {
+		*r = m
+		return nil
+	}
+	var list []string
+	if err := json.Unmarshal(b, &list); err != nil {
+		return fmt.Errorf("sysextRelease is neither an object nor a list of KEY=VALUE strings: %s", b)
+	}
+	m = make(map[string]string, len(list))
+	for _, kv := range list {
+		if k, v, ok := strings.Cut(kv, "="); ok && k != "" {
+			m[k] = v
+		}
+	}
+	*r = m
+	return nil
 }
 
 // streamCommand runs name with stdout and stderr merged into one pipe and

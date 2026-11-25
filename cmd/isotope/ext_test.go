@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -649,7 +650,7 @@ func TestKairosBackendExtArgv(t *testing.T) {
 	script := `#!/bin/sh
 echo "$@" >> ` + filepath.Join(dir, "log") + `
 case "$*" in
-  *--json=short*) echo '{"name":"t.raw","sysextRelease":{"ID":"_any","ARCHITECTURE":"x86-64"}}' ;;
+  *--json=short*) echo '{"name":"t.raw","sysextRelease":["ID=_any","ARCHITECTURE=x86-64"]}' ;;
   *--mtree*) printf 'usr/ type=dir mode=0755\nusr/bin/t type=file mode=0755 size=2 sha256sum=ab\n' ;;
 esac
 `
@@ -665,6 +666,31 @@ esac
 	b, _ := os.ReadFile(filepath.Join(dir, "log"))
 	if got := string(b); got != "--no-pager --json=short /var/lib/kairos/extensions/t.raw\n--no-pager --mtree --mtree-hash=yes /var/lib/kairos/extensions/t.raw\n" {
 		t.Fatalf("dissect calls %q", got)
+	}
+}
+
+// systemd 262 lists the extension-release as KEY=VALUE strings; 261 and
+// older wrote an object. Both must read the same, or every install is refused.
+func TestReleaseFieldsBothShapes(t *testing.T) {
+	for name, js := range map[string]string{
+		"object (systemd 261)": `{"sysextRelease":{"ID":"_any","ARCHITECTURE":"x86-64"}}`,
+		"list (systemd 262)":   `{"sysextRelease":["ID=_any","ARCHITECTURE=x86-64","junk","=x"]}`,
+	} {
+		var meta struct {
+			SysextRelease releaseFields `json:"sysextRelease"`
+		}
+		if err := json.Unmarshal([]byte(js), &meta); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(meta.SysextRelease) != 2 || meta.SysextRelease["ID"] != "_any" || meta.SysextRelease["ARCHITECTURE"] != "x86-64" {
+			t.Errorf("%s: %v", name, meta.SysextRelease)
+		}
+	}
+	var meta struct {
+		SysextRelease releaseFields `json:"sysextRelease"`
+	}
+	if err := json.Unmarshal([]byte(`{"sysextRelease":7}`), &meta); err == nil {
+		t.Error("a number was accepted as the extension-release")
 	}
 }
 
