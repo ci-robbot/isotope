@@ -219,53 +219,38 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 	v := firewallViewOf(in)
 	off := !v.Enabled || working != ""
 	var c col
-	c.add(u.caps(i18n.T("Firewall")))
+	var add []guikit.Action
+	if v.CanAdd {
+		add = append(add, guikit.Action{Click: &p.fwAdd, Kind: guikit.ButtonSecondary, Label: i18n.T("Allow incoming…"), Disabled: off})
+	}
+	c.add(u.section(i18n.T("Firewall"), add...))
 	c.gap(10)
-	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-		var rows col
-		var right layout.Widget
-		switch {
-		case v.Toggle != "":
-			right = u.buttons(guikit.Action{Click: &p.fwToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle, Disabled: off})
-		case v.Reset != "":
-			right = u.buttons(guikit.Action{Click: &p.fwReset, Kind: guikit.ButtonSecondary, Label: v.Reset, Disabled: off})
-		}
-		rows.add(u.row(i18n.T("Firewall"), v.Sub, right))
-		if !v.CanAdd {
-			// Settings that cannot be read: the ports that can still be
-			// read, without buttons.
-			if v.Empty != "" {
-				rows.gap(8)
-				rows.add(u.dim(v.Empty))
-			}
-			for _, r := range v.Rows {
-				rows.gap(8)
-				rows.add(u.row(r.Title, r.Sub, nil))
-			}
-			if v.Hint != "" {
-				rows.gap(8)
-				rows.add(u.dim(v.Hint))
-			}
-			return rows.layout(gtx)
-		}
-		for _, r := range v.Rows {
-			rows.gap(8)
+	var top []guikit.Action
+	switch {
+	case v.Toggle != "":
+		top = append(top, guikit.Action{Click: &p.fwToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle, Disabled: off})
+	case v.Reset != "":
+		top = append(top, guikit.Action{Click: &p.fwReset, Kind: guikit.ButtonSecondary, Label: v.Reset, Disabled: off})
+	}
+	rows := []layout.Widget{u.actionRow("fw", i18n.T("Firewall"), v.Sub, nil, top...)}
+	for _, r := range v.Rows {
+		var as []guikit.Action
+		// Settings that cannot be read list the ports that can still be
+		// read, without buttons.
+		if v.CanAdd {
 			k := p.fwClicksFor(r.Rule)
-			rows.add(u.row(r.Title, r.Sub, u.buttons(
-				guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove"), Disabled: off})))
+			as = append(as, guikit.Action{Click: &k.remove, Kind: guikit.ButtonSecondary, Label: i18n.T("Remove"), Disabled: off})
 		}
-		if v.Empty != "" {
-			rows.gap(8)
-			rows.add(u.dim(v.Empty))
-		}
-		if v.Hint != "" {
-			rows.gap(8)
-			rows.add(u.dim(v.Hint))
-		}
-		rows.gap(8)
-		rows.add(u.buttons(guikit.Action{Click: &p.fwAdd, Kind: guikit.ButtonSecondary, Label: i18n.T("Allow incoming…"), Disabled: off}))
-		return rows.layout(gtx)
-	}))
+		rows = append(rows, u.actionRow("fw:"+r.Title+"|"+r.Sub, r.Title, r.Sub, nil, as...))
+	}
+	if v.Empty != "" {
+		rows = append(rows, u.note(v.Empty))
+	}
+	c.add(u.group(rows...))
+	if v.Hint != "" {
+		c.gap(8)
+		c.add(u.dim(v.Hint))
+	}
 	return c.layout(gtx)
 }
 

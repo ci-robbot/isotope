@@ -308,34 +308,28 @@ func (p *networkPage) remoteSection(gtx layout.Context, in rdInput, working stri
 	var c col
 	c.add(u.caps(i18n.T("Remote desktop")))
 	c.gap(10)
-	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-		var rows col
-		var right layout.Widget
-		switch {
-		case v.Toggle != "":
-			kind := guikit.ButtonSecondary
-			right = u.buttons(guikit.Action{Click: &p.rdk.toggle, Kind: kind, Label: v.Toggle, Disabled: off})
-		case v.Extension:
-			right = u.buttons(guikit.Action{Click: &p.rdk.extensions, Kind: guikit.ButtonSecondary, Label: i18n.T("Open Extensions")})
-		}
-		rows.add(u.row(i18n.T("Remote desktop"), v.Sub, right))
-		for _, r := range v.Rows {
-			rows.gap(8)
-			rows.add(u.row(r[0], r[1], nil))
-		}
-		if v.Warn != "" {
-			rows.gap(10)
-			rows.add(u.notice(v.Warn))
-		}
-		if v.Hint != "" {
-			rows.gap(8)
-			rows.add(u.dim(v.Hint))
-		}
-		if v.Password != "" {
-			rows.gap(8)
-			rows.add(u.buttons(guikit.Action{Click: &p.rdk.password, Kind: guikit.ButtonSecondary, Label: v.Password, Disabled: off}))
-		}
-		return rows.layout(gtx)
-	}))
+	var as []guikit.Action
+	switch {
+	case v.Toggle != "":
+		as = append(as, guikit.Action{Click: &p.rdk.toggle, Kind: guikit.ButtonSecondary, Label: v.Toggle, Disabled: off})
+	case v.Extension:
+		as = append(as, guikit.Action{Click: &p.rdk.extensions, Kind: guikit.ButtonSecondary, Label: i18n.T("Open Extensions")})
+	}
+	if v.Password != "" {
+		as = append(as, guikit.Action{Click: &p.rdk.password, Kind: guikit.ButtonSecondary, Label: v.Password, Disabled: off})
+	}
+	rows := []layout.Widget{u.actionRow("rd", i18n.T("Remote desktop"), v.Sub, nil, as...)}
+	for _, r := range v.Rows {
+		rows = append(rows, u.actionRow("rd:"+r[0], r[0], r[1], nil))
+	}
+	c.add(u.group(rows...))
+	if v.Warn != "" {
+		c.gap(10)
+		c.add(u.notice(v.Warn))
+	}
+	if v.Hint != "" {
+		c.gap(8)
+		c.add(u.dim(v.Hint))
+	}
 	return c.layout(gtx)
 }

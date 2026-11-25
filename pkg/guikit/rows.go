@@ -40,7 +40,12 @@ func (th *Theme) Group(gtx layout.Context, rows ...layout.Widget) layout.Dimensi
 				return layout.Inset{Top: 12, Bottom: 12, Left: 16, Right: 16}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Min.X = gtx.Constraints.Max.X
 					gtx.Constraints.Min.Y = Dp(gtx, 34)
-					return layout.W.Layout(gtx, r)
+					// W keeps the minimum height: the row is centred in
+					// its 34 dp only when it does not take them.
+					return layout.W.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						gtx.Constraints.Min.Y = 0
+						return r(gtx)
+					})
 				})
 			}))
 		}

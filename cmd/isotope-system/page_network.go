@@ -548,74 +548,61 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(24)
 			c.add(u.caps(i18n.T("Devices")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, d := range st.Devices {
-					if i > 0 {
-						rows.gap(8)
-					}
-					sub := i18n.T(d.State)
-					if d.Connection != "" {
-						sub += " · " + d.Connection
-					}
-					if d.Address != "" {
-						sub += " · " + d.Address
-					}
-					rows.add(u.row(fmt.Sprintf("%s (%s)", i18n.T(d.Kind), d.Iface), sub, nil))
+			var rows []layout.Widget
+			for _, d := range st.Devices {
+				sub := i18n.T(d.State)
+				if d.Connection != "" {
+					sub += " · " + d.Connection
 				}
-				return rows.layout(gtx)
-			}))
+				if d.Address != "" {
+					sub += " · " + d.Address
+				}
+				rows = append(rows, u.actionRow("dev:"+d.Iface, fmt.Sprintf("%s (%s)", i18n.T(d.Kind), d.Iface), sub, nil))
+			}
+			c.add(u.group(rows...))
 		}
 		if len(st.Modems) > 0 {
 			c.gap(26)
 			c.add(u.caps(i18n.T("Mobile broadband")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, m := range st.Modems {
-					if i > 0 {
-						rows.gap(8)
-					}
-					k := p.modemClicksFor(m.ID)
-					label := i18n.T("Connect")
-					if m.Connected {
-						label = i18n.T("Disconnect")
-					}
-					rows.add(u.row(modemTitle(m), modemSub(m), u.buttons(
-						guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: label, Disabled: working != "" || !(m.Connected || m.Ready)},
-						guikit.Action{Click: &k.apn, Kind: guikit.ButtonGhost, Label: i18n.T("APN…"), Disabled: working != ""},
-					)))
+			var rows []layout.Widget
+			for _, m := range st.Modems {
+				k := p.modemClicksFor(m.ID)
+				label := i18n.T("Connect")
+				if m.Connected {
+					label = i18n.T("Disconnect")
 				}
-				return rows.layout(gtx)
-			}))
+				rows = append(rows, u.actionRow("modem:"+m.ID, modemTitle(m), modemSub(m), nil,
+					guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: label, Disabled: working != "" || !(m.Connected || m.Ready)},
+					guikit.Action{Click: &k.apn, Kind: guikit.ButtonSecondary, Label: i18n.T("APN…"), Disabled: working != ""},
+				))
+			}
+			c.add(u.group(rows...))
 		}
 		c.gap(26)
-		c.add(u.caps("VPN"))
+		c.add(u.section("VPN",
+			guikit.Action{Click: &p.importWG, Kind: guikit.ButtonSecondary, Label: i18n.T("Import WireGuard…"), Disabled: working != ""},
+			guikit.Action{Click: &p.addOC, Kind: guikit.ButtonSecondary, Label: i18n.T("Add company VPN…"), Disabled: working != ""},
+		))
 		c.gap(10)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
+		{
+			var rows []layout.Widget
 			for _, v := range vpns {
 				k := p.vpnClicksFor(v.UUID)
 				label, sub := i18n.T("Connect"), v.Kind
 				if v.Active {
 					label, sub = i18n.T("Disconnect"), i18n.Tf("%s · connected", v.Kind)
 				}
-				rows.add(u.row(v.ID, sub, u.buttons(
+				rows = append(rows, u.actionRow("vpn:"+v.UUID, v.ID, sub, nil,
 					guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: label, Disabled: working != ""},
-					guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove"), Disabled: working != ""},
-				)))
-				rows.gap(8)
+					guikit.Action{Click: &k.remove, Kind: guikit.ButtonDanger, Label: i18n.T("Remove"), Disabled: working != ""},
+				))
 			}
 			if len(vpns) == 0 {
-				rows.add(u.dim(i18n.T("No VPN is set up.")))
-				rows.gap(8)
+				rows = append(rows, u.note(i18n.T("No VPN is set up.")))
 			}
-			rows.add(u.buttons(
-				guikit.Action{Click: &p.importWG, Kind: guikit.ButtonSecondary, Label: i18n.T("Import WireGuard…"), Disabled: working != ""},
-				guikit.Action{Click: &p.addOC, Kind: guikit.ButtonSecondary, Label: i18n.T("Add company VPN…"), Disabled: working != ""},
-			))
-			return rows.layout(gtx)
-		}))
+			c.add(u.group(rows...))
+		}
 		if u.hooks.RemoteDesktop != nil {
 			c.gap(26)
 			c.add(func(gtx layout.Context) layout.Dimensions { return p.remoteSection(gtx, rd, working) })
@@ -626,7 +613,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.gap(26)
-		c.add(u.row("Wi-Fi", map[bool]string{true: i18n.T("On"), false: i18n.T("Off")}[st.WifiOn], func(gtx layout.Context) layout.Dimensions {
+		{
 			label := i18n.T("Turn on")
 			if st.WifiOn {
 				label = i18n.T("Turn off")
@@ -634,15 +621,15 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			as := []guikit.Action{{Click: &p.wifi, Kind: guikit.ButtonSecondary, Label: label}}
 			for _, d := range st.Devices {
 				if d.Kind == "Wi-Fi" && d.State == "Connected" {
-					as = append(as, guikit.Action{Click: &p.disconnect, Kind: guikit.ButtonGhost, Label: i18n.T("Disconnect")})
+					as = append(as, guikit.Action{Click: &p.disconnect, Kind: guikit.ButtonSecondary, Label: i18n.T("Disconnect")})
 					break
 				}
 			}
-			return u.buttons(as...)(gtx)
-		}))
+			c.add(u.group(u.actionRow("wifi", "Wi-Fi", map[bool]string{true: i18n.T("On"), false: i18n.T("Off")}[st.WifiOn], nil, as...)))
+		}
 		if chosen != "" {
 			c.gap(14)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
+			c.add(u.group(func(gtx layout.Context) layout.Dimensions {
 				return u.Labelled(gtx, i18n.Tf("Password for %s", chosen), p.password, "", func(gtx layout.Context) layout.Dimensions {
 					return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
@@ -665,50 +652,41 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 			case loading && len(aps) == 0:
 				c.add(u.spinnerLine(i18n.T("Looking for networks…")))
 			case len(aps) == 0:
-				c.add(u.dim(i18n.T("No network in range.")))
+				c.add(u.group(u.note(i18n.T("No network in range."))))
 			default:
-				c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-					var rows col
-					for i, a := range aps {
-						if i > 0 {
-							rows.gap(8)
-						}
-						k := p.clicksFor(a.SSID)
-						sub := i18n.Tf("Signal %d%%", a.Strength)
-						if a.Secured {
-							sub += " · " + i18n.T("secured")
-						}
-						if contains(st.Saved, a.SSID) {
-							sub += " · " + i18n.T("saved")
-						}
-						title := a.SSID
-						var right layout.Widget
-						if st.Connected && a.SSID == st.Name {
-							title = i18n.Tf("%s (connected)", title)
-						} else {
-							right = u.buttons(guikit.Action{Click: &k.connect, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect"), Disabled: working != ""})
-						}
-						rows.add(u.row(title, sub, right))
+				var rows []layout.Widget
+				for _, a := range aps {
+					k := p.clicksFor(a.SSID)
+					sub := i18n.Tf("Signal %d%%", a.Strength)
+					if a.Secured {
+						sub += " · " + i18n.T("secured")
 					}
-					return rows.layout(gtx)
-				}))
+					if contains(st.Saved, a.SSID) {
+						sub += " · " + i18n.T("saved")
+					}
+					title := a.SSID
+					var as []guikit.Action
+					if st.Connected && a.SSID == st.Name {
+						title = i18n.Tf("%s (connected)", title)
+					} else {
+						as = append(as, guikit.Action{Click: &k.connect, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect"), Disabled: working != ""})
+					}
+					rows = append(rows, u.actionRow("ap:"+a.SSID, title, sub, nil, as...))
+				}
+				c.add(u.group(rows...))
 			}
 		}
 		if len(st.Saved) > 0 {
 			c.gap(26)
 			c.add(u.caps(i18n.T("Saved networks")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, s := range st.Saved {
-					if i > 0 {
-						rows.gap(8)
-					}
-					k := p.clicksFor(s)
-					rows.add(u.row(s, "", u.buttons(guikit.Action{Click: &k.forget, Kind: guikit.ButtonGhost, Label: i18n.T("Forget"), Disabled: working != ""})))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, s := range st.Saved {
+				k := p.clicksFor(s)
+				rows = append(rows, u.actionRow("saved:"+s, s, "", nil,
+					guikit.Action{Click: &k.forget, Kind: guikit.ButtonSecondary, Label: i18n.T("Forget"), Disabled: working != ""}))
+			}
+			c.add(u.group(rows...))
 		}
 		return c.layout(gtx)
 	})

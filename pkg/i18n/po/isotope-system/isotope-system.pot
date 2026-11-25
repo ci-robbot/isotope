@@ -3557,20 +3557,20 @@ msgid "APN…"
 msgstr ""
 
 #: cmd/isotope-system/page_network.go
+msgid "Import WireGuard…"
+msgstr ""
+
+#: cmd/isotope-system/page_network.go
+msgid "Add company VPN…"
+msgstr ""
+
+#: cmd/isotope-system/page_network.go
 #, go-format
 msgid "%s · connected"
 msgstr ""
 
 #: cmd/isotope-system/page_network.go
 msgid "No VPN is set up."
-msgstr ""
-
-#: cmd/isotope-system/page_network.go
-msgid "Import WireGuard…"
-msgstr ""
-
-#: cmd/isotope-system/page_network.go
-msgid "Add company VPN…"
 msgstr ""
 
 #: cmd/isotope-system/page_network.go
