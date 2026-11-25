@@ -14,7 +14,7 @@ Open the **Browse** tab. Then do one of these:
 
 - Type a name or a word in **Search Flathub**.
 - Choose a category, for example **Office** or **Games**.
-- Look at **ISOTOPE PICKS**, the apps that Isotope Welcome offers.
+- Look at **Isotope picks**, the apps that Isotope Welcome offers.
 
 Click an app to see its details.
 
@@ -42,7 +42,7 @@ To update now:
 1. Open the **Updates** tab.
 2. Click **Update all**.
 
-Some updates show under **NEEDS YOUR OK**. The new version of such an app asks for more than the version you have, for example access to your files or to the network. Automatic updates do not install it. Click **Review…** to see what it asks for. Then click **Update**, or click **Cancel** to keep the version you have.
+Some updates show under **Needs your OK**. The new version of such an app asks for more than the version you have, for example access to your files or to the network. Automatic updates do not install it. Click **Review…** to see what it asks for. Then click **Update**, or click **Cancel** to keep the version you have.
 
 A running app gets its update when you close it and open it again.
 

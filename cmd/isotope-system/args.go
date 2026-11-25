@@ -25,9 +25,6 @@ const (
 // Pages is the sidebar, in order.
 var Pages = []Page{PageApps, PageUpdates, PageDesktop, PageExtensions, PageBackup, PageSecurity, PageNetwork, PageBluetooth, PagePrinters, PageUsers, PageDisks, PageCompat, PageAbout}
 
-// later are the pages listed but not there yet: none today.
-var later = map[Page]bool{}
-
 // Title is the page's name in the sidebar and its heading.
 func (p Page) Title() string {
 	switch p {

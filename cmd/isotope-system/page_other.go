@@ -173,7 +173,7 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 					rc.gap(8)
 				}
 				rc.add(u.row(r[0], "", func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StBody, guikit.ColText2, r[1])
+					return u.Label(gtx, guikit.StBody, u.Colors().Text2, r[1])
 				}))
 			}
 			return rc.layout(gtx)

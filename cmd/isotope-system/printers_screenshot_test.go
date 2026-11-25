@@ -14,6 +14,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+
+	"github.com/kairos-community/isotope/pkg/guikit"
 )
 
 // The Printers page's screenshots, compared with the PNGs in testdata/
@@ -98,7 +100,7 @@ func TestPrintersScreenshots(t *testing.T) {
 			u := printersShot(t, true, full())
 			r := printerRows([]Printer{hallQueue}, true)[0]
 			u.ask("Remove "+r.Title+"?", "The printer is removed for every user of this computer, with the jobs waiting for it. It can be added again from the printers found below.",
-				choice{Label: "Cancel"}, choice{Label: "Remove"})
+				choice{Label: "Cancel", Kind: guikit.ButtonSecondary}, choice{Label: "Remove", Kind: guikit.ButtonDanger})
 			return u
 		}},
 	}

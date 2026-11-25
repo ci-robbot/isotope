@@ -8,9 +8,9 @@ Open the page: press [[Super+Escape]] and choose **Extensions**.
 
 ## Install an extension
 
-1. Under **AVAILABLE**, find the extension. Type a word in the search field to find it faster.
+1. Under **Available**, find the extension. Type a word in the search field to find it faster.
 2. Click **Install**.
-3. Wait until the page shows it under **INSTALLED**.
+3. Wait until the page shows it under **Installed**.
 
 Isotope turns the extension on at once and at every start. If the extension has a service, Isotope starts it.
 
@@ -18,7 +18,7 @@ Isotope compares the files of the extension with the system before it turns it o
 
 ## Turn an extension off, or remove it
 
-Under **INSTALLED**:
+Under **Installed**:
 
 - Click **Turn off** to stop the extension. It stays on the disk. Click **Turn on** to use it again.
 - Click **Remove** to turn it off and delete it. You can install it again from the catalog.

@@ -8,13 +8,16 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"gioui.org/op"
 	"gioui.org/unit"
 	"github.com/godbus/dbus/v5"
 
+	"github.com/kairos-community/isotope/pkg/cosmictheme"
 	"github.com/kairos-community/isotope/pkg/guikit"
 	"github.com/kairos-community/isotope/pkg/i18n"
 )
@@ -110,8 +113,22 @@ func main() {
 
 	win := new(app.Window)
 	hooks.Invalidate = win.Invalidate
-	win.Option(app.Title("Isotope System"), app.Size(unit.Dp(1100), unit.Dp(720)), app.Decorated(true))
+	hooks.Window = func(a system.Action) { win.Perform(a) }
+	// COSMIC asks clients to draw their own title bar: the window draws a
+	// COSMIC header bar there. Elsewhere the window manager draws its own
+	// bar (or none, as for every window).
+	cosmic := isCosmic(os.Getenv)
+	ww, wh := windowSize(cosmic)
+	win.Option(app.Title("Isotope System"), app.Size(unit.Dp(ww), unit.Dp(wh)),
+		app.MinSize(unit.Dp(minWindowW), unit.Dp(minWindowH)), app.Decorated(!cosmic))
 	u := newUI(sys, guikit.NewShaper(), hooks, page)
+	home, _ := os.UserHomeDir()
+	if cosmic {
+		u.bar = &guikit.HeaderBar{Title: u.page.Title(), Left: guikit.ControlsLeftHere(),
+			Height: guikit.HeaderHeight(os.Getenv, home, os.ReadFile)}
+	}
+	followTheme(paletteSource{cosmic: cosmic, dirs: cosmictheme.Dirs(os.Getenv, home), read: os.ReadFile,
+		scheme: portalScheme(session)}, session, u.SetPalette)
 	if tab != "" {
 		u.showTab(page, tab)
 	}
@@ -134,6 +151,11 @@ func main() {
 					os.Exit(1)
 				}
 				os.Exit(0)
+			case app.ConfigEvent:
+				if u.bar != nil {
+					u.bar.Maximized = e.Config.Mode == app.Maximized
+					win.Invalidate()
+				}
 			case app.FrameEvent:
 				gtx := app.NewContext(&ops, e)
 				u.Layout(gtx)
@@ -142,4 +164,26 @@ func main() {
 		}
 	}()
 	app.Main()
+}
+
+// The window's opening size in dp, cut to the screen, and its minimum.
+const (
+	defWindowW, defWindowH = 960, 680
+	minWindowW, minWindowH = 640, 480
+)
+
+// windowSize is the opening size: defWindowW x defWindowH, cut to what
+// the screen leaves free. On COSMIC the screen is read from cosmic-randr;
+// elsewhere the window manager places and cuts the window itself.
+func windowSize(cosmic bool) (int, int) {
+	w, h, scale := 0, 0, 1.0
+	if cosmic {
+		if out, err := exec.Command("cosmic-randr", "list", "--kdl").Output(); err == nil {
+			if outs, err := guikit.ParseCosmicOutputs(out); err == nil {
+				w, h, scale = guikit.CosmicScreen(outs)
+			}
+		}
+	}
+	ww, wh := guikit.FitWindowSize(w, h, scale, defWindowW, defWindowH)
+	return max(ww, minWindowW), max(wh, minWindowH)
 }

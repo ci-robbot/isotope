@@ -389,7 +389,7 @@ func (p *updatesPage) firmwareSection() layout.Widget {
 	u.mu.Unlock()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("FIRMWARE")))
+		c.add(u.caps(i18n.T("Firmware")))
 		c.gap(4)
 		c.add(u.dim(i18n.T("Firmware of this computer and its devices, from the Linux Vendor Firmware Service (LVFS).")))
 		c.gap(10)

@@ -8,7 +8,7 @@ Open the page: press [[Super+Escape]], choose **System**, then choose **Desktop 
 
 Isotope has four desktops: COSMIC, niri, Sway and i3. See [Desktops, the Isotope menu and keys](desktops.md).
 
-1. Under **DESKTOP**, find the desktop that you want.
+1. Under **Desktop**, find the desktop that you want.
 2. Click **Switch…**, then confirm.
 3. Wait until the installation is done.
 4. Restart the computer.
@@ -30,7 +30,7 @@ Each desktop has two images:
 
 If you installed the virtual machine image on a real computer, the screen is drawn in software and can be slow. A notification then tells you to change to the hardware image.
 
-1. Under **IMAGE**, click **Switch to the hardware image** or **Switch to the virtual machine image**.
+1. Under **Image**, click **Switch to the hardware image** or **Switch to the virtual machine image**.
 2. Confirm, then restart when the installation is done.
 
 In a terminal, use `isotope switch --gpu full` for the hardware image, or `isotope switch --gpu vm`.

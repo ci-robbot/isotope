@@ -11,13 +11,13 @@ Every user can connect to networks and VPNs. Only an administrator can change th
 To connect to a Wi-Fi network:
 
 1. Make sure that Wi-Fi is on. If it is off, click **Turn on** next to **Wi-Fi**.
-2. Under **NETWORKS IN RANGE**, find the network. Click **Refresh** if it is not there.
+2. Under **Networks in range**, find the network. Click **Refresh** if it is not there.
 3. Click **Connect**.
 4. Type the password of the network. A Wi-Fi password has at least 8 characters.
 
 The computer then joins this network by itself when it is in range.
 
-To stop that, find the network under **SAVED NETWORKS** and click **Forget**. Isotope deletes its password.
+To stop that, find the network under **Saved networks** and click **Forget**. Isotope deletes its password.
 
 You can also connect from the Isotope menu: press [[Super+Escape]] and choose **Wi-Fi**. On Sway and i3, [[Super+N]] opens the Wi-Fi menu.
 
@@ -58,11 +58,11 @@ With remote desktop, a person at another computer can see and control your deskt
 
 Remote desktop is off until you turn it on. It stays on until you turn it off or log out. While it is on, the firewall allows port 5900 (TCP). Every connection is encrypted.
 
-First, install the `remote-desktop` extension. Only an administrator can do this. Open the **Extensions** page of Isotope System, or click **Open Extensions** in the **REMOTE DESKTOP** section. See [Extensions](extensions.md).
+First, install the `remote-desktop` extension. Only an administrator can do this. Open the **Extensions** page of Isotope System, or click **Open Extensions** in the **Remote desktop** section. See [Extensions](extensions.md).
 
 To turn it on:
 
-1. In the **REMOTE DESKTOP** section, click **Turn on**.
+1. In the **Remote desktop** section, click **Turn on**.
 2. The first time, type a remote desktop password twice. Use a new password, not your login password. It has 8 to 64 characters.
 3. Click **Save and turn on**.
 
@@ -90,7 +90,7 @@ By default, the firewall allows SSH (port 22, TCP). You can remove it.
 
 Do this when a program on this computer must accept connections from the network, for example a web server or a game server.
 
-1. In the **FIREWALL** section, click **Allow incoming…**.
+1. In the **Firewall** section, click **Allow incoming…**.
 2. Type the **Port**, a number from 1 to 65535. For example, 8080 for a web server.
 3. Choose the **Protocol**: TCP or UDP.
 4. Optional: type a **Description**, for example the name of the program.
@@ -125,7 +125,7 @@ To use a 4G or 5G modem, first install the `modemmanager` extension. Only an adm
 
 In a terminal, use `isotope ext install modemmanager`.
 
-When the computer has a modem, the **Network** page shows the **MOBILE BROADBAND** section:
+When the computer has a modem, the **Network** page shows the **Mobile broadband** section:
 
 1. Click **Connect**.
 2. If the modem does not connect, click **APN…** and type the access point name (APN) of your mobile operator. Leave it empty to look it up for the network of the modem.

@@ -513,7 +513,7 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.gap(24)
-		c.add(u.caps(i18n.T("DEVICES")))
+		c.add(u.caps(i18n.T("Devices")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col

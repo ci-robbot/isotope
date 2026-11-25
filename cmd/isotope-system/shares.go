@@ -355,7 +355,7 @@ func (p *disksPage) sharesSection() layout.Widget {
 	off := working != ""
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("NETWORK SHARES")))
+		c.add(u.caps(i18n.T("Network shares")))
 		c.gap(10)
 		if u.hooks.Daemon == nil {
 			c.add(u.errorBox(i18n.T("The update service (isotope-updated), which mounts network shares, is not available.")))
@@ -617,10 +617,10 @@ func checkRow(u *UI, click *widget.Clickable, on bool, label string) layout.Widg
 	return func(gtx layout.Context) layout.Dimensions {
 		return click.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.Checkbox(gtx, on) }),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Checkbox(gtx, on) }),
 				layout.Rigid(layout.Spacer{Width: 10}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StBody, guikit.ColText, label)
+					return u.Label(gtx, guikit.StBody, u.Colors().Text, label)
 				}))
 		})
 	}

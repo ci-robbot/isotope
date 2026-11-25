@@ -407,7 +407,7 @@ func (p *printersPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.spinnerLine(s.working))
 			c.gap(14)
 		}
-		c.add(u.caps(i18n.T("PRINTERS")))
+		c.add(u.caps(i18n.T("Printers")))
 		c.gap(10)
 		switch {
 		case s.loadErr != "":
@@ -429,7 +429,7 @@ func (p *printersPage) Body(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		c.gap(24)
-		c.add(u.caps(i18n.T("FOUND ON THE NETWORK AND USB")))
+		c.add(u.caps(i18n.T("Found on the network and USB")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col
@@ -473,7 +473,7 @@ func (p *printersPage) printerRow(r printerRow, busy bool) layout.Widget {
 			if r.Badge == "" {
 				return layout.Dimensions{}
 			}
-			return u.Label(gtx, guikit.StSmall, guikit.ColAccent, r.Badge)
+			return u.Label(gtx, guikit.StSmall, u.Colors().Accent, r.Badge)
 		}))
 		if len(as) > 0 {
 			c.gap(8)
@@ -490,7 +490,7 @@ func (p *printersPage) foundRow(r foundRow, busy bool) layout.Widget {
 	case r.Status != "":
 		status := r.Status
 		right = func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StSmall, guikit.ColDim, status)
+			return u.Label(gtx, guikit.StSmall, u.Colors().Dim, status)
 		}
 	case r.CanAdd:
 		right = u.buttons(guikit.Action{Click: p.addClick(r.F.URI), Kind: guikit.ButtonPrimary, Label: i18n.T("Add"), Disabled: busy})

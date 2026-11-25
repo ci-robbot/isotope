@@ -17,7 +17,7 @@ You need a place for the backup. Isotope can use these:
 
 To set up the backup:
 
-1. On the **Backup** page, under **BACK UP THIS MACHINE**, choose **A USB disk** or **A remote server**.
+1. On the **Backup** page, under **Back up this machine**, choose **A USB disk** or **A remote server**.
 2. For a USB disk, plug it in and choose it. For a server, type its address and the login.
 3. Type the folder for the backup. Isotope makes it if it is not there. Then click **Continue**.
 4. Choose **Create a new backup**. If the folder already has a backup of this computer, choose **Use an existing backup** and type its password.
@@ -36,7 +36,7 @@ Click **Back up now**. You can use the computer while the backup runs.
 
 ## Back up automatically
 
-Under **AUTOMATIC BACKUPS**, choose one of these:
+Under **Automatic backups**, choose one of these:
 
 - **Daily**: once a day.
 - **Weekly**: once a week.
@@ -59,7 +59,7 @@ The file holds the whole backup, encrypted with its password. You can restore it
 You can restore a whole computer only on a new installation. The new installation must use the same disk setup as the old one: the same encryption choice and the same edition.
 
 1. Install Isotope. See [Install Isotope](install.md).
-2. Log in. In Isotope Welcome, choose **Restore from a backup**. You can also use the **RESTORE** section of the **Backup** page.
+2. Log in. In Isotope Welcome, choose **Restore from a backup**. You can also use the **Restore** section of the **Backup** page.
 3. Choose where the backup is: plug in the USB disk, or type the server.
 4. Type the password of the backup.
 5. Choose which backup to restore.

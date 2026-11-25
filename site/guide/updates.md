@@ -44,19 +44,19 @@ An automatic update does not run in these cases:
 
 ## Install another release
 
-Under **OTHER RELEASES**, the page lists the other releases for your desktop. Click **Install** to install one.
+Under **Other releases**, the page lists the other releases for your desktop. Click **Install** to install one.
 
 > When you install an older release, Isotope stays on it. It does not offer newer releases until you install the latest release again.
 
 ## The history
 
-Under **HISTORY**, the page lists the updates and the restarts into the previous system.
+Under **History**, the page lists the updates and the restarts into the previous system.
 
 ## Firmware updates
 
 Isotope also updates the firmware of the computer and of its devices: for example the disks, USB devices, Thunderbolt docks and the system firmware. The firmware comes from the Linux Vendor Firmware Service (LVFS).
 
-The **FIRMWARE** section of the **Updates** page lists the devices that can get firmware updates. When an update is ready, the device shows **Version X is available**.
+The **Firmware** section of the **Updates** page lists the devices that can get firmware updates. When an update is ready, the device shows **Version X is available**.
 
 1. Click **Update** next to the device.
 2. Read the message, then confirm.

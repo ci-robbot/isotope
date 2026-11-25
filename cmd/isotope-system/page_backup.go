@@ -374,7 +374,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(func(gtx layout.Context) layout.Dimensions { return p.setupBody(gtx, st.Busy()) })
 			if offered {
 				c.gap(28)
-				c.add(u.caps(i18n.T("RESTORE")))
+				c.add(u.caps(i18n.T("Restore")))
 				c.gap(10)
 				c.add(u.para(i18n.T("This machine is new, so it can become the machine of a backup. Choose where the backup is above, then:")))
 				c.gap(10)
@@ -385,7 +385,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.gap(28)
-		c.add(u.caps(i18n.T("AUTOMATIC BACKUPS")))
+		c.add(u.caps(i18n.T("Automatic backups")))
 		c.gap(10)
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var kids []layout.FlexChild
@@ -409,7 +409,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 			return c.layout(gtx)
 		}
 		c.gap(28)
-		c.add(u.caps(i18n.T("BACKUPS")))
+		c.add(u.caps(i18n.T("Backups")))
 		c.gap(10)
 		switch {
 		case !b.Present:
@@ -428,7 +428,7 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 						rc.gap(6)
 					}
 					rc.add(func(gtx layout.Context) layout.Dimensions {
-						return u.LabelMax(gtx, guikit.StBody, guikit.ColText2, 1, r)
+						return u.LabelMax(gtx, guikit.StBody, u.Colors().Text2, 1, r)
 					})
 				}
 				return rc.layout(gtx)

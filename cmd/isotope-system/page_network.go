@@ -456,7 +456,7 @@ func (p *networkPage) openConnectDialog() {
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var rows col
 			rows.add(func(gtx layout.Context) layout.Dimensions {
-				return u.Theme.Label(gtx, guikit.StBody, guikit.ColDim, i18n.T("Type"))
+				return u.Theme.Label(gtx, guikit.StBody, u.Colors().Dim, i18n.T("Type"))
 			})
 			for i, pr := range OpenConnectProtocols {
 				rows.gap(6)
@@ -465,10 +465,10 @@ func (p *networkPage) openConnectDialog() {
 				rows.add(func(gtx layout.Context) layout.Dimensions {
 					return f.pick[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.Radio(gtx, on) }),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Radio(gtx, on) }),
 							layout.Rigid(layout.Spacer{Width: 10}.Layout),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Theme.Label(gtx, guikit.StBody, guikit.ColText, label)
+								return u.Theme.Label(gtx, guikit.StBody, u.Colors().Text, label)
 							}))
 					})
 				})
@@ -546,7 +546,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if len(st.Devices) > 0 {
 			c.gap(24)
-			c.add(u.caps(i18n.T("DEVICES")))
+			c.add(u.caps(i18n.T("Devices")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -568,7 +568,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if len(st.Modems) > 0 {
 			c.gap(26)
-			c.add(u.caps(i18n.T("MOBILE BROADBAND")))
+			c.add(u.caps(i18n.T("Mobile broadband")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -659,7 +659,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if st.WifiOn {
 			c.gap(18)
-			c.add(u.caps(i18n.T("NETWORKS IN RANGE")))
+			c.add(u.caps(i18n.T("Networks in range")))
 			c.gap(10)
 			switch {
 			case loading && len(aps) == 0:
@@ -696,7 +696,7 @@ func (p *networkPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if len(st.Saved) > 0 {
 			c.gap(26)
-			c.add(u.caps(i18n.T("SAVED NETWORKS")))
+			c.add(u.caps(i18n.T("Saved networks")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col

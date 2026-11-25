@@ -306,7 +306,7 @@ func (p *networkPage) remoteSection(gtx layout.Context, in rdInput, working stri
 	v := remoteViewOf(in)
 	off := working != ""
 	var c col
-	c.add(u.caps(i18n.T("REMOTE DESKTOP")))
+	c.add(u.caps(i18n.T("Remote desktop")))
 	c.gap(10)
 	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 		var rows col

@@ -219,7 +219,7 @@ func (p *networkPage) firewallSection(gtx layout.Context, in fwInput, working st
 	v := firewallViewOf(in)
 	off := !v.Enabled || working != ""
 	var c col
-	c.add(u.caps(i18n.T("FIREWALL")))
+	c.add(u.caps(i18n.T("Firewall")))
 	c.gap(10)
 	c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 		var rows col
@@ -331,7 +331,7 @@ func (p *networkPage) allowDialog() {
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var rows col
 			rows.add(func(gtx layout.Context) layout.Dimensions {
-				return u.Theme.Label(gtx, guikit.StBody, guikit.ColDim, i18n.T("Protocol"))
+				return u.Theme.Label(gtx, guikit.StBody, u.Colors().Dim, i18n.T("Protocol"))
 			})
 			for i, pr := range fwProtocols {
 				rows.gap(6)
@@ -340,10 +340,10 @@ func (p *networkPage) allowDialog() {
 				rows.add(func(gtx layout.Context) layout.Dimensions {
 					return f.pick[i].Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.Radio(gtx, on) }),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Radio(gtx, on) }),
 							layout.Rigid(layout.Spacer{Width: 10}.Layout),
 							layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-								return u.Theme.Label(gtx, guikit.StBody, guikit.ColText, label)
+								return u.Theme.Label(gtx, guikit.StBody, u.Colors().Text, label)
 							}))
 					})
 				})

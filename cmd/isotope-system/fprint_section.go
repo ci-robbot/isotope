@@ -225,12 +225,12 @@ func (s *fingerSection) pickForm(gtx layout.Context, enrolled map[string]bool) l
 					}
 					return u.Card(gtx, s.clickFor(s.pick, n), s.picked == n, layout.Inset{Top: 8, Bottom: 8, Left: 12, Right: 12}, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
-							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return guikit.Radio(gtx, s.picked == n) }),
+							layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Radio(gtx, s.picked == n) }),
 							layout.Rigid(layout.Spacer{Width: 10}.Layout),
 							layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-								c := guikit.ColText
+								c := u.Colors().Text
 								if enrolled[n] {
-									c = guikit.ColDim
+									c = u.Colors().Dim
 								}
 								return u.Label(gtx, guikit.StBody, c, label)
 							}),
@@ -242,9 +242,9 @@ func (s *fingerSection) pickForm(gtx layout.Context, enrolled map[string]bool) l
 		}
 	}
 	return layout.Flex{}.Layout(gtx,
-		layout.Flexed(1, hand(fingerNames[:5], i18n.T("LEFT"))),
+		layout.Flexed(1, hand(fingerNames[:5], i18n.T("Left"))),
 		layout.Rigid(layout.Spacer{Width: 14}.Layout),
-		layout.Flexed(1, hand(fingerNames[5:], i18n.T("RIGHT"))),
+		layout.Flexed(1, hand(fingerNames[5:], i18n.T("Right"))),
 	)
 }
 
@@ -286,7 +286,7 @@ func (s *fingerSection) enroll(finger string, st FingerState) {
 		do, far := s.enrollText(st)
 		var c col
 		c.add(func(gtx layout.Context) layout.Dimensions {
-			return u.LabelLines(gtx, guikit.StCard, guikit.ColText, 1.4, do)
+			return u.LabelLines(gtx, guikit.StCard, u.Colors().Text, 1.4, do)
 		})
 		if far != "" {
 			c.gap(8)
@@ -369,7 +369,7 @@ func (s *fingerSection) body() layout.Widget {
 	st, loaded, loadErr := s.state()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("FINGERPRINTS")))
+		c.add(u.caps(i18n.T("Fingerprints")))
 		c.gap(10)
 		switch {
 		case !loaded:

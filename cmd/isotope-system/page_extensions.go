@@ -228,7 +228,7 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 			return u.Input(gtx, p.filter, guikit.StBody, 38, i18n.T("Search")+"  ", nil)
 		})
 		c.gap(22)
-		c.add(u.caps(i18n.T("INSTALLED")))
+		c.add(u.caps(i18n.T("Installed")))
 		c.gap(10)
 		if len(inst) == 0 {
 			c.add(u.dim(i18n.T("No extension is installed.")))
@@ -257,7 +257,7 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		c.gap(26)
-		c.add(u.caps(i18n.T("AVAILABLE")))
+		c.add(u.caps(i18n.T("Available")))
 		c.gap(10)
 		switch {
 		case loading && len(avail) == 0:

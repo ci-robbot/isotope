@@ -560,7 +560,7 @@ func (p *disksPage) driveCard(d Drive) layout.Widget {
 			if reason == "" {
 				return layout.Dimensions{}
 			}
-			return u.Label(gtx, guikit.StSmall, guikit.ColText2, reason)
+			return u.Label(gtx, guikit.StSmall, u.Colors().Text2, reason)
 		}))
 		for _, b := range contents(d) {
 			c.gap(10)

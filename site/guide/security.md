@@ -23,7 +23,7 @@ At the start of the computer, type the recovery key where Isotope asks for the p
 
 Make a new key if the disk has no recovery key, or if you lost the key or someone else saw it.
 
-1. Under **RECOVERY KEY**, click **New recovery key…**.
+1. Under **Recovery key**, click **New recovery key…**.
 2. Type the disk passphrase or the current recovery key. On the Trusted Boot edition, the TPM opens the disk and Isotope does not ask.
 3. Isotope shows the new key one time only. Write it down and keep it away from the computer.
 4. Click **I saved it**, then type the group of letters that Isotope asks for.

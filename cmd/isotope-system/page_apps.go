@@ -759,14 +759,14 @@ func (p *appsPage) searchRow(gtx layout.Context, sn appsSnap) layout.Dimensions 
 						return layout.Dimensions{}
 					}
 					return layout.Inset{Left: 13}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StBody, guikit.ColDim, hint)
+						return u.Label(gtx, guikit.StBody, u.Colors().Dim, hint)
 					})
 				}),
 			)
 		}),
 		layout.Rigid(layout.Spacer{Width: 10}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			b := guikit.Box{Radius: 10, Fill: guikit.ColSidebar}
+			b := guikit.Box{Radius: 10, Fill: u.Colors().Group}
 			return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.UniformInset(4).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					var kids []layout.FlexChild
@@ -792,12 +792,12 @@ func (p *appsPage) tab(gtx layout.Context, c *widget.Clickable, label string, on
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		pointer.CursorPointer.Add(gtx.Ops)
 		b := guikit.Box{Radius: 8}
-		fg := guikit.ColDim
+		fg := u.Colors().Dim
 		if on {
-			b.Fill, fg = guikit.ColField, guikit.ColText
+			b.Fill, fg = u.Colors().Field, u.Colors().Text
 		}
 		if gtx.Focused(c) {
-			b.Ring, b.RingWidth = guikit.FocusRingStrong, 2
+			b.Ring, b.RingWidth = u.Colors().Focus, 2
 		}
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Top: 8, Bottom: 8, Left: 14, Right: 14}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -811,13 +811,13 @@ func (p *appsPage) chip(gtx layout.Context, c *widget.Clickable, label string, o
 	u := p.u
 	return c.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		pointer.CursorPointer.Add(gtx.Ops)
-		b := guikit.Box{Radius: 16, Border: guikit.Over(guikit.ColWindow, guikit.ColText, 0.18), BorderWidth: 1}
-		fg := guikit.ColText2
+		b := guikit.Box{Radius: 16, Border: guikit.Over(u.Colors().Window, u.Colors().Text, 0.18), BorderWidth: 1}
+		fg := u.Colors().Text2
 		if on {
-			b.Fill, b.Border, fg = guikit.Over(guikit.ColWindow, guikit.ColAccent, 0.14), guikit.ColAccent, guikit.ColText
+			b.Fill, b.Border, fg = guikit.Over(u.Colors().Window, u.Colors().Accent, 0.14), u.Colors().Accent, u.Colors().Text
 		}
 		if gtx.Focused(c) {
-			b.Ring, b.RingWidth = guikit.FocusRingStrong, 2
+			b.Ring, b.RingWidth = u.Colors().Focus, 2
 		}
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Top: 7, Bottom: 7, Left: 12, Right: 12}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -857,7 +857,7 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 		}
 		if sn.chip != "" {
 			apps := sn.cat.InCategory(sn.chip)
-			c.add(u.caps(strings.ToUpper(sn.chip) + " · " + countApps(len(apps))))
+			c.add(u.caps(sn.chip + " · " + countApps(len(apps))))
 			c.gap(10)
 			c.add(p.appList(sn, apps, sn.job != nil))
 			if len(apps) > appsMaxRows {
@@ -866,7 +866,7 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 			}
 			return c.layout(gtx)
 		}
-		c.add(u.caps(i18n.T("ISOTOPE PICKS")))
+		c.add(u.caps(i18n.T("Isotope picks")))
 		c.gap(10)
 		lines := pickLines(sn.cat, sn.picks, sn.installedIDs)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
@@ -900,7 +900,7 @@ func (p *appsPage) browseBody(sn appsSnap) layout.Widget {
 }
 
 func countApps(n int) string {
-	return i18n.Nf("%d APP", "%d APPS", n, n)
+	return i18n.Nf("%d app", "%d apps", n, n)
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -983,7 +983,7 @@ func (p *appsPage) appRow(l appLine, busy, flathub, compact bool) layout.Widget 
 								maxLines = 1
 							}
 							c.add(func(gtx layout.Context) layout.Dimensions {
-								return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, maxLines, l.Sub)
+								return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, maxLines, l.Sub)
 							})
 							return c.layout(gtx)
 						}),
@@ -1004,29 +1004,27 @@ func (p *appsPage) nameLine(gtx layout.Context, name string, verified bool, suff
 		if verified || suffix != "" {
 			gtx.Constraints.Max.X = max(gtx.Constraints.Max.X-guikit.Dp(gtx, 90), gtx.Constraints.Max.X/2)
 		}
-		return u.LabelMax(gtx, guikit.StBody600, guikit.ColText, 1, name)
+		return u.LabelMax(gtx, guikit.StBody600, u.Colors().Text, 1, name)
 	})}
 	if verified {
 		kids = append(kids, layout.Rigid(layout.Spacer{Width: 8}.Layout), layout.Rigid(p.verified))
 	}
 	if suffix != "" {
 		kids = append(kids, layout.Rigid(layout.Spacer{Width: 8}.Layout), layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 1, suffix)
+			return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 1, suffix)
 		}))
 	}
 	return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
 }
 
-// colVerified is the Verified badge's green.
-var colVerified = guikit.RGB(0x37be95)
-
 func (p *appsPage) verified(gtx layout.Context) layout.Dimensions {
 	// Never wrapped: it overflows a too narrow row rather than stacking.
 	gtx.Constraints.Max.X = max(gtx.Constraints.Max.X, guikit.Dp(gtx, 80))
-	b := guikit.Box{Radius: 9, Border: guikit.Over(guikit.ColWindow, colVerified, 0.45), BorderWidth: 1}
+	pal := p.u.Colors()
+	b := guikit.Box{Radius: 9, Border: guikit.Over(pal.Window, pal.Success, 0.45), BorderWidth: 1}
 	return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		return layout.Inset{Top: 1, Bottom: 1, Left: 7, Right: 7}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return p.u.Label(gtx, guikit.Style{Face: guikit.StSmall600.Face, Weight: guikit.StSmall600.Weight, Size: 11}, colVerified, i18n.T("Verified"))
+			return p.u.Label(gtx, guikit.Style{Face: guikit.StSmall600.Face, Weight: guikit.StSmall600.Weight, Size: 11}, pal.Success, i18n.T("Verified"))
 		})
 	})
 }
@@ -1059,7 +1057,7 @@ func (p *appsPage) icon(gtx layout.Context, id, name, path string, size float32)
 	gtx.Constraints = layout.Exact(sz)
 	layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		st := guikit.Style{Face: guikit.StTitle.Face, Weight: guikit.StTitle.Weight, Size: unit.Sp(size * 0.4)}
-		return p.u.Label(gtx, st, guikit.ColOnAccent, letter)
+		return p.u.Label(gtx, st, guikit.ColOnAccent, letter) // on the fixed tile colours
 	})
 	return layout.Dimensions{Size: sz}
 }
@@ -1096,7 +1094,7 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 			c.add(u.spinnerLine(i18n.T("Downloading Flathub's catalog… The first time takes a minute.")))
 		default:
 			res := p.searchResults(sn.cat, q)
-			title := i18n.Nf("FLATHUB · %d RESULT", "FLATHUB · %d RESULTS", len(res), len(res))
+			title := i18n.Nf("Flathub · %d result", "Flathub · %d results", len(res), len(res))
 			c.add(u.caps(title))
 			c.gap(10)
 			if len(res) == 0 {
@@ -1111,7 +1109,7 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 		}
 		if exts := extMatches(sn.extCat, sn.exts, q); len(exts) > 0 {
 			c.gap(22)
-			c.add(u.caps(i18n.T("SYSTEM EXTENSIONS")))
+			c.add(u.caps(i18n.T("System extensions")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -1139,7 +1137,7 @@ func (p *appsPage) searchBody(sn appsSnap, q string) layout.Widget {
 func (p *appsPage) extTile(gtx layout.Context) layout.Dimensions {
 	px := guikit.Dp(gtx, 44)
 	sz := image.Pt(px, px)
-	guikit.FillRRect(gtx, image.Rectangle{Max: sz}, guikit.Dp(gtx, 11), guikit.ColDisabled)
+	guikit.FillRRect(gtx, image.Rectangle{Max: sz}, guikit.Dp(gtx, 11), p.u.Colors().Disabled)
 	off := op.Offset(image.Pt((px-guikit.Dp(gtx, 26))/2, (px-guikit.Dp(gtx, 26))/2)).Push(gtx.Ops)
 	guikit.Mark(gtx, 26, true, 1, 0)
 	off.Pop()
@@ -1167,7 +1165,7 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 	}
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("IN PROGRESS")))
+		c.add(u.caps(i18n.T("In progress")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
@@ -1176,13 +1174,13 @@ func (p *appsPage) jobPanel(j *appsJob) layout.Widget {
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					var rows col
 					rows.add(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StBody600, guikit.ColText, title)
+						return u.Label(gtx, guikit.StBody600, u.Colors().Text, title)
 					})
 					rows.gap(2)
 					rows.add(u.dim(sub))
 					rows.gap(8)
 					rows.add(func(gtx layout.Context) layout.Dimensions {
-						return guikit.ProgressBar(gtx, float32(max(j.Progress.Percent, 0))/100)
+						return u.ProgressBar(gtx, float32(max(j.Progress.Percent, 0))/100)
 					})
 					return rows.layout(gtx)
 				}),
@@ -1210,7 +1208,7 @@ func (p *appsPage) installedBody(sn appsSnap) layout.Widget {
 		case !sn.instLoaded:
 			c.add(u.spinnerLine(i18n.T("Reading your apps…")))
 		default:
-			c.add(u.caps(i18n.Tf("INSTALLED · %s", countApps(len(rows)))))
+			c.add(u.caps(i18n.Tf("Installed · %s", countApps(len(rows)))))
 			c.gap(10)
 			if len(rows) == 0 {
 				c.add(u.panel(u.dim(i18n.T("No app yet. Browse or search Flathub to install one."))))
@@ -1232,7 +1230,7 @@ func (p *appsPage) installedBody(sn appsSnap) layout.Widget {
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, l+" ")
+						return u.Label(gtx, guikit.StSmall, u.Colors().Dim, l+" ")
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 						return u.Link(gtx, &p.extLink, i18n.T("Manage them in Extensions"))
@@ -1258,11 +1256,11 @@ func (p *appsPage) installedRow(r installedRow, busy bool) layout.Widget {
 						layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 							var c col
 							c.add(func(gtx layout.Context) layout.Dimensions {
-								return u.LabelMax(gtx, guikit.StBody600, guikit.ColText, 1, r.Name)
+								return u.LabelMax(gtx, guikit.StBody600, u.Colors().Text, 1, r.Name)
 							})
 							c.gap(2)
 							c.add(func(gtx layout.Context) layout.Dimensions {
-								return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 1, r.Sub)
+								return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 1, r.Sub)
 							})
 							return c.layout(gtx)
 						}),
@@ -1317,7 +1315,7 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 		}
 		if len(uv.Held) > 0 {
 			c.gap(20)
-			c.add(u.caps(i18n.T("NEEDS YOUR OK")))
+			c.add(u.caps(i18n.T("Needs your OK")))
 			c.gap(10)
 			c.add(p.updateList(uv.Held, busy))
 		}
@@ -1325,7 +1323,7 @@ func (p *appsPage) updatesBody(sn appsSnap) layout.Widget {
 			c.gap(14)
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 700))
-				return u.LabelLines(gtx, guikit.StSmall, guikit.ColWarn, 1.4, l)
+				return u.LabelLines(gtx, guikit.StSmall, u.Colors().Warning, 1.4, l)
 			})
 		}
 		return c.layout(gtx)
@@ -1362,7 +1360,7 @@ func (p *appsPage) updateList(rows []updateRow, busy bool) layout.Widget {
 									lead := i18n.T("Asks for more:")
 									return p.warnLead(gtx, lead, strings.TrimPrefix(notes, lead))
 								}
-								return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 2, notes)
+								return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 2, notes)
 							})
 						}
 						return c.layout(gtx)
@@ -1380,12 +1378,14 @@ func (p *appsPage) updateList(rows []updateRow, busy bool) layout.Widget {
 func (p *appsPage) warnLead(gtx layout.Context, lead, rest string) layout.Dimensions {
 	u := p.u
 	if !strings.HasPrefix(rest, " ") {
-		return u.LabelMax(gtx, guikit.StSmall, guikit.ColWarn, 2, lead+rest)
+		return u.LabelMax(gtx, guikit.StSmall, u.Colors().Warning, 2, lead+rest)
 	}
 	return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Label(gtx, guikit.StSmall, guikit.ColWarn, lead) }),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return u.Label(gtx, guikit.StSmall, u.Colors().Warning, lead)
+		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 2, rest)
+			return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 2, rest)
 		}),
 	)
 }
@@ -1433,12 +1433,12 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 				var h col
 				h.add(func(gtx layout.Context) layout.Dimensions {
-					return u.LabelMax(gtx, guikit.StTitle, guikit.ColText, 1, name)
+					return u.LabelMax(gtx, guikit.StTitle, u.Colors().Text, 1, name)
 				})
 				h.gap(4)
 				h.add(func(gtx layout.Context) layout.Dimensions {
 					kids := []layout.FlexChild{layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, orUnknown(a.Developer))
+						return u.Label(gtx, guikit.StSmall, u.Colors().Dim, orUnknown(a.Developer))
 					})}
 					if a.Verified {
 						kids = append(kids, layout.Rigid(layout.Spacer{Width: 8}.Layout), layout.Rigid(p.verified))
@@ -1448,7 +1448,7 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 				if a.Summary != "" {
 					h.gap(6)
 					h.add(func(gtx layout.Context) layout.Dimensions {
-						return u.LabelMax(gtx, guikit.StBody, guikit.ColText2, 2, a.Summary)
+						return u.LabelMax(gtx, guikit.StBody, u.Colors().Text2, 2, a.Summary)
 					})
 				}
 				return h.layout(gtx)
@@ -1472,7 +1472,7 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 				fc.gap(4)
 				fc.add(func(gtx layout.Context) layout.Dimensions {
 					gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 260))
-					return u.LabelMax(gtx, guikit.StBody600, guikit.ColText, 1, f.Value)
+					return u.LabelMax(gtx, guikit.StBody600, u.Colors().Text, 1, f.Value)
 				})
 				return fc.layout(gtx)
 			}))
@@ -1483,17 +1483,17 @@ func (p *appsPage) detailBody(gtx layout.Context, sn appsSnap) layout.Dimensions
 		c.gap(18)
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, guikit.Dp(gtx, 700))
-			return u.LabelLines(gtx, guikit.StBody, guikit.ColText2, 1.5, a.Description)
+			return u.LabelLines(gtx, guikit.StBody, u.Colors().Text2, 1.5, a.Description)
 		})
 	}
 	if a.Release.Description != "" && inst != nil && a.Release.Version != inst.Version {
 		c.gap(18)
-		c.add(u.caps(i18n.Tf("WHAT'S NEW IN %s", strings.ToUpper(a.Release.Version))))
+		c.add(u.caps(i18n.Tf("What's new in %s", a.Release.Version)))
 		c.gap(6)
 		c.add(u.dim(a.Release.Description))
 	}
 	c.gap(22)
-	c.add(u.caps(i18n.T("WHAT IT CAN REACH")))
+	c.add(u.caps(i18n.T("What it can reach")))
 	c.gap(10)
 	switch {
 	case !d.Loaded:
@@ -1529,17 +1529,17 @@ func (p *appsPage) reachPanel(s flatpak.Summary) layout.Widget {
 	}
 	cell := func(r flatpak.Reach) layout.Widget {
 		return func(gtx layout.Context) layout.Dimensions {
-			title := guikit.ColText
+			title := u.Colors().Text
 			if r.Warn {
-				title = guikit.ColWarn
+				title = u.Colors().Warning
 			}
 			return layout.Flex{}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return layout.Inset{Top: 2}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						if r.Warn {
-							return guikit.WarnIcon(gtx, 16, guikit.ColWarn)
+							return guikit.WarnIcon(gtx, 16, u.Colors().Warning)
 						}
-						return guikit.RingIcon(gtx, 16)
+						return u.RingIcon(gtx, 16)
 					})
 				}),
 				layout.Rigid(layout.Spacer{Width: 10}.Layout),
@@ -1548,7 +1548,7 @@ func (p *appsPage) reachPanel(s flatpak.Summary) layout.Widget {
 					c.add(func(gtx layout.Context) layout.Dimensions { return u.Label(gtx, guikit.StBody600, title, r.Title) })
 					c.gap(2)
 					c.add(func(gtx layout.Context) layout.Dimensions {
-						return u.LabelMax(gtx, guikit.StSmall, guikit.ColDim, 2, r.Sub)
+						return u.LabelMax(gtx, guikit.StSmall, u.Colors().Dim, 2, r.Sub)
 					})
 					return c.layout(gtx)
 				}),

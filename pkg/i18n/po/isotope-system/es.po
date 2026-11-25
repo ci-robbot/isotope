@@ -72,8 +72,8 @@ msgstr "Un runtime o extensión que usan sus aplicaciones."
 
 #: cmd/isotope-system/apps.go
 #, go-format
-msgid "READY TO UPDATE · %d"
-msgstr "LISTAS PARA ACTUALIZAR · %d"
+msgid "Ready to update · %d"
+msgstr "Listas para actualizar · %d"
 
 #: cmd/isotope-system/apps.go
 #, go-format
@@ -137,32 +137,32 @@ msgstr "todo estaba actualizado."
 
 #: cmd/isotope-system/apps.go
 msgctxt "installed version"
-msgid "INSTALLED"
-msgstr "INSTALADA"
+msgid "Installed"
+msgstr "Instalada"
 
 #: cmd/isotope-system/apps.go
-msgid "NEWEST"
-msgstr "MÁS RECIENTE"
+msgid "Newest"
+msgstr "Más reciente"
 
 #: cmd/isotope-system/apps.go
-msgid "VERSION"
-msgstr "VERSIÓN"
+msgid "Version"
+msgstr "Versión"
 
 #: cmd/isotope-system/apps.go
-msgid "SIZE"
-msgstr "TAMAÑO"
+msgid "Size"
+msgstr "Tamaño"
 
 #: cmd/isotope-system/apps.go
-msgid "DOWNLOAD"
-msgstr "DESCARGA"
+msgid "Download"
+msgstr "Descarga"
 
 #: cmd/isotope-system/apps.go
-msgid "LICENCE"
-msgstr "LICENCIA"
+msgid "Licence"
+msgstr "Licencia"
 
 #: cmd/isotope-system/apps.go
-msgid "SOURCE"
-msgstr "ORIGEN"
+msgid "Source"
+msgstr "Origen"
 
 #: cmd/isotope-system/apps.go
 msgid "Proprietary"
@@ -682,8 +682,8 @@ msgid "%s free"
 msgstr "%s libres"
 
 #: cmd/isotope-system/backup_setup.go
-msgid "BACK UP THIS MACHINE"
-msgstr "COPIA DE SEGURIDAD DE ESTE EQUIPO"
+msgid "Back up this machine"
+msgstr "Copia de seguridad de este equipo"
 
 #: cmd/isotope-system/backup_setup.go
 msgid "A USB disk"
@@ -1041,10 +1041,6 @@ msgid "Removing %s…"
 msgstr "Quitando %s…"
 
 #: cmd/isotope-system/firewall.go
-msgid "FIREWALL"
-msgstr "CORTAFUEGOS"
-
-#: cmd/isotope-system/firewall.go
 msgid "Allow incoming…"
 msgstr "Permitir entrantes…"
 
@@ -1204,8 +1200,8 @@ msgid "Restart"
 msgstr "Reiniciar"
 
 #: cmd/isotope-system/firmware.go
-msgid "FIRMWARE"
-msgstr "FIRMWARE"
+msgid "Firmware"
+msgstr "Firmware"
 
 #: cmd/isotope-system/firmware.go
 msgid "Firmware of this computer and its devices, from the Linux Vendor Firmware Service (LVFS)."
@@ -1465,12 +1461,12 @@ msgid "%s (added)"
 msgstr "%s (añadido)"
 
 #: cmd/isotope-system/fprint_section.go
-msgid "LEFT"
-msgstr "IZQUIERDA"
+msgid "Left"
+msgstr "Izquierda"
 
 #: cmd/isotope-system/fprint_section.go
-msgid "RIGHT"
-msgstr "DERECHA"
+msgid "Right"
+msgstr "Derecha"
 
 #. TRANSLATORS: %s is a finger, such as "your right index finger".
 #: cmd/isotope-system/fprint_section.go
@@ -1537,8 +1533,8 @@ msgid "Isotope could not remove %[1]s: %[2]s"
 msgstr "Isotope no pudo quitar %[1]s: %[2]s"
 
 #: cmd/isotope-system/fprint_section.go
-msgid "FINGERPRINTS"
-msgstr "HUELLAS DIGITALES"
+msgid "Fingerprints"
+msgstr "Huellas digitales"
 
 #: cmd/isotope-system/fprint_section.go
 msgid "Looking for a fingerprint reader…"
@@ -2366,8 +2362,8 @@ msgid "The first %d, verified apps first. Search to find the others."
 msgstr "Las primeras %d, primero las verificadas. Busque para encontrar las demás."
 
 #: cmd/isotope-system/page_apps.go
-msgid "ISOTOPE PICKS"
-msgstr "SELECCIÓN DE ISOTOPE"
+msgid "Isotope picks"
+msgstr "Selección de Isotope"
 
 #: cmd/isotope-system/page_apps.go
 msgid "None of Isotope's picks is in the catalog."
@@ -2383,10 +2379,10 @@ msgstr "Actualizando el catálogo de Flathub…"
 
 #: cmd/isotope-system/page_apps.go
 #, go-format
-msgid "%d APP"
-msgid_plural "%d APPS"
-msgstr[0] "%d APLICACIÓN"
-msgstr[1] "%d APLICACIONES"
+msgid "%d app"
+msgid_plural "%d apps"
+msgstr[0] "%d aplicación"
+msgstr[1] "%d aplicaciones"
 
 #: cmd/isotope-system/page_apps.go
 msgid "Open"
@@ -2398,10 +2394,10 @@ msgstr "Verificada"
 
 #: cmd/isotope-system/page_apps.go
 #, go-format
-msgid "FLATHUB · %d RESULT"
-msgid_plural "FLATHUB · %d RESULTS"
-msgstr[0] "FLATHUB · %d RESULTADO"
-msgstr[1] "FLATHUB · %d RESULTADOS"
+msgid "Flathub · %d result"
+msgid_plural "Flathub · %d results"
+msgstr[0] "Flathub · %d resultado"
+msgstr[1] "Flathub · %d resultados"
 
 #: cmd/isotope-system/page_apps.go
 #, go-format
@@ -2414,8 +2410,8 @@ msgid "The first %d. Type more to narrow the search."
 msgstr "Las primeras %d. Escriba más para afinar la búsqueda."
 
 #: cmd/isotope-system/page_apps.go
-msgid "SYSTEM EXTENSIONS"
-msgstr "EXTENSIONES DEL SISTEMA"
+msgid "System extensions"
+msgstr "Extensiones del sistema"
 
 #: cmd/isotope-system/page_apps.go
 msgid "Open in Extensions"
@@ -2442,13 +2438,13 @@ msgid "step %[1]d of %[2]d"
 msgstr "paso %[1]d de %[2]d"
 
 #: cmd/isotope-system/page_apps.go
-msgid "IN PROGRESS"
-msgstr "EN CURSO"
+msgid "In progress"
+msgstr "En curso"
 
 #: cmd/isotope-system/page_apps.go
 #, go-format
-msgid "INSTALLED · %s"
-msgstr "INSTALADAS · %s"
+msgid "Installed · %s"
+msgstr "Instaladas · %s"
 
 #: cmd/isotope-system/page_apps.go
 msgid "No app yet. Browse or search Flathub to install one."
@@ -2475,8 +2471,8 @@ msgid "Update all"
 msgstr "Actualizar todas"
 
 #: cmd/isotope-system/page_apps.go
-msgid "NEEDS YOUR OK"
-msgstr "NECESITA SU APROBACIÓN"
+msgid "Needs your OK"
+msgstr "Necesita su aprobación"
 
 #: cmd/isotope-system/page_apps.go
 msgid "Review…"
@@ -2496,12 +2492,12 @@ msgstr "Atrás"
 
 #: cmd/isotope-system/page_apps.go
 #, go-format
-msgid "WHAT'S NEW IN %s"
-msgstr "NOVEDADES DE %s"
+msgid "What's new in %s"
+msgstr "Novedades de %s"
 
 #: cmd/isotope-system/page_apps.go
-msgid "WHAT IT CAN REACH"
-msgstr "A QUÉ PUEDE ACCEDER"
+msgid "What it can reach"
+msgstr "A qué puede acceder"
 
 #: cmd/isotope-system/page_apps.go
 msgid "Reading its permissions…"
@@ -2648,8 +2644,8 @@ msgid "Restoring this machine…"
 msgstr "Restaurando este equipo…"
 
 #: cmd/isotope-system/page_backup.go
-msgid "RESTORE"
-msgstr "RESTAURACIÓN"
+msgid "Restore"
+msgstr "Restauración"
 
 #: cmd/isotope-system/page_backup.go
 msgid "This machine is new, so it can become the machine of a backup. Choose where the backup is above, then:"
@@ -2660,12 +2656,12 @@ msgid "Restore this machine from a backup…"
 msgstr "Restaurar este equipo desde una copia de seguridad…"
 
 #: cmd/isotope-system/page_backup.go
-msgid "AUTOMATIC BACKUPS"
-msgstr "COPIAS DE SEGURIDAD AUTOMÁTICAS"
+msgid "Automatic backups"
+msgstr "Copias de seguridad automáticas"
 
 #: cmd/isotope-system/page_backup.go
-msgid "BACKUPS"
-msgstr "COPIAS DE SEGURIDAD"
+msgid "Backups"
+msgstr "Copias de seguridad"
 
 #: cmd/isotope-system/page_backup.go
 #, go-format
@@ -2898,8 +2894,8 @@ msgstr "Todavía no hay dispositivos. Ponga el dispositivo en modo de emparejami
 
 #: cmd/isotope-system/page_bluetooth.go
 #: cmd/isotope-system/page_network.go
-msgid "DEVICES"
-msgstr "DISPOSITIVOS"
+msgid "Devices"
+msgstr "Dispositivos"
 
 #: cmd/isotope-system/page_bluetooth.go
 msgid "A higher quality uses more battery and needs a good signal."
@@ -3015,8 +3011,8 @@ msgid "Run programs made for other Linux systems on Isotope."
 msgstr "Ejecute en Isotope programas hechos para otros sistemas Linux."
 
 #: cmd/isotope-system/page_compat.go
-msgid "GLIBC COMPATIBILITY"
-msgstr "COMPATIBILIDAD CON GLIBC"
+msgid "glibc compatibility"
+msgstr "Compatibilidad con glibc"
 
 #: cmd/isotope-system/page_compat.go
 msgid "Isotope is built on musl. Most Linux programs you download, and AppImages, are built for glibc instead; Isotope runs them in a container for your user, an Ubuntu system that shares your home folder."
@@ -3115,8 +3111,9 @@ msgid "Only an administrator (a member of the admin group) can switch the deskto
 msgstr "Solo un administrador (un miembro del grupo admin) puede cambiar el escritorio."
 
 #: cmd/isotope-system/page_desktop.go
-msgid "DESKTOP"
-msgstr "ESCRITORIO"
+#: cmd/isotope-system/page_other.go
+msgid "Desktop"
+msgstr "Escritorio"
 
 #: cmd/isotope-system/page_desktop.go
 msgid "Switch…"
@@ -3127,8 +3124,9 @@ msgid "Running"
 msgstr "En uso"
 
 #: cmd/isotope-system/page_desktop.go
-msgid "IMAGE"
-msgstr "IMAGEN"
+#: cmd/isotope-system/page_other.go
+msgid "Image"
+msgstr "Imagen"
 
 #: cmd/isotope-system/page_desktop.go
 msgid "Switch to the virtual machine image"
@@ -3356,8 +3354,8 @@ msgid "Search"
 msgstr "Buscar"
 
 #: cmd/isotope-system/page_extensions.go
-msgid "INSTALLED"
-msgstr "INSTALADAS"
+msgid "Installed"
+msgstr "Instaladas"
 
 #: cmd/isotope-system/page_extensions.go
 msgid "No extension is installed."
@@ -3369,8 +3367,8 @@ msgid "Off. %s"
 msgstr "Desactivada. %s"
 
 #: cmd/isotope-system/page_extensions.go
-msgid "AVAILABLE"
-msgstr "DISPONIBLES"
+msgid "Available"
+msgstr "Disponibles"
 
 #: cmd/isotope-system/page_extensions.go
 msgid "Reading the catalogs…"
@@ -3566,10 +3564,6 @@ msgid "Not connected"
 msgstr "No conectado"
 
 #: cmd/isotope-system/page_network.go
-msgid "MOBILE BROADBAND"
-msgstr "BANDA ANCHA MÓVIL"
-
-#: cmd/isotope-system/page_network.go
 msgid "APN…"
 msgstr "APN…"
 
@@ -3600,8 +3594,8 @@ msgid "Password for %s"
 msgstr "Contraseña de %s"
 
 #: cmd/isotope-system/page_network.go
-msgid "NETWORKS IN RANGE"
-msgstr "REDES AL ALCANCE"
+msgid "Networks in range"
+msgstr "Redes al alcance"
 
 #: cmd/isotope-system/page_network.go
 msgid "Looking for networks…"
@@ -3630,8 +3624,8 @@ msgid "%s (connected)"
 msgstr "%s (conectada)"
 
 #: cmd/isotope-system/page_network.go
-msgid "SAVED NETWORKS"
-msgstr "REDES GUARDADAS"
+msgid "Saved networks"
+msgstr "Redes guardadas"
 
 #: cmd/isotope-system/page_other.go
 msgid "Software (no driver for this GPU)"
@@ -3668,14 +3662,6 @@ msgstr "Novedades de esta versión"
 #: cmd/isotope-system/page_other.go
 msgid "Built on Hadron"
 msgstr "Basado en Hadron"
-
-#: cmd/isotope-system/page_other.go
-msgid "Desktop"
-msgstr "Escritorio"
-
-#: cmd/isotope-system/page_other.go
-msgid "Image"
-msgstr "Imagen"
 
 #: cmd/isotope-system/page_other.go
 msgid "Edition"
@@ -3791,10 +3777,6 @@ msgid "The update service (isotope-updated) is not available: printers cannot be
 msgstr "El servicio de actualización (isotope-updated) no está disponible: no se pueden añadir ni quitar impresoras."
 
 #: cmd/isotope-system/page_printers.go
-msgid "PRINTERS"
-msgstr "IMPRESORAS"
-
-#: cmd/isotope-system/page_printers.go
 msgid "Reading the printers…"
 msgstr "Leyendo las impresoras…"
 
@@ -3803,8 +3785,8 @@ msgid "No printer yet. Add one of the printers found below."
 msgstr "Todavía no hay impresoras. Añada una de las impresoras encontradas abajo."
 
 #: cmd/isotope-system/page_printers.go
-msgid "FOUND ON THE NETWORK AND USB"
-msgstr "ENCONTRADAS EN LA RED Y POR USB"
+msgid "Found on the network and USB"
+msgstr "Encontradas en la red y por USB"
 
 #: cmd/isotope-system/page_printers.go
 msgid "Searching for printers…"
@@ -3956,10 +3938,6 @@ msgid "Reading the disk's keys…"
 msgstr "Leyendo las claves del disco…"
 
 #: cmd/isotope-system/page_security.go
-msgid "RECOVERY KEY"
-msgstr "CLAVE DE RECUPERACIÓN"
-
-#: cmd/isotope-system/page_security.go
 msgid "A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working."
 msgstr "Una clave de recuperación abre el disco cuando se pierde la frase de contraseña o el TPM se niega (tras una actualización del firmware). Una nueva reemplaza a la antigua, que deja de funcionar."
 
@@ -4048,16 +4026,16 @@ msgid "Only an administrator (a member of the admin group) can install updates. 
 msgstr "Solo un administrador (un miembro del grupo admin) puede instalar actualizaciones. Usted puede seguir buscándolas."
 
 #: cmd/isotope-system/page_updates.go
-msgid "OTHER RELEASES"
-msgstr "OTRAS VERSIONES"
+msgid "Other releases"
+msgstr "Otras versiones"
 
 #: cmd/isotope-system/page_updates.go
 msgid "Installing an older release pins the system to it, until you install the latest again."
 msgstr "Instalar una versión anterior fija el sistema en ella, hasta que vuelva a instalar la última."
 
 #: cmd/isotope-system/page_updates.go
-msgid "INSTALL AN IMAGE"
-msgstr "INSTALAR UNA IMAGEN"
+msgid "Install an image"
+msgstr "Instalar una imagen"
 
 #: cmd/isotope-system/page_updates.go
 msgid "Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first."
@@ -4068,12 +4046,12 @@ msgid "Install…"
 msgstr "Instalar…"
 
 #: cmd/isotope-system/page_updates.go
-msgid "HISTORY"
-msgstr "HISTORIAL"
+msgid "History"
+msgstr "Historial"
 
 #: cmd/isotope-system/page_updates.go
-msgid "PREVIOUS SYSTEM"
-msgstr "SISTEMA ANTERIOR"
+msgid "Previous system"
+msgstr "Sistema anterior"
 
 #: cmd/isotope-system/page_updates.go
 msgid "Restart into the previous system"
@@ -4086,10 +4064,6 @@ msgstr "Solo para el próximo arranque: el sistema que tenía antes de la últim
 #: cmd/isotope-system/page_updates.go
 msgid "Your apps from Flathub: "
 msgstr "Sus aplicaciones de Flathub: "
-
-#: cmd/isotope-system/page_updates.go
-msgid "AUTOMATIC UPDATES"
-msgstr "ACTUALIZACIONES AUTOMÁTICAS"
 
 #: cmd/isotope-system/page_updates.go
 msgid "Install updates automatically"
@@ -4350,10 +4324,6 @@ msgid "Saving the remote desktop password…"
 msgstr "Guardando la contraseña del escritorio remoto…"
 
 #: cmd/isotope-system/remote.go
-msgid "REMOTE DESKTOP"
-msgstr "ESCRITORIO REMOTO"
-
-#: cmd/isotope-system/remote.go
 msgid "Open Extensions"
 msgstr "Abrir Extensiones"
 
@@ -4418,8 +4388,8 @@ msgid "Could not forget %s"
 msgstr "No se pudo olvidar %s"
 
 #: cmd/isotope-system/shares.go
-msgid "NETWORK SHARES"
-msgstr "RECURSOS COMPARTIDOS DE RED"
+msgid "Network shares"
+msgstr "Recursos compartidos de red"
 
 #: cmd/isotope-system/shares.go
 msgid "The update service (isotope-updated), which mounts network shares, is not available."

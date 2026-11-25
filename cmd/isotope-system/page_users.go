@@ -482,7 +482,7 @@ func (p *usersPage) userRow(x User) layout.Widget {
 			if !own {
 				return layout.Dimensions{}
 			}
-			return u.Label(gtx, guikit.StSmall, guikit.ColText2, i18n.T("You"))
+			return u.Label(gtx, guikit.StSmall, u.Colors().Text2, i18n.T("You"))
 		}))
 		if len(as) > 0 {
 			c.gap(10)

@@ -958,7 +958,7 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 		gtx = gtx.Disabled()
 	}
 	var c col
-	c.add(u.caps(i18n.T("BACK UP THIS MACHINE")))
+	c.add(u.caps(i18n.T("Back up this machine")))
 	c.gap(10)
 	c.add(func(gtx layout.Context) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
@@ -1049,7 +1049,7 @@ func (p *backupPage) setupBody(gtx layout.Context, busy bool) layout.Dimensions 
 				c.add(u.para(i18n.T("Add this key to the server's authorized_keys, then Connect.")))
 				c.gap(8)
 				c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-					return u.LabelLines(gtx, guikit.StMono12, guikit.ColText, 1.3, sshKey)
+					return u.LabelLines(gtx, guikit.StMono12, u.Colors().Text, 1.3, sshKey)
 				}))
 				c.gap(10)
 				c.add(u.buttons(

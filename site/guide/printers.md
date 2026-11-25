@@ -12,7 +12,7 @@ Only an administrator can add or remove printers, or choose the default printer.
 
 1. Turn the printer on. Connect it to the same network as the computer, or plug it in with USB.
 2. Click **Search for printers**.
-3. Under **FOUND ON THE NETWORK AND USB**, find the printer and click **Add**.
+3. Under **Found on the network and USB**, find the printer and click **Add**.
 
 A USB printer is set up automatically while it is plugged in. It shows **Set up automatically while it is plugged in**.
 

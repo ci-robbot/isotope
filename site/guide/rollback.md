@@ -11,7 +11,7 @@ If the new system does not start, the computer starts the previous system again 
 Only an administrator can do this.
 
 1. Press [[Super+Escape]] and choose **Update**. The **Updates** page of Isotope System opens.
-2. Under **PREVIOUS SYSTEM**, click **Restart into the previous system**.
+2. Under **Previous system**, click **Restart into the previous system**.
 3. Read the message, then confirm.
 
 The computer restarts into the previous system.
@@ -29,7 +29,7 @@ isotope rollback
 To keep the older version, install it:
 
 1. Open the **Updates** page.
-2. Under **OTHER RELEASES**, find the version that you want.
+2. Under **Other releases**, find the version that you want.
 3. Click **Install**, then restart.
 
 Isotope then stays on that version. It does not offer newer releases until you install the latest release again.

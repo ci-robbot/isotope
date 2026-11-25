@@ -258,7 +258,7 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 		var c col
 		c.add(u.Heading(i18n.T("Compatibility"), i18n.T("Run programs made for other Linux systems on Isotope.")))
 		c.gap(24)
-		c.add(u.caps(i18n.T("GLIBC COMPATIBILITY")))
+		c.add(u.caps(i18n.T("glibc compatibility")))
 		c.gap(10)
 		c.add(u.para(i18n.T("Isotope is built on musl. Most Linux programs you download, and AppImages, are built for glibc instead; Isotope runs them in a container for your user, an Ubuntu system that shares your home folder.")))
 		c.gap(14)

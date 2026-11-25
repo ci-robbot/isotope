@@ -52,7 +52,7 @@ func (u *UI) keyDialog(title, intro, key string, done func()) {
 					rows.gap(4)
 				}
 				rows.add(func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StMono, guikit.ColText, l)
+					return u.Label(gtx, guikit.StMono, u.Colors().Text, l)
 				})
 			}
 			return rows.layout(gtx)

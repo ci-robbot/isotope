@@ -110,7 +110,7 @@ func (p *desktopPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.notice(i18n.T("Only an administrator (a member of the admin group) can switch the desktop.")))
 		}
 		c.gap(24)
-		c.add(u.caps(i18n.T("DESKTOP")))
+		c.add(u.caps(i18n.T("Desktop")))
 		c.gap(10)
 		c.add(func(gtx layout.Context) layout.Dimensions {
 			var kids []layout.FlexChild
@@ -135,7 +135,7 @@ func (p *desktopPage) Body(gtx layout.Context) layout.Dimensions {
 		c.add(u.dim(i18n.T(switchWarning)))
 		if l := otherLine(rel); l != "" {
 			c.gap(28)
-			c.add(u.caps(i18n.T("IMAGE")))
+			c.add(u.caps(i18n.T("Image")))
 			c.gap(10)
 			label := i18n.T("Switch to the virtual machine image")
 			if l == isorelease.GPUFull {

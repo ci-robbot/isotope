@@ -764,14 +764,14 @@ func TestEveryPageDraws(t *testing.T) {
 	}
 }
 
-func TestNavListsEveryPageAndMarksTheLaterOnes(t *testing.T) {
+func TestNavListsEveryPageWithItsIcon(t *testing.T) {
 	u, _, _ := testUI(t, true)
 	if len(u.nav.Items) != len(Pages) {
 		t.Fatalf("%d rows for %d pages", len(u.nav.Items), len(Pages))
 	}
 	for i, p := range Pages {
-		if u.nav.Items[i].Later != later[p] {
-			t.Errorf("%s: later %v", p, u.nav.Items[i].Later)
+		if u.nav.Items[i].Icon == "" || u.nav.Items[i].Name != p.Title() {
+			t.Errorf("%s: row %+v", p, u.nav.Items[i])
 		}
 	}
 	u.ShowPage(PageBackup)

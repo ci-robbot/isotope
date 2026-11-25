@@ -375,7 +375,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 				p.others = make([]widget.Clickable, len(o.Others))
 			}
 			c.gap(28)
-			c.add(u.caps(i18n.T("OTHER RELEASES")))
+			c.add(u.caps(i18n.T("Other releases")))
 			c.gap(4)
 			c.add(u.dim(i18n.T("Installing an older release pins the system to it, until you install the latest again.")))
 			c.gap(10)
@@ -393,7 +393,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if o.Advanced {
 			c.gap(28)
-			c.add(u.caps(i18n.T("INSTALL AN IMAGE")))
+			c.add(u.caps(i18n.T("Install an image")))
 			c.gap(4)
 			c.add(u.dim(i18n.T("Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first.")))
 			c.gap(10)
@@ -410,7 +410,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if hl := HistoryLines(history, st.Installed, u.now()); len(hl) > 0 {
 			c.gap(28)
-			c.add(u.caps(i18n.T("HISTORY")))
+			c.add(u.caps(i18n.T("History")))
 			c.gap(10)
 			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 				var rows col
@@ -425,7 +425,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if o.Rollback {
 			c.gap(28)
-			c.add(u.caps(i18n.T("PREVIOUS SYSTEM")))
+			c.add(u.caps(i18n.T("Previous system")))
 			c.gap(10)
 			c.add(u.row(i18n.T("Restart into the previous system"), i18n.T("For the next boot only: the system you had before the last update."),
 				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || u.writingFirmware()})))
@@ -436,7 +436,7 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Baseline}.Layout(gtx,
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						return u.Label(gtx, guikit.StSmall, guikit.ColDim, i18n.T("Your apps from Flathub: "))
+						return u.Label(gtx, guikit.StSmall, u.Colors().Dim, i18n.T("Your apps from Flathub: "))
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions { return u.Link(gtx, &p.appsLink, l) }),
 				)
@@ -454,7 +454,7 @@ func (p *updatesPage) autoSection() layout.Widget {
 	u.mu.Unlock()
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("AUTOMATIC UPDATES")))
+		c.add(u.caps(i18n.T("Automatic updates")))
 		c.gap(10)
 		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
 			var rows col

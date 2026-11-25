@@ -44,7 +44,7 @@ The user can no longer log in.
 
 With a fingerprint reader, your finger can unlock the screen. It can also approve `sudo` and administrator prompts. Logging in still asks for your password, because your password also unlocks your keyring.
 
-The **FINGERPRINTS** section is at the bottom of the **Users** page. It shows only your own fingerprints.
+The **Fingerprints** section is at the bottom of the **Users** page. It shows only your own fingerprints.
 
 1. If the section says **Fingerprint sign-in is not installed**, click **Install the fingerprint extension**. Only an administrator can install it. See [Extensions](extensions.md).
 2. Click **Add a fingerprint…**.

@@ -280,7 +280,7 @@ func (p *securityPage) Body(gtx layout.Context) layout.Dimensions {
 			}))
 		}
 		c.gap(28)
-		c.add(u.caps(i18n.T("RECOVERY KEY")))
+		c.add(u.caps(i18n.T("Recovery key")))
 		c.gap(10)
 		c.add(u.para(i18n.T("A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working.")))
 		c.gap(12)

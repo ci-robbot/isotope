@@ -495,7 +495,7 @@ func TestAppsDetailsReadWhatItCanReach(t *testing.T) {
 	for _, f := range facts {
 		got = append(got, f.Label+"="+f.Value)
 	}
-	if strings.Join(got, " ") != "VERSION=3.2.8 DOWNLOAD=102.5 MB LICENCE=GPL-3.0+ AND LGPL-3.0+ SOURCE=Flathub" {
+	if strings.Join(got, " ") != "Version=3.2.8 Download=102.5 MB Licence=GPL-3.0+ AND LGPL-3.0+ Source=Flathub" {
 		t.Errorf("facts %q", got)
 	}
 	// An installed app reads its installed metadata.
@@ -519,7 +519,7 @@ func TestAppsUpdatesView(t *testing.T) {
 	if len(v.Ready) != 2 || len(v.Held) != 1 {
 		t.Fatalf("ready %d held %d", len(v.Ready), len(v.Held))
 	}
-	if v.ReadyTitle != "READY TO UPDATE · 2, 176.1 MB" {
+	if v.ReadyTitle != "Ready to update · 2, 176.1 MB" {
 		t.Errorf("title %q", v.ReadyTitle)
 	}
 	if v.Ready[0].Change != "146.0 → 146.0.1 · 92.0 MB · running, restarts later" {

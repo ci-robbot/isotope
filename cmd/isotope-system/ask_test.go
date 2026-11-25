@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
-
-	"github.com/kairos-community/isotope/pkg/guikit"
 )
 
 func askTestUI() *UI {
-	return &UI{Theme: &guikit.Theme{Shaper: guikit.NewShaper()}, scale: 1, hooks: Hooks{Invalidate: func() {}}}
+	return newAskUI(func() {})
 }
 
 func TestAskVPNSecretJSON(t *testing.T) {

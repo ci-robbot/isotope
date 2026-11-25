@@ -2,7 +2,7 @@
 
 A network share is a folder on another computer, such as a NAS or a Windows PC. Isotope mounts SMB shares (Windows, Samba, most NAS) and NFS shares (version 4.1 or later).
 
-You find network shares in the **NETWORK SHARES** section of the **Disks** page. Open it: press [[Super+Escape]], choose **System**, then choose **Disks**.
+You find network shares in the **Network shares** section of the **Disks** page. Open it: press [[Super+Escape]], choose **System**, then choose **Disks**.
 
 ![The Connect to server window: the address of the share, the user, the domain and the password.](../../cmd/isotope-system/testdata/shares-connect.png)
 

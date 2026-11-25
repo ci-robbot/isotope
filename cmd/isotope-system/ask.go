@@ -10,10 +10,13 @@ import (
 	"strings"
 
 	"gioui.org/app"
+	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
+	"github.com/godbus/dbus/v5"
 
+	"github.com/kairos-community/isotope/pkg/cosmictheme"
 	"github.com/kairos-community/isotope/pkg/guikit"
 	"github.com/kairos-community/isotope/pkg/i18n"
 )
@@ -213,7 +216,20 @@ func (m *askModel) fileDialog() *dialog {
 func (m *askModel) layout(gtx layout.Context) layout.Dimensions {
 	u := m.u
 	gtx = guikit.Scaled(gtx, u.scale)
-	guikit.FillRect(gtx, image.Rectangle{Max: gtx.Constraints.Max}, guikit.ColWindow)
+	u.mu.Lock()
+	if u.newPal != nil {
+		u.pal, u.newPal = *u.newPal, nil
+	}
+	u.mu.Unlock()
+	guikit.FillRect(gtx, image.Rectangle{Max: gtx.Constraints.Max}, u.pal.Window)
+	if u.bar != nil {
+		if acts, _ := u.bar.Update(gtx); acts != 0 && u.hooks.Window != nil {
+			u.hooks.Window(acts)
+		}
+		top := u.bar.Layout(gtx, u.Theme).Size.Y
+		defer op.Offset(image.Pt(0, top)).Push(gtx.Ops).Pop()
+		gtx.Constraints = layout.Exact(image.Pt(gtx.Constraints.Max.X, gtx.Constraints.Max.Y-top))
+	}
 	// Esc picks the dialog's first choice, as in every dialog.
 	u.mu.Lock()
 	u.dlg = m.d // pick clears it; no Invalidate, or every frame asks for the next
@@ -224,6 +240,14 @@ func (m *askModel) layout(gtx layout.Context) layout.Dimensions {
 	return layout.Dimensions{Size: gtx.Constraints.Max}
 }
 
+// newAskUI is the UI of an ask window: a theme and a palette, no pages.
+func newAskUI(invalidate func()) *UI {
+	u := &UI{Theme: &guikit.Theme{Shaper: guikit.NewShaper(), TitleStyle: StPageTitle}, scale: 1,
+		hooks: Hooks{Invalidate: invalidate}, pal: guikit.IsotopePalette(true)}
+	u.Pal = &u.pal
+	return u
+}
+
 // runAsk is `isotope-system ask ...`.
 func runAsk(args []string) int {
 	spec, err := parseAsk(args)
@@ -232,8 +256,21 @@ func runAsk(args []string) int {
 		return 2
 	}
 	win := new(app.Window)
-	win.Option(app.Title("Isotope"), app.Size(unit.Dp(560), unit.Dp(360)), app.Decorated(true))
-	u := &UI{Theme: &guikit.Theme{Shaper: guikit.NewShaper()}, scale: 1, hooks: Hooks{Invalidate: win.Invalidate}}
+	cosmic := isCosmic(os.Getenv)
+	win.Option(app.Title("Isotope"), app.Size(unit.Dp(560), unit.Dp(360)), app.Decorated(!cosmic))
+	u := newAskUI(win.Invalidate)
+	u.hooks.Window = func(a system.Action) { win.Perform(a) }
+	home, _ := os.UserHomeDir()
+	if cosmic {
+		u.bar = &guikit.HeaderBar{Title: "Isotope", Left: guikit.ControlsLeftHere(), CloseOnly: true,
+			Height: guikit.HeaderHeight(os.Getenv, home, os.ReadFile)}
+	}
+	session, err := dbus.ConnectSessionBus()
+	if err != nil {
+		session = nil
+	}
+	followTheme(paletteSource{cosmic: cosmic, dirs: cosmictheme.Dirs(os.Getenv, home), read: os.ReadFile,
+		scheme: portalScheme(session)}, session, u.SetPalette)
 	m := newAskModel(u, spec, os.Stdout, func(code int) { os.Exit(code) })
 	go func() {
 		var ops op.Ops
@@ -241,6 +278,10 @@ func runAsk(args []string) int {
 			switch e := win.Event().(type) {
 			case app.DestroyEvent:
 				os.Exit(1)
+			case app.ConfigEvent:
+				if u.bar != nil {
+					u.bar.Maximized = e.Config.Mode == app.Maximized
+				}
 			case app.FrameEvent:
 				gtx := app.NewContext(&ops, e)
 				m.layout(gtx)

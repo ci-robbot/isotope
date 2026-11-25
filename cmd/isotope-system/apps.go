@@ -376,7 +376,7 @@ func updatesViewOf(ps []flatpak.Pending, installed []flatpak.Installed, cat *fla
 		}
 	}
 	if len(v.Ready) > 0 {
-		v.ReadyTitle = i18n.Tf("READY TO UPDATE · %d", len(v.Ready))
+		v.ReadyTitle = i18n.Tf("Ready to update · %d", len(v.Ready))
 		if total > 0 {
 			v.ReadyTitle += ", " + flatpak.FormatSize(total)
 		}
@@ -453,26 +453,26 @@ func detailFacts(a flatpak.App, ri flatpak.RemoteInfo, inst *flatpak.Installed) 
 	}
 	var fs []detailFact
 	if inst != nil && inst.Version != "" {
-		fs = append(fs, detailFact{i18n.X("installed version", "INSTALLED"), inst.Version})
+		fs = append(fs, detailFact{i18n.X("installed version", "Installed"), inst.Version})
 		if version != "" && version != inst.Version {
-			fs = append(fs, detailFact{i18n.T("NEWEST"), version})
+			fs = append(fs, detailFact{i18n.T("Newest"), version})
 		}
 	} else if version != "" {
-		fs = append(fs, detailFact{i18n.T("VERSION"), version})
+		fs = append(fs, detailFact{i18n.T("Version"), version})
 	}
 	if inst != nil && inst.Size != "" {
-		fs = append(fs, detailFact{i18n.T("SIZE"), sizeText(inst.Size)})
+		fs = append(fs, detailFact{i18n.T("Size"), sizeText(inst.Size)})
 	} else if ri.Download != "" {
-		fs = append(fs, detailFact{i18n.T("DOWNLOAD"), sizeText(ri.Download)})
+		fs = append(fs, detailFact{i18n.T("Download"), sizeText(ri.Download)})
 	}
 	lic := ri.License
 	if lic == "" {
 		lic = a.License
 	}
 	if lic != "" {
-		fs = append(fs, detailFact{i18n.T("LICENCE"), licenceText(lic)})
+		fs = append(fs, detailFact{i18n.T("Licence"), licenceText(lic)})
 	}
-	fs = append(fs, detailFact{i18n.T("SOURCE"), "Flathub"})
+	fs = append(fs, detailFact{i18n.T("Source"), "Flathub"})
 	return fs
 }
 
