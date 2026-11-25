@@ -36,10 +36,17 @@ Hadron musl toolchain:
 `desktop-default` copies `printing`; `server-default` does not.
 
 **nss-mdns: not possible.** musl has no NSS, so `getaddrinfo("x.local")`
-cannot go through Avahi. Nothing here needs it: CUPS resolves `dnssd://`
-URIs through its own Avahi client, the page adds printers by their
-`dnssd://` URI, and cups-browsed is set to `IPBasedDeviceURIs IPv4`, so the
-queues it makes hold an address, not a `.local` name.
+cannot go through Avahi. A `dnssd://` URI does not avoid that: CUPS resolves
+the service through its Avahi client, but then looks up the `.local` host
+name Avahi returned with getaddrinfo. Against the router's DNS that fails
+("Name does not resolve"); through systemd-resolved's stub it fails as soon
+as the printer has no IPv6 address (resolved fails the AAAA query, and musl
+fails the whole lookup). Seen on an HP LaserJet MFP M140w on Isotope 0.2.5.
+So the page adds a printer by the IPv4 address Avahi resolved,
+`ipp(s)://ADDRESS:PORT/<rp>` (`printing.AddressURI`), and cups-browsed is
+set to `IPBasedDeviceURIs IPv4` for the same reason. Only an IPv6 link-local
+printer keeps a `dnssd://` URI. The cost: a printer that gets a new address
+(a new DHCP lease) must be added again; a reserved address avoids that.
 
 ## GTK's CUPS print backend and the COSMIC keys
 

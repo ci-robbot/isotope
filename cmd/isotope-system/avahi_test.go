@@ -146,7 +146,7 @@ func TestFindAvahi(t *testing.T) {
 		{name: "HP LaserJet M404 [A1B2C3]", typ: "_ipp._tcp", address: "192.168.1.20",
 			txt: []string{"ty=HP LaserJet Pro M404", "note=Office", "UUID=1234-ab", "pdl=application/pdf,image/urf", "URF=W8,SRGB24"}},
 		{name: "HP LaserJet M404 [A1B2C3]", typ: "_ipps._tcp", address: "192.168.1.20",
-			txt: []string{"ty=HP LaserJet Pro M404", "note=Office", "UUID=1234-ab", "pdl=application/pdf"}},
+			txt: []string{"ty=HP LaserJet Pro M404", "note=Office", "UUID=1234-ab", "pdl=application/pdf", "rp=ipp/print"}},
 		{name: "Canon G3010 (USB)", typ: "_ipp._tcp", address: "127.0.0.1",
 			txt: []string{"ty=Canon G3010 series", "pdl=image/pwg-raster,image/jpeg"}},
 		{name: "Old PostScript", typ: "_ipp._tcp", address: "fe80::1",
@@ -165,10 +165,10 @@ func TestFindAvahi(t *testing.T) {
 	}
 	want := []FoundPrinter{
 		{Service: "Canon G3010 (USB)", Queue: "Canon_G3010_USB", Model: "Canon G3010 series",
-			URI: "dnssd://Canon%20G3010%20%28USB%29._ipp._tcp.local/", Address: "127.0.0.1", Port: 631, USB: true, Driverless: true},
+			URI: "ipp://127.0.0.1:631/ipp/print", Address: "127.0.0.1", Port: 631, USB: true, Driverless: true},
 		{Service: "HP LaserJet M404 [A1B2C3]", Queue: "HP_LaserJet_M404_A1B2C3", Model: "HP LaserJet Pro M404",
 			Location: "Office", UUID: "1234-ab",
-			URI: "dnssd://HP%20LaserJet%20M404%20%5BA1B2C3%5D._ipps._tcp.local/?uuid=1234-ab", Address: "192.168.1.20", Port: 631, Driverless: true},
+			URI: "ipps://192.168.1.20:631/ipp/print", Address: "192.168.1.20", Port: 631, Driverless: true},
 		{Service: "Old PostScript", Queue: "Old_PostScript", Model: "Old LaserWriter",
 			URI: "dnssd://Old%20PostScript._ipp._tcp.local/", Address: "fe80::1", Port: 631},
 	}
@@ -180,8 +180,9 @@ func TestFindAvahi(t *testing.T) {
 	if len(a.freed) != 2 {
 		t.Errorf("freed %v, want both browsers", a.freed)
 	}
-	// One resolve per printer and type, not one per network and protocol.
-	if len(a.resolved) != 5 {
+	// One resolve per printer and type, not one per network and protocol;
+	// a printer that does not answer is asked once more for any address.
+	if len(a.resolved) != 6 {
 		t.Errorf("resolved %q", a.resolved)
 	}
 }

@@ -9,7 +9,9 @@ package printing
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -127,9 +129,10 @@ func QueueName(service string) string {
 	return s
 }
 
-// DNSSDURI is the dnssd:// device URI CUPS resolves itself, through Avahi,
-// at every job: so a printer whose address changes keeps working, and no
-// .local name has to go through musl's resolver, which cannot do mDNS.
+// DNSSDURI is the dnssd:// device URI CUPS resolves through Avahi, at every
+// job, to the printer's .local host name. CUPS then looks that name up with
+// getaddrinfo, which on musl fails for most printers (see AddressURI), so
+// the page uses it only when AddressURI has nothing.
 // svcType is "_ipp._tcp" or "_ipps._tcp"; uuid may be empty.
 func DNSSDURI(instance, svcType, uuid string) string {
 	u := "dnssd://" + escapeHost(instance) + "." + svcType + ".local/"
@@ -137,6 +140,33 @@ func DNSSDURI(instance, svcType, uuid string) string {
 		u += "?uuid=" + url.QueryEscape(uuid)
 	}
 	return u
+}
+
+// AddressURI is the ipp:// or ipps:// device URI of a printer at address
+// and port, with rp (its DNS-SD "rp" TXT key, the resource path; "ipp/print"
+// when empty). svcType is "_ipp._tcp" or "_ipps._tcp". It is "" for an
+// address that is not an IP, for IPv6 link-local (a URI cannot carry the
+// zone CUPS would need) and for port 0. If the printer's address changes
+// (a new DHCP lease), the queue must be added again: a reserved address in
+// the router avoids that.
+func AddressURI(svcType, address string, port uint16, rp string) string {
+	ip := net.ParseIP(address)
+	if ip == nil || port == 0 || ip.IsLinkLocalUnicast() || ip.IsUnspecified() {
+		return ""
+	}
+	scheme := "ipp"
+	if svcType == "_ipps._tcp" {
+		scheme = "ipps"
+	}
+	rp = strings.Trim(rp, "/")
+	if rp == "" {
+		rp = "ipp/print"
+	}
+	var path strings.Builder
+	for _, seg := range strings.Split(rp, "/") {
+		path.WriteString("/" + url.PathEscape(seg))
+	}
+	return scheme + "://" + net.JoinHostPort(ip.String(), strconv.Itoa(int(port))) + path.String()
 }
 
 // escapeHost percent-encodes everything but the unreserved characters, as
