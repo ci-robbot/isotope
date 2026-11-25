@@ -674,6 +674,23 @@ func (u *UI) actionRow(key, title, sub string, extra layout.Widget, as ...guikit
 	}
 }
 
+// rowButtons is a row of row-sized buttons, for a row whose actions are
+// one choice (a codec) and must all show.
+func (u *UI) rowButtons(as ...guikit.Action) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		var kids []layout.FlexChild
+		for i, a := range as {
+			if i > 0 {
+				kids = append(kids, layout.Rigid(layout.Spacer{Width: 8}.Layout))
+			}
+			kids = append(kids, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return u.RowButton(gtx, a.Click, a.Kind, a.Label, !a.Disabled)
+			}))
+		}
+		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
+	}
+}
+
 // note is a row of a group that is a sentence in the dim colour: the
 // group's empty state.
 func (u *UI) note(txt string) layout.Widget { return u.dim(txt) }

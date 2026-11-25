@@ -441,7 +441,7 @@ func (p *disksPage) driveActions(d Drive) []guikit.Action {
 		as = append(as, guikit.Action{Click: &k.powerOff, Kind: guikit.ButtonSecondary, Label: i18n.T("Power off")})
 	}
 	if p.u.sys.Admin {
-		as = append(as, guikit.Action{Click: &k.format, Kind: guikit.ButtonGhost, Label: i18n.T("Format…")})
+		as = append(as, guikit.Action{Click: &k.format, Kind: guikit.ButtonDanger, Label: i18n.T("Format…")})
 	}
 	return as
 }
@@ -554,28 +554,25 @@ func (p *disksPage) driveCard(d Drive) layout.Widget {
 	if p.changeable(d) {
 		note = p.formatNote()
 	}
-	return u.panel(func(gtx layout.Context) layout.Dimensions {
-		var c col
-		c.add(u.row(driveName(d), sub, func(gtx layout.Context) layout.Dimensions {
-			if reason == "" {
-				return layout.Dimensions{}
-			}
+	var extra layout.Widget
+	if reason != "" {
+		extra = func(gtx layout.Context) layout.Dimensions {
 			return u.Label(gtx, guikit.StSmall, u.Colors().Text2, reason)
-		}))
-		for _, b := range contents(d) {
-			c.gap(10)
-			c.add(p.blockRow(d, b))
 		}
-		if len(as) > 0 {
-			c.gap(12)
-			c.add(func(gtx layout.Context) layout.Dimensions { return wrapButtons(gtx, u, as) })
-		}
+	}
+	rows := []layout.Widget{u.actionRow("drive:"+d.ID, driveName(d), sub, extra, as...)}
+	for _, b := range contents(d) {
+		rows = append(rows, p.blockRow(d, b))
+	}
+	return func(gtx layout.Context) layout.Dimensions {
+		var c col
+		c.add(u.group(rows...))
 		if note != "" {
 			c.gap(8)
 			c.add(u.dim(note))
 		}
 		return c.layout(gtx)
-	})
+	}
 }
 
 func (p *disksPage) blockRow(d Drive, b Block) layout.Widget {
@@ -589,12 +586,7 @@ func (p *disksPage) blockRow(d Drive, b Block) layout.Widget {
 	}
 	as := p.blockActions(d, b)
 	return func(gtx layout.Context) layout.Dimensions {
-		return layout.Inset{Left: 14}.Layout(gtx, u.row(labelOf(b), sub, func(gtx layout.Context) layout.Dimensions {
-			if len(as) == 0 {
-				return layout.Dimensions{}
-			}
-			return u.buttons(as...)(gtx)
-		}))
+		return layout.Inset{Left: 16}.Layout(gtx, u.actionRow("block:"+b.ID, labelOf(b), sub, nil, as...))
 	}
 }
 

@@ -4388,6 +4388,10 @@ msgid "Could not forget %s"
 msgstr "No se pudo olvidar %s"
 
 #: cmd/isotope-system/shares.go
+msgid "Connect to server…"
+msgstr "Conectar con un servidor…"
+
+#: cmd/isotope-system/shares.go
 msgid "Network shares"
 msgstr "Recursos compartidos de red"
 
@@ -4398,10 +4402,6 @@ msgstr "El servicio de actualizaciones (isotope-updated), que monta los recursos
 #: cmd/isotope-system/shares.go
 msgid "No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server."
 msgstr "No hay recursos compartidos guardados. Conéctese con un servidor SMB (Windows, Samba, un NAS) o NFS."
-
-#: cmd/isotope-system/shares.go
-msgid "Connect to server…"
-msgstr "Conectar con un servidor…"
 
 #: cmd/isotope-system/shares.go
 msgid "a password or a domain needs a user name"

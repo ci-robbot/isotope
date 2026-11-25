@@ -498,9 +498,7 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 			c.add(u.dim(i18n.T("This computer has no Bluetooth adapter, or it is switched off by a key or by rfkill.")))
 			return c.layout(gtx)
 		}
-		c.add(u.row(view.Headline, "", u.buttons(acts...)))
-		c.gap(6)
-		c.add(u.dim(i18n.T("Files sent to this computer are saved in Downloads.")))
+		c.add(u.group(u.actionRow("bt:adapter", view.Headline, i18n.T("Files sent to this computer are saved in Downloads."), nil, acts...)))
 		if busy {
 			c.gap(12)
 			c.add(u.spinnerLine(working))
@@ -512,44 +510,38 @@ func (p *btPage) Body(gtx layout.Context) layout.Dimensions {
 			}
 			return c.layout(gtx)
 		}
-		c.gap(24)
+		c.gap(28)
 		c.add(u.caps(i18n.T("Devices")))
 		c.gap(10)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			for i, r := range view.Rows {
-				if i > 0 {
-					rows.gap(14)
+		var rows []layout.Widget
+		for _, r := range view.Rows {
+			var as []guikit.Action
+			for _, a := range r.Actions {
+				k := guikit.ButtonSecondary
+				if a == "Forget" {
+					k = guikit.ButtonDanger
 				}
-				var as []guikit.Action
-				for _, a := range r.Actions {
-					k := guikit.ButtonSecondary
-					if a == "Forget" {
-						k = guikit.ButtonGhost
-					}
-					as = append(as, guikit.Action{Click: p.click(r.Dev.Path + "|" + a), Kind: k, Label: i18n.T(a), Disabled: busy})
-				}
-				sub := r.Sub
-				if sending.Dev == r.Dev.Path {
-					sub = btSendText(sending.Sent, sending.Total)
-					as = []guikit.Action{{Click: p.click("send|cancel"), Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")}}
-				}
-				rows.add(u.row(r.Dev.Name, sub, u.buttons(as...)))
-				if len(r.Codecs) > 0 {
-					rows.gap(8)
-					var cs []guikit.Action
-					for _, cd := range r.Codecs {
-						k := guikit.ButtonSecondary
-						if cd.Active {
-							k = guikit.ButtonPrimary
-						}
-						cs = append(cs, guikit.Action{Click: p.click(r.Dev.Path + "|codec|" + cd.Name), Kind: k, Label: cd.Label, Disabled: busy})
-					}
-					rows.add(u.row(i18n.T("Sound quality"), i18n.T("A higher quality uses more battery and needs a good signal."), u.buttons(cs...)))
-				}
+				as = append(as, guikit.Action{Click: p.click(r.Dev.Path + "|" + a), Kind: k, Label: i18n.T(a), Disabled: busy})
 			}
-			return rows.layout(gtx)
-		}))
+			sub := r.Sub
+			if sending.Dev == r.Dev.Path {
+				sub = btSendText(sending.Sent, sending.Total)
+				as = []guikit.Action{{Click: p.click("send|cancel"), Kind: guikit.ButtonSecondary, Label: i18n.T("Cancel")}}
+			}
+			rows = append(rows, u.actionRow("bt:"+r.Dev.Path, r.Dev.Name, sub, nil, as...))
+			if len(r.Codecs) > 0 {
+				var cs []guikit.Action
+				for _, cd := range r.Codecs {
+					k := guikit.ButtonSecondary
+					if cd.Active {
+						k = guikit.ButtonPrimary
+					}
+					cs = append(cs, guikit.Action{Click: p.click(r.Dev.Path + "|codec|" + cd.Name), Kind: k, Label: cd.Label, Disabled: busy})
+				}
+				rows = append(rows, u.row(i18n.T("Sound quality"), i18n.T("A higher quality uses more battery and needs a good signal."), u.rowButtons(cs...)))
+			}
+		}
+		c.add(u.group(rows...))
 		return c.layout(gtx)
 	})
 }

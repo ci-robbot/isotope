@@ -4377,6 +4377,10 @@ msgid "Could not forget %s"
 msgstr ""
 
 #: cmd/isotope-system/shares.go
+msgid "Connect to server…"
+msgstr ""
+
+#: cmd/isotope-system/shares.go
 msgid "Network shares"
 msgstr ""
 
@@ -4386,10 +4390,6 @@ msgstr ""
 
 #: cmd/isotope-system/shares.go
 msgid "No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server."
-msgstr ""
-
-#: cmd/isotope-system/shares.go
-msgid "Connect to server…"
 msgstr ""
 
 #: cmd/isotope-system/shares.go

@@ -355,46 +355,43 @@ func (p *disksPage) sharesSection() layout.Widget {
 	off := working != ""
 	return func(gtx layout.Context) layout.Dimensions {
 		var c col
-		c.add(u.caps(i18n.T("Network shares")))
+		var connect []guikit.Action
+		if u.hooks.Daemon != nil {
+			connect = append(connect, guikit.Action{Click: &p.connect, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect to server…"), Disabled: off})
+		}
+		c.add(u.section(i18n.T("Network shares"), connect...))
 		c.gap(10)
 		if u.hooks.Daemon == nil {
 			c.add(u.errorBox(i18n.T("The update service (isotope-updated), which mounts network shares, is not available.")))
 			return c.layout(gtx)
 		}
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var in col
-			switch {
-			case errText != "":
-				in.add(u.dim(errText))
-				in.gap(10)
-			case !loaded:
-				in.add(u.dim(i18n.T("Loading…")))
-				in.gap(10)
-			case len(rows) == 0:
-				in.add(u.dim(i18n.T("No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server.")))
-				in.gap(10)
+		if working != "" {
+			c.add(u.spinnerLine(working))
+			c.gap(10)
+		}
+		var in []layout.Widget
+		switch {
+		case errText != "":
+			in = append(in, u.note(errText))
+		case !loaded:
+			in = append(in, u.note(i18n.T("Loading…")))
+		case len(rows) == 0:
+			in = append(in, u.note(i18n.T("No saved shares. Connect to an SMB (Windows, Samba, a NAS) or NFS server.")))
+		}
+		for _, r := range rows {
+			k := p.shClicks(r.Key)
+			var as []guikit.Action
+			if r.MountPoint != "" {
+				as = append(as, guikit.Action{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: i18n.T("Unmount"), Disabled: off})
+			} else {
+				as = append(as, guikit.Action{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: i18n.T("Mount"), Disabled: off})
 			}
-			if working != "" {
-				in.add(u.spinnerLine(working))
-				in.gap(10)
+			if r.Saved >= 0 {
+				as = append(as, guikit.Action{Click: &k.forget, Kind: guikit.ButtonDanger, Label: i18n.T("Forget"), Disabled: off})
 			}
-			for _, r := range rows {
-				k := p.shClicks(r.Key)
-				var as []guikit.Action
-				if r.MountPoint != "" {
-					as = append(as, guikit.Action{Click: &k.unmount, Kind: guikit.ButtonSecondary, Label: i18n.T("Unmount"), Disabled: off})
-				} else {
-					as = append(as, guikit.Action{Click: &k.mount, Kind: guikit.ButtonSecondary, Label: i18n.T("Mount"), Disabled: off})
-				}
-				if r.Saved >= 0 {
-					as = append(as, guikit.Action{Click: &k.forget, Kind: guikit.ButtonGhost, Label: i18n.T("Forget"), Disabled: off})
-				}
-				in.add(u.row(r.Title, r.Sub, u.buttons(as...)))
-				in.gap(10)
-			}
-			in.add(u.buttons(guikit.Action{Click: &p.connect, Kind: guikit.ButtonSecondary, Label: i18n.T("Connect to server…"), Disabled: off}))
-			return in.layout(gtx)
-		}))
+			in = append(in, u.actionRow("share:"+r.Key, r.Title, r.Sub, nil, as...))
+		}
+		c.add(u.group(in...))
 		return c.layout(gtx)
 	}
 }

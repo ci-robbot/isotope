@@ -481,19 +481,3 @@ func (p *usersPage) userRow(x User) layout.Widget {
 	}
 	return u.actionRow("user:"+x.Name, title, sub, you, p.actionsOf(x)...)
 }
-
-// wrapButtons lays the buttons in a row, or one per line when they do not
-// fit the width.
-func wrapButtons(gtx layout.Context, u *UI, as []guikit.Action) layout.Dimensions {
-	if gtx.Constraints.Max.X < 520 && len(as) > 1 {
-		var c col
-		for i, a := range as {
-			if i > 0 {
-				c.gap(8)
-			}
-			c.add(u.buttons(a))
-		}
-		return c.layout(gtx)
-	}
-	return u.buttons(as...)(gtx)
-}
