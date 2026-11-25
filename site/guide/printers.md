@@ -28,7 +28,7 @@ Click **Make default** next to the printer. Apps choose the default printer firs
 
 ## Remove a printer
 
-Click **Remove…** next to the printer, then confirm. The printer is removed for every user of the computer, with the print jobs that wait for it. You can add it again later.
+Click **⋯** next to the printer, then **Remove…**, then confirm. The printer is removed for every user of the computer, with the print jobs that wait for it. You can add it again later.
 
 ## Print from an app
 

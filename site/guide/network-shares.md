@@ -26,7 +26,7 @@ Isotope mounts the share at `/run/media/<your user name>/<the name of the share>
 
 - Click **Unmount** to disconnect the share. It stays in the list.
 - Click **Mount** to connect it again.
-- Click **Forget**, then confirm, to remove the share and its saved password from the list.
+- Click **⋯** next to the share, then **Forget**, then confirm, to remove the share and its saved password from the list.
 
 Isotope unmounts your shares when you log out.
 

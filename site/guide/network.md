@@ -23,7 +23,7 @@ You can also connect from the Isotope menu: press [[Super+Escape]] and choose **
 
 ## VPN
 
-The **VPN** section lists your VPN connections. Click **Connect** or **Disconnect** to use one. Click **Remove** to delete a connection and its keys from the computer.
+The **VPN** section lists your VPN connections. Click **Connect** or **Disconnect** to use one. To delete a connection and its keys from the computer, click **⋯** next to it, then **Remove**.
 
 ### Add a WireGuard VPN
 

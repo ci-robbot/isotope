@@ -10,7 +10,9 @@ Do one of these:
 - Open it from the list of your apps. Its name is **Isotope System**.
 - In a terminal, type `isotope system`. To open one page, add its name, for example `isotope system network`.
 
-The pages are in the list at the left of the window.
+The pages are in the list at the left of the window. When the window is narrow, the list is hidden: click the button at the top left to show it.
+
+Each page shows its items as rows, with their buttons at the right. When a row has more buttons than fit, and for the buttons that delete something, click **⋯** at the right of the row to see them.
 
 ## The pages
 

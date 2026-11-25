@@ -21,7 +21,7 @@ Isotope compares the files of the extension with the system before it turns it o
 Under **Installed**:
 
 - Click **Turn off** to stop the extension. It stays on the disk. Click **Turn on** to use it again.
-- Click **Remove** to turn it off and delete it. You can install it again from the catalog.
+- Click **⋯** next to it, then **Remove**, to turn it off and delete it. You can install it again from the catalog.
 
 ## Use the terminal
 

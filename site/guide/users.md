@@ -34,7 +34,7 @@ An administrator can install updates, change the system, and add and remove user
 
 ## Remove a user
 
-1. Click **Remove…** next to the user.
+1. Click **⋯** next to the user, then **Remove…**.
 2. To keep the files of the user on the disk, select **Keep the home folder**.
 3. Click **Remove** and the name of the user.
 

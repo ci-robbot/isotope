@@ -31,7 +31,7 @@ Only an administrator can format a disk.
 
 > Formatting erases everything on the disk. You cannot undo it.
 
-1. Click **Format…** next to the disk.
+1. Click **Format…** next to the disk. On a USB disk, click **⋯** next to the disk, then **Format…**.
 2. Choose **exFAT** or **ext4**. exFAT works on Windows, macOS and Linux. ext4 works on Linux only.
 3. Optional: type a **Label**. An exFAT label has at most 11 characters.
 4. Click **Erase and format**.

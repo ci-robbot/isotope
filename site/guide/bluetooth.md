@@ -20,7 +20,7 @@ The device is then paired and connects.
 Next to a paired device:
 
 - Click **Connect** or **Disconnect**.
-- Click **Forget**, then confirm, to remove the device from this computer. To use it again, pair it again.
+- Click **⋯** next to the device, then **Forget**, then confirm, to remove the device from this computer. To use it again, pair it again.
 
 The page shows the battery level of a device when the device tells it.
 
