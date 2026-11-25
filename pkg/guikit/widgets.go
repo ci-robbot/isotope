@@ -31,6 +31,16 @@ const (
 // Button draws a 40 dp button. A disabled button is drawn greyed and
 // ignores clicks and keys.
 func (th *Theme) Button(gtx layout.Context, c *widget.Clickable, kind ButtonKind, txt string, enabled bool) layout.Dimensions {
+	return th.button(gtx, c, kind, txt, enabled, 40, 0)
+}
+
+// RowButton is a Button sized for a list row: 34 dp high, narrower.
+func (th *Theme) RowButton(gtx layout.Context, c *widget.Clickable, kind ButtonKind, txt string, enabled bool) layout.Dimensions {
+	return th.button(gtx, c, kind, txt, enabled, 34, 6)
+}
+
+// button is Button at height h, its side padding less by trim.
+func (th *Theme) button(gtx layout.Context, c *widget.Clickable, kind ButtonKind, txt string, enabled bool, h, trim float32) layout.Dimensions {
 	p := th.Colors()
 	if !enabled {
 		gtx = gtx.Disabled()
@@ -60,7 +70,8 @@ func (th *Theme) Button(gtx layout.Context, c *widget.Clickable, kind ButtonKind
 		if enabled {
 			pointer.CursorPointer.Add(gtx.Ops)
 		}
-		gtx.Constraints.Min.Y = Dp(gtx, 40)
+		gtx.Constraints.Min.Y = Dp(gtx, h)
+		padX -= trim
 		return b.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Inset{Left: unit.Dp(padX), Right: unit.Dp(padX)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Min.X = 0
