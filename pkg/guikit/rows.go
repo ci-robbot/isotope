@@ -4,6 +4,7 @@ import (
 	"image"
 
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -173,13 +174,25 @@ func (th *Theme) overflow(gtx layout.Context, o *Overflow, more []Action) layout
 	}
 	for i, a := range more {
 		if o.items[i].Clicked(gtx) && !a.Disabled {
+			// From the keyboard, the focus goes back to the "⋯" button.
+			if gtx.Focused(&o.items[i]) {
+				gtx.Execute(key.FocusCmd{Tag: &o.btn})
+			}
 			o.open = false
 			a.Click.Click()
 			gtx.Execute(op.InvalidateCmd{})
 		}
 	}
+	if o.open {
+		o.menuKeys(gtx, more)
+	}
 	if o.btn.Clicked(gtx) {
 		o.open = !o.open
+		// Opened from the keyboard (a mouse click does not focus the
+		// button): the focus moves to the first item.
+		if o.open && gtx.Focused(&o.btn) {
+			o.focusNext(gtx, more, -1, 1)
+		}
 	}
 	sz := Dp(gtx, 34)
 	dims := o.btn.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -224,6 +237,76 @@ func (th *Theme) overflow(gtx layout.Context, o *Overflow, more []Action) layout
 	off.Pop()
 	op.Defer(gtx.Ops, m.Stop())
 	return dims
+}
+
+// menuKeys moves the focus in an open menu: Down and Tab to the next
+// enabled item, Up and Shift+Tab to the one before, Home and End to the
+// first and last, both ends wrapping; Escape closes the menu and gives the
+// focus back to the "⋯" button. Down on the button enters the menu.
+func (o *Overflow) menuKeys(gtx layout.Context, more []Action) {
+	for {
+		ev, ok := gtx.Event(
+			key.Filter{Focus: &o.btn, Name: key.NameEscape},
+			key.Filter{Focus: &o.btn, Name: key.NameDownArrow},
+		)
+		if !ok {
+			break
+		}
+		if e, ok := ev.(key.Event); ok && e.State == key.Press {
+			if e.Name == key.NameEscape {
+				o.open = false
+			} else {
+				o.focusNext(gtx, more, -1, 1)
+			}
+		}
+	}
+	for i := range more {
+		t := &o.items[i]
+		for {
+			ev, ok := gtx.Event(
+				key.Filter{Focus: t, Name: key.NameEscape},
+				key.Filter{Focus: t, Name: key.NameDownArrow},
+				key.Filter{Focus: t, Name: key.NameUpArrow},
+				key.Filter{Focus: t, Name: key.NameHome},
+				key.Filter{Focus: t, Name: key.NameEnd},
+				key.Filter{Focus: t, Name: key.NameTab, Optional: key.ModShift},
+			)
+			if !ok {
+				break
+			}
+			e, ok := ev.(key.Event)
+			if !ok || e.State != key.Press {
+				continue
+			}
+			switch {
+			case e.Name == key.NameEscape:
+				o.open = false
+				gtx.Execute(key.FocusCmd{Tag: &o.btn})
+			case e.Name == key.NameDownArrow, e.Name == key.NameTab && !e.Modifiers.Contain(key.ModShift):
+				o.focusNext(gtx, more, i, 1)
+			case e.Name == key.NameUpArrow, e.Name == key.NameTab:
+				o.focusNext(gtx, more, i, -1)
+			case e.Name == key.NameHome:
+				o.focusNext(gtx, more, -1, 1)
+			case e.Name == key.NameEnd:
+				o.focusNext(gtx, more, len(more), -1)
+			}
+		}
+	}
+}
+
+// focusNext focuses the first enabled item after from in the direction dir
+// (1 or -1), wrapping round; it does nothing when every item is disabled.
+func (o *Overflow) focusNext(gtx layout.Context, more []Action, from, dir int) {
+	n := len(more)
+	for step := 1; step <= n; step++ {
+		i := ((from+dir*step)%n + n) % n
+		if !more[i].Disabled {
+			gtx.Execute(key.FocusCmd{Tag: &o.items[i]})
+			gtx.Execute(op.InvalidateCmd{})
+			return
+		}
+	}
 }
 
 // menu lays the menu's items, one 36 dp line each.

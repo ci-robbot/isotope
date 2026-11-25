@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"gioui.org/io/input"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 )
@@ -111,5 +112,100 @@ func TestActionRowNarrowUsesTheMenu(t *testing.T) {
 	frame(&r, 700, 60, lay(700))
 	if o.Open() {
 		t.Fatal("a wide row shows both buttons and keeps no menu open")
+	}
+}
+
+func press(r *input.Router, name key.Name, mods key.Modifiers) {
+	r.Queue(key.Event{Name: name, Modifiers: mods, State: key.Press}, key.Event{Name: name, Modifiers: mods, State: key.Release})
+}
+
+// The menu from the keyboard: Enter on the focused "⋯" opens it on its
+// first enabled item; Down, Up, Tab, Home and End move between the
+// enabled items, wrapping; Enter fires the item and gives the focus back
+// to "⋯"; Escape closes it the same way.
+func TestOverflowMenuKeyboard(t *testing.T) {
+	th := NewTheme()
+	var a, b, c, d, e widget.Clickable
+	as := []Action{
+		{Click: &a, Label: "Connect"},
+		{Click: &b, Label: "Rename"},
+		{Click: &c, Label: "Disabled", Disabled: true},
+		{Click: &d, Label: "Share"},
+		{Click: &e, Label: "Forget", Kind: ButtonDanger},
+	}
+	// Connect and Rename are buttons; the menu is Disabled, Share, Forget.
+	o := new(Overflow)
+	var r input.Router
+	fired := map[string]int{}
+	focusBtn := true
+	lay := func(gtx layout.Context) {
+		for _, x := range as {
+			if x.Click.Clicked(gtx) {
+				fired[x.Label]++
+			}
+		}
+		if focusBtn {
+			gtx.Execute(key.FocusCmd{Tag: &o.btn})
+			focusBtn = false
+		}
+		th.ActionRow(gtx, "Office", "", nil, as, o)
+	}
+	run := func() {
+		for range 3 {
+			frame(&r, 700, 400, lay)
+		}
+	}
+	_, more := SplitActions(as, 700)
+	focused := func() string {
+		for i := range more {
+			if r.Source().Focused(&o.items[i]) {
+				return more[i].Label
+			}
+		}
+		if r.Source().Focused(&o.btn) {
+			return "⋯"
+		}
+		return ""
+	}
+	run()
+	if focused() != "⋯" {
+		t.Fatalf("focus %q, want the ⋯ button", focused())
+	}
+	press(&r, key.NameReturn, 0)
+	run()
+	if !o.Open() {
+		t.Fatal("Enter did not open the menu")
+	}
+	want := func(label string) {
+		t.Helper()
+		run()
+		if got := focused(); got != label {
+			t.Fatalf("focus on %q, want %q", got, label)
+		}
+	}
+	want("Share") // the first enabled item: Disabled is skipped
+	press(&r, key.NameDownArrow, 0)
+	want("Forget")
+	press(&r, key.NameDownArrow, 0)
+	want("Share") // wraps past the disabled one
+	press(&r, key.NameUpArrow, 0)
+	want("Forget")
+	press(&r, key.NameTab, key.ModShift)
+	want("Share")
+	press(&r, key.NameEnd, 0)
+	want("Forget")
+	press(&r, key.NameHome, 0)
+	want("Share")
+	press(&r, key.NameReturn, 0)
+	run()
+	if o.Open() || fired["Share"] != 1 || focused() != "⋯" {
+		t.Fatalf("after Enter: open %v, fired %v, focus %q", o.Open(), fired, focused())
+	}
+	press(&r, key.NameReturn, 0)
+	run()
+	press(&r, key.NameEscape, 0)
+	run()
+	if o.Open() || focused() != "⋯" || len(fired) != 1 {
+		t.Fatalf("after Escape: open %v, focus %q, fired %v", o.Open(), focused(), fired)
 	}
 }

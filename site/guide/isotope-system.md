@@ -12,7 +12,7 @@ Do one of these:
 
 The pages are in the list at the left of the window. When the window is narrow, the list is hidden: click the button at the top left to show it.
 
-Each page shows its items as rows, with their buttons at the right. When a row has more buttons than fit, and for the buttons that delete something, click **⋯** at the right of the row to see them.
+Each page shows its items as rows, with their buttons at the right. When a row has more buttons than fit, and for the buttons that delete something, click **⋯** at the right of the row to see them. With the keyboard, move to **⋯** with [[Tab]] and press [[Enter]]. Then choose an item with the arrow keys and press [[Enter]], or press [[Escape]] to close the menu.
 
 ## The pages
 
