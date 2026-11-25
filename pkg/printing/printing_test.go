@@ -92,3 +92,30 @@ func TestDNSSDURI(t *testing.T) {
 		t.Errorf("no uuid, UTF-8: %q", got)
 	}
 }
+
+func TestAddressURI(t *testing.T) {
+	for _, c := range []struct {
+		typ, addr string
+		port      uint16
+		rp, want  string
+	}{
+		{"_ipp._tcp", "192.168.68.7", 631, "ipp/print", "ipp://192.168.68.7:631/ipp/print"},
+		{"_ipps._tcp", "192.168.1.20", 443, "", "ipps://192.168.1.20:443/ipp/print"},
+		{"_ipp._tcp", "127.0.0.1", 60000, "/ipp/print/", "ipp://127.0.0.1:60000/ipp/print"},
+		{"_ipp._tcp", "2001:db8::5", 631, "printers/Office Jet", "ipp://[2001:db8::5]:631/printers/Office%20Jet"},
+		{"_ipp._tcp", "fe80::1", 631, "ipp/print", ""},
+		{"_ipp._tcp", "printer.local", 631, "ipp/print", ""},
+		{"_ipp._tcp", "", 631, "ipp/print", ""},
+		{"_ipp._tcp", "10.0.0.2", 0, "ipp/print", ""},
+	} {
+		got := AddressURI(c.typ, c.addr, c.port, c.rp)
+		if got != c.want {
+			t.Errorf("AddressURI(%q, %q, %d, %q) = %q, want %q", c.typ, c.addr, c.port, c.rp, got, c.want)
+		}
+		if got != "" {
+			if err := CheckURI(got); err != nil {
+				t.Errorf("CheckURI(%q) = %v", got, err)
+			}
+		}
+	}
+}

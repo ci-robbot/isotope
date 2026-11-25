@@ -27,6 +27,8 @@ const (
 	avahiBrowser = "org.freedesktop.Avahi.ServiceBrowser"
 	// avahiUnspec is AVAHI_IF_UNSPEC and AVAHI_PROTO_UNSPEC.
 	avahiUnspec = int32(-1)
+	// avahiInet is AVAHI_PROTO_INET: resolve to an IPv4 address.
+	avahiInet = int32(0)
 )
 
 // ippTypes are the DNS-SD types of an IPP printer; a printer that has both
@@ -127,10 +129,20 @@ wait:
 	var found []FoundPrinter
 	for _, it := range items {
 		rctx, cancel := context.WithTimeout(context.Background(), resolveTimeout)
+		// An IPv4 address first: the queue gets it in its URI (see
+		// printer), and an IPv6 link-local one would need its zone. A
+		// printer with no IPv4 address is resolved again to any address.
 		var r avahiResolved
-		err := server.CallWithContext(rctx, avahiServer+".ResolveService", 0,
-			it.iface, it.proto, it.name, it.typ, it.domain, avahiUnspec, uint32(0)).
-			Store(&r.iface, &r.proto, &r.name, &r.typ, &r.domain, &r.host, &r.aproto, &r.address, &r.port, &r.txt, &r.flags)
+		var err error
+		for _, aproto := range []int32{avahiInet, avahiUnspec} {
+			r = avahiResolved{}
+			err = server.CallWithContext(rctx, avahiServer+".ResolveService", 0,
+				it.iface, it.proto, it.name, it.typ, it.domain, aproto, uint32(0)).
+				Store(&r.iface, &r.proto, &r.name, &r.typ, &r.domain, &r.host, &r.aproto, &r.address, &r.port, &r.txt, &r.flags)
+			if err == nil || rctx.Err() != nil {
+				break
+			}
+		}
 		cancel()
 		if err != nil {
 			continue // gone, or it does not answer: not shown
@@ -151,7 +163,13 @@ type avahiResolved struct {
 }
 
 // printer reads the answer: the TXT keys ty (make and model), note
-// (location), UUID, and pdl and URF for what the printer takes.
+// (location), UUID, rp (the resource path), and pdl and URF for what the
+// printer takes. The queue's URI holds the address Avahi resolved, as
+// cups-browsed's IPBasedDeviceURIs does: a dnssd:// URI makes CUPS look up
+// the printer's .local host name with getaddrinfo, and musl cannot (no
+// nss-mdns; systemd-resolved fails the AAAA half of the lookup when the
+// printer has no IPv6 address, which fails the whole lookup in musl).
+// Only an address with no usable form (IPv6 link-local) keeps dnssd://.
 func (r avahiResolved) printer() FoundPrinter {
 	txt := map[string]string{}
 	for _, kv := range r.txt {
@@ -165,8 +183,11 @@ func (r avahiResolved) printer() FoundPrinter {
 		Location: txt["note"],
 		UUID:     txt["uuid"],
 	}
-	p.URI = printing.DNSSDURI(r.name, r.typ, p.UUID)
 	p.Address, p.Port = r.address, r.port
+	p.URI = printing.AddressURI(r.typ, r.address, r.port, txt["rp"])
+	if p.URI == "" {
+		p.URI = printing.DNSSDURI(r.name, r.typ, p.UUID)
+	}
 	if ip := net.ParseIP(r.address); ip != nil && ip.IsLoopback() {
 		p.USB = true
 	}
