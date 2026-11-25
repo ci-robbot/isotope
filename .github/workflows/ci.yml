@@ -140,11 +140,12 @@ jobs:
           test -z "$(gofmt -l pkg/i18n tools/i18n)"
           go vet ./pkg/i18n/... ./tools/i18n/... && go test ./pkg/i18n/... ./tools/i18n/...
 
-      # The shared look of the graphical tools (pkg/guikit): pure Go, no GPU.
+      # The shared look of the graphical tools (pkg/guikit) and the COSMIC
+      # theme reader it maps (pkg/cosmictheme): pure Go, no GPU.
       - name: guikit tests
         run: |
-          test -z "$(gofmt -l pkg/guikit)"
-          go vet ./pkg/guikit/... && go test ./pkg/guikit/...
+          test -z "$(gofmt -l pkg/guikit pkg/cosmictheme)"
+          go vet ./pkg/guikit/... ./pkg/cosmictheme/... && go test ./pkg/guikit/... ./pkg/cosmictheme/...
 
       - name: install-gui tests
         env:
