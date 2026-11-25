@@ -6835,6 +6835,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY pkg/installer/ pkg/installer/
 COPY pkg/guikit/ pkg/guikit/
+COPY pkg/cosmictheme/ pkg/cosmictheme/
 COPY pkg/i18n/ pkg/i18n/
 COPY cmd/isotope-install-gui/ cmd/isotope-install-gui/
 RUN CGO_ENABLED=1 ISOTOPE_GUI_SKIP_SCREENSHOTS=1 go test -tags nox11,novulkan ./cmd/isotope-install-gui && \
@@ -6888,6 +6889,7 @@ RUN go mod download
 # The live page takes the keyboard list and checks from pkg/installer.
 COPY pkg/installer/ pkg/installer/
 COPY pkg/guikit/ pkg/guikit/
+COPY pkg/cosmictheme/ pkg/cosmictheme/
 COPY pkg/i18n/ pkg/i18n/
 COPY cmd/isotope-welcome/ cmd/isotope-welcome/
 # The tests read the app list and the shortcut sheets from the rootfs trees.
