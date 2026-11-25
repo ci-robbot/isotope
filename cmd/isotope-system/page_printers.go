@@ -413,43 +413,36 @@ func (p *printersPage) Body(gtx layout.Context) layout.Dimensions {
 		case s.loadErr != "":
 			c.add(u.errorBox(capitalize(s.loadErr) + "."))
 		case !s.loaded:
-			c.add(u.spinnerLine(i18n.T("Reading the printers…")))
+			c.add(u.group(u.spinnerLine(i18n.T("Reading the printers…"))))
 		case len(s.printers) == 0:
-			c.add(u.panel(u.dim(i18n.T("No printer yet. Add one of the printers found below."))))
+			c.add(u.group(u.note(i18n.T("No printer yet. Add one of the printers found below."))))
 		default:
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, r := range printerRows(s.printers, p.canChange()) {
-					if i > 0 {
-						rows.gap(12)
-					}
-					rows.add(p.printerRow(r, busy))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, r := range printerRows(s.printers, p.canChange()) {
+				rows = append(rows, p.printerRow(r, busy))
+			}
+			c.add(u.group(rows...))
 		}
-		c.gap(24)
-		c.add(u.caps(i18n.T("Found on the network and USB")))
+		c.gap(28)
+		c.add(u.section(i18n.T("Found on the network and USB"),
+			guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: i18n.T("Search again"), Disabled: s.searching || busy}))
 		c.gap(10)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			found := foundRows(s.found, s.printers, p.canChange())
-			switch {
-			case s.searching:
-				rows.add(u.spinnerLine(i18n.T("Searching for printers…")))
-			case s.findErr != "":
-				rows.add(u.errorBox(capitalize(s.findErr) + "."))
-			case s.searched && len(found) == 0:
-				rows.add(u.dim(i18n.T("No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again.")))
-			}
-			for _, r := range found {
-				rows.gap(12)
-				rows.add(p.foundRow(r, busy))
-			}
-			rows.gap(12)
-			rows.add(u.buttons(guikit.Action{Click: &p.search, Kind: guikit.ButtonSecondary, Label: i18n.T("Search again"), Disabled: s.searching || busy}))
-			return rows.layout(gtx)
-		}))
+		var rows []layout.Widget
+		found := foundRows(s.found, s.printers, p.canChange())
+		switch {
+		case s.searching:
+			rows = append(rows, u.spinnerLine(i18n.T("Searching for printers…")))
+		case s.findErr != "":
+			rows = append(rows, u.errorBox(capitalize(s.findErr)+"."))
+		case s.searched && len(found) == 0:
+			rows = append(rows, u.note(i18n.T("No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again.")))
+		}
+		for _, r := range found {
+			rows = append(rows, p.foundRow(r, busy))
+		}
+		if len(rows) > 0 {
+			c.add(u.group(rows...))
+		}
 		return c.layout(gtx)
 	})
 }
@@ -465,37 +458,31 @@ func (p *printersPage) printerRow(r printerRow, busy bool) layout.Widget {
 		as = append(as, guikit.Action{Click: &k.def, Kind: guikit.ButtonSecondary, Label: i18n.T("Make default"), Disabled: busy})
 	}
 	if r.CanRemove {
-		as = append(as, guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: busy})
+		as = append(as, guikit.Action{Click: &k.rm, Kind: guikit.ButtonDanger, Label: i18n.T("Remove…"), Disabled: busy})
 	}
-	return func(gtx layout.Context) layout.Dimensions {
-		var c col
-		c.add(u.row(r.Title, r.Sub, func(gtx layout.Context) layout.Dimensions {
-			if r.Badge == "" {
-				return layout.Dimensions{}
-			}
+	var badge layout.Widget
+	if r.Badge != "" {
+		badge = func(gtx layout.Context) layout.Dimensions {
 			return u.Label(gtx, guikit.StSmall, u.Colors().Accent, r.Badge)
-		}))
-		if len(as) > 0 {
-			c.gap(8)
-			c.add(func(gtx layout.Context) layout.Dimensions { return wrapButtons(gtx, u, as) })
 		}
-		return c.layout(gtx)
 	}
+	return u.actionRow("printer:"+r.P.Name, r.Title, r.Sub, badge, as...)
 }
 
 func (p *printersPage) foundRow(r foundRow, busy bool) layout.Widget {
 	u := p.u
-	var right layout.Widget
+	var status layout.Widget
+	var as []guikit.Action
 	switch {
 	case r.Status != "":
-		status := r.Status
-		right = func(gtx layout.Context) layout.Dimensions {
-			return u.Label(gtx, guikit.StSmall, u.Colors().Dim, status)
+		st := r.Status
+		status = func(gtx layout.Context) layout.Dimensions {
+			return u.Label(gtx, guikit.StSmall, u.Colors().Dim, st)
 		}
 	case r.CanAdd:
-		right = u.buttons(guikit.Action{Click: p.addClick(r.F.URI), Kind: guikit.ButtonPrimary, Label: i18n.T("Add"), Disabled: busy})
+		as = append(as, guikit.Action{Click: p.addClick(r.F.URI), Kind: guikit.ButtonPrimary, Label: i18n.T("Add"), Disabled: busy})
 	}
-	return u.row(r.Title, r.Sub, right)
+	return u.actionRow("found:"+r.F.URI, r.Title, r.Sub, status, as...)
 }
 
 // capitalize starts an error's sentence with a capital.

@@ -381,34 +381,26 @@ func (s *fingerSection) body() layout.Widget {
 			if !u.sys.Admin {
 				sub = i18n.T(fpNoExtUser)
 			}
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var p col
-				p.add(u.row(i18n.T("Fingerprint sign-in is not installed"), sub, nil))
-				p.gap(10)
-				p.add(u.buttons(guikit.Action{Click: &s.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install the fingerprint extension")}))
-				return p.layout(gtx)
-			}))
+			c.add(u.group(u.actionRow("fp:install", i18n.T("Fingerprint sign-in is not installed"), sub, nil,
+				guikit.Action{Click: &s.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install the fingerprint extension")})))
 		case st.NeedsRestart:
 			c.add(u.notice(i18n.T(fpRestart)))
 		case st.Reader == "":
-			c.add(u.panel(u.row(i18n.T("No fingerprint reader"), i18n.T(fpNoReader), nil)))
+			c.add(u.group(u.actionRow("fp:none", i18n.T("No fingerprint reader"), i18n.T(fpNoReader), nil)))
 		default:
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var p col
-				sub := i18n.T("No fingerprints yet.")
-				if n := len(st.Enrolled); n > 0 {
-					sub = i18n.Nf("%d fingerprint", "%d fingerprints", n, n)
-				}
-				p.add(u.row(st.Reader, sub, u.buttons(guikit.Action{Click: &s.add, Kind: guikit.ButtonSecondary, Label: i18n.T("Add a fingerprint…")})))
-				for _, n := range st.Enrolled {
-					n := n
-					p.gap(8)
-					p.add(u.row(fingerLabel(n), "", u.buttons(guikit.Action{Click: s.clickFor(s.remove, n), Kind: guikit.ButtonGhost, Label: i18n.T("Remove…")})))
-				}
-				p.gap(12)
-				p.add(u.dim(i18n.T(fpNotNeeded)))
-				return p.layout(gtx)
-			}))
+			sub := i18n.T("No fingerprints yet.")
+			if n := len(st.Enrolled); n > 0 {
+				sub = i18n.Nf("%d fingerprint", "%d fingerprints", n, n)
+			}
+			rows := []layout.Widget{u.actionRow("fp:reader", st.Reader, sub, nil,
+				guikit.Action{Click: &s.add, Kind: guikit.ButtonSecondary, Label: i18n.T("Add a fingerprint…")})}
+			for _, n := range st.Enrolled {
+				rows = append(rows, u.actionRow("fp:"+n, fingerLabel(n), "", nil,
+					guikit.Action{Click: s.clickFor(s.remove, n), Kind: guikit.ButtonDanger, Label: i18n.T("Remove…")}))
+			}
+			c.add(u.group(rows...))
+			c.gap(8)
+			c.add(u.dim(i18n.T(fpNotNeeded)))
 		}
 		return c.layout(gtx)
 	}

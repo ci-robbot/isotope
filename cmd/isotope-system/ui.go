@@ -94,6 +94,8 @@ type UI struct {
 	pageAt time.Time
 	pages  map[Page]pageView
 	scale  float32
+	// menus are the rows' "⋯" menus, by row key (actionRow).
+	menus map[string]*guikit.Overflow
 	// bar is the header bar the window draws on COSMIC; nil elsewhere,
 	// where the window manager draws the title bar.
 	bar *guikit.HeaderBar
@@ -171,6 +173,7 @@ func newUI(sys System, sh *text.Shaper, h Hooks, first Page) *UI {
 		hooks: h,
 		now:   time.Now,
 		pages: map[Page]pageView{},
+		menus: map[string]*guikit.Overflow{},
 		scale: 1,
 		pal:   guikit.IsotopePalette(true),
 	}
@@ -648,5 +651,47 @@ func (u *UI) spinnerLine(txt string) layout.Widget {
 				return u.Label(gtx, guikit.StBody, u.Colors().Text2, txt)
 			}),
 		)
+	}
+}
+
+// group is a section's rows in one rounded container, split by lines.
+func (u *UI) group(rows ...layout.Widget) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions { return u.Group(gtx, rows...) }
+}
+
+// actionRow is a settings row: title and sub at the left, extra (may be
+// nil) and the actions at the right, the ones that do not fit in a "⋯"
+// menu. key names the row for its menu: unique on the page and stable
+// while the row is shown (a printer's name, a device's path).
+func (u *UI) actionRow(key, title, sub string, extra layout.Widget, as ...guikit.Action) layout.Widget {
+	o := u.menus[key]
+	if o == nil {
+		o = new(guikit.Overflow)
+		u.menus[key] = o
+	}
+	return func(gtx layout.Context) layout.Dimensions {
+		return u.ActionRow(gtx, title, sub, extra, as, o)
+	}
+}
+
+// note is a row of a group that is a sentence in the dim colour: the
+// group's empty state.
+func (u *UI) note(txt string) layout.Widget { return u.dim(txt) }
+
+// section is a section's heading with its actions at the right of it
+// ("Search again").
+func (u *UI) section(title string, as ...guikit.Action) layout.Widget {
+	if len(as) == 0 {
+		return u.caps(title)
+	}
+	return func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		kids := []layout.FlexChild{layout.Flexed(1, u.caps(title))}
+		for _, a := range as {
+			kids = append(kids, layout.Rigid(layout.Spacer{Width: 8}.Layout), layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return u.RowButton(gtx, a.Click, a.Kind, a.Label, !a.Disabled)
+			}))
+		}
+		return layout.Flex{Alignment: layout.Middle}.Layout(gtx, kids...)
 	}
 }

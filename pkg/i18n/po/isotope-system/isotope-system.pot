@@ -3778,15 +3778,15 @@ msgid "Found on the network and USB"
 msgstr ""
 
 #: cmd/isotope-system/page_printers.go
+msgid "Search again"
+msgstr ""
+
+#: cmd/isotope-system/page_printers.go
 msgid "Searching for printers…"
 msgstr ""
 
 #: cmd/isotope-system/page_printers.go
 msgid "No printer found. Turn the printer on and connect it to this network, or plug it in with USB, then search again."
-msgstr ""
-
-#: cmd/isotope-system/page_printers.go
-msgid "Search again"
 msgstr ""
 
 #: cmd/isotope-system/page_printers.go

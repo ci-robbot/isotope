@@ -378,7 +378,7 @@ func (p *usersPage) actionsOf(x User) []guikit.Action {
 		}
 		as = append(as,
 			guikit.Action{Click: &k.admin, Kind: guikit.ButtonSecondary, Label: label},
-			guikit.Action{Click: &k.rm, Kind: guikit.ButtonGhost, Label: i18n.T("Remove…"), Disabled: own})
+			guikit.Action{Click: &k.rm, Kind: guikit.ButtonDanger, Label: i18n.T("Remove…"), Disabled: own})
 	}
 	return as
 }
@@ -457,12 +457,11 @@ func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
 		case !loaded:
 			c.add(u.spinnerLine(i18n.T("Reading the users…")))
 		default:
-			for i, x := range users {
-				if i > 0 {
-					c.gap(10)
-				}
-				c.add(p.userRow(x))
+			var rows []layout.Widget
+			for _, x := range users {
+				rows = append(rows, p.userRow(x))
 			}
+			c.add(u.group(rows...))
 		}
 		// The user's own fingerprints, which need fprintd, not the daemon.
 		c.gap(26)
@@ -474,22 +473,13 @@ func (p *usersPage) Body(gtx layout.Context) layout.Dimensions {
 func (p *usersPage) userRow(x User) layout.Widget {
 	u := p.u
 	title, sub := p.rowText(x)
-	as := p.actionsOf(x)
-	own := p.self(x.Name)
-	return u.panel(func(gtx layout.Context) layout.Dimensions {
-		var c col
-		c.add(u.row(title, sub, func(gtx layout.Context) layout.Dimensions {
-			if !own {
-				return layout.Dimensions{}
-			}
-			return u.Label(gtx, guikit.StSmall, u.Colors().Text2, i18n.T("You"))
-		}))
-		if len(as) > 0 {
-			c.gap(10)
-			c.add(func(gtx layout.Context) layout.Dimensions { return wrapButtons(gtx, u, as) })
+	var you layout.Widget
+	if p.self(x.Name) {
+		you = func(gtx layout.Context) layout.Dimensions {
+			return u.Label(gtx, guikit.StSmall, u.Colors().Accent, i18n.T("You"))
 		}
-		return c.layout(gtx)
-	})
+	}
+	return u.actionRow("user:"+x.Name, title, sub, you, p.actionsOf(x)...)
 }
 
 // wrapButtons lays the buttons in a row, or one per line when they do not
