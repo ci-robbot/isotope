@@ -110,6 +110,12 @@ func TestPrintersScreenshots(t *testing.T) {
 			printersCompare(t, c.name, printersRender(t, u, printersShotSize))
 		})
 	}
+	// The smallest window: the rows keep one button and put the others in
+	// their "⋯" menu.
+	t.Run("printers-narrow", func(t *testing.T) {
+		u := printersShot(t, true, full())
+		printersCompare(t, "printers-narrow", printersRender(t, u, image.Pt(minWindowW, minWindowH)))
+	})
 }
 
 func printersRender(t *testing.T, u *UI, sz image.Point) *image.RGBA {
