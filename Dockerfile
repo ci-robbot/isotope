@@ -573,6 +573,14 @@ RUN curl --retry 5 --retry-delay 3 --retry-all-errors -fL https://gitlab.freedes
 # build's EGL_DEFAULT_DISPLAY is surfaceless (it was wayland with 25.3). Apps
 # that pass a wl_display or use eglGetPlatformDisplay, as the toolkits do,
 # are not affected.
+# b_ndebug=true: assertions off, as the distributions build Mesa. Mesa's
+# default is b_ndebug=if-release, and the toolchain's buildtype is minsize, so
+# every assert() stayed in and aborted the app instead of returning the error
+# after it. NVK on a Maxwell GM107 without its graphics firmware asserted in
+# nouveau_ws_subchan_alloc ("called with invalid oclass") and killed every
+# COSMIC app at start; without the assert it returns -EINVAL, the device is
+# not created, and the app takes another GPU. The install step checks that
+# message is gone from NVK.
 ARG GPU=vm
 # The example's libLLVM is built without RTTI, so Mesa must disable it too
 # (cpp_rtti=false).
@@ -588,7 +596,7 @@ RUN if [ "$GPU" = "full" ]; then \
     export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" \
            CXXFLAGS="$(printf '%s' "${CXXFLAGS:-}" | sed 's/-flto[^ ]*//g')" \
            LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g') -Wl,--exclude-libs,libunwind.a"; \
-    meson setup buildDir ${COMMON_MESON_FLAGS} ${RUSTARGS} -Dplatforms=wayland \
+    meson setup buildDir ${COMMON_MESON_FLAGS} -Db_ndebug=true ${RUSTARGS} -Dplatforms=wayland \
     -Dgallium-drivers="$DRV" \
     -Dvulkan-drivers="$VK" \
     -Dvulkan-layers="$VKLAYERS" \
@@ -606,7 +614,8 @@ RUN if [ "$GPU" = "full" ]; then \
 RUN DESTDIR=/mesa ninja -C buildDir install && \
     if [ -e /mesa/usr/lib/libvulkan_nouveau.so ]; then \
       nm -D --defined-only /mesa/usr/lib/libvulkan_nouveau.so >/tmp/nvk.syms && \
-      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms; \
+      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms && \
+      ! grep -aq 'called with invalid oclass' /mesa/usr/lib/libvulkan_nouveau.so; \
     fi
 # The megadriver links libLLVM at runtime (llvmpipe in every mode, lavapipe
 # too); with GPU=full it also links libelf (radeonsi, NVK), the shared
@@ -3428,7 +3437,7 @@ RUN if [ "$GPU" = "full" ]; then \
     export CFLAGS="$(printf '%s' "$CFLAGS" | sed 's/-flto[^ ]*//g')" \
            CXXFLAGS="$(printf '%s' "${CXXFLAGS:-}" | sed 's/-flto[^ ]*//g')" \
            LDFLAGS="$(printf '%s' "$LDFLAGS" | sed 's/-flto[^ ]*//g') -Wl,--exclude-libs,libunwind.a"; \
-    meson setup buildDir ${COMMON_MESON_FLAGS} ${RUSTARGS} -Dplatforms=x11,wayland \
+    meson setup buildDir ${COMMON_MESON_FLAGS} -Db_ndebug=true ${RUSTARGS} -Dplatforms=x11,wayland \
       -Dgallium-drivers="$DRV" -Dvulkan-drivers="$VK" -Dvulkan-layers="$VKLAYERS" \
       -Dgallium-va="$VA" -Dvideo-codecs=all \
       -Dglx=dri -Dopengl=true -Dgles1=enabled -Dgles2=enabled \
@@ -3436,7 +3445,8 @@ RUN if [ "$GPU" = "full" ]; then \
 RUN DESTDIR=/mesa-x11 ninja -C buildDir install && \
     if [ -e /mesa-x11/usr/lib/libvulkan_nouveau.so ]; then \
       nm -D --defined-only /mesa-x11/usr/lib/libvulkan_nouveau.so >/tmp/nvk.syms && \
-      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms; \
+      ! grep -qw -e malloc -e _Unwind_RaiseException /tmp/nvk.syms && \
+      ! grep -aq 'called with invalid oclass' /mesa-x11/usr/lib/libvulkan_nouveau.so; \
     fi
 # The same bundled libraries as the Sway Mesa stage.
 RUN mkdir -p /mesa-x11/usr/lib && cp -a /usr/lib/libLLVM.so* /mesa-x11/usr/lib/ && \
