@@ -231,53 +231,42 @@ func (p *extPage) Body(gtx layout.Context) layout.Dimensions {
 		c.add(u.caps(i18n.T("Installed")))
 		c.gap(10)
 		if len(inst) == 0 {
-			c.add(u.dim(i18n.T("No extension is installed.")))
+			c.add(u.group(u.note(i18n.T("No extension is installed."))))
 		} else {
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, r := range inst {
-					if i > 0 {
-						rows.gap(10)
-					}
-					k := p.clicksFor(r.Name)
-					toggle := i18n.T("Turn on")
-					if r.Enabled {
-						toggle = i18n.T("Turn off")
-					}
-					sub := r.Description
-					if !r.Enabled {
-						sub = strings.TrimSpace(i18n.Tf("Off. %s", sub))
-					}
-					rows.add(u.row(extTitle(r), sub, u.buttons(
-						guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: toggle, Disabled: busy},
-						guikit.Action{Click: &k.remove, Kind: guikit.ButtonGhost, Label: i18n.T("Remove"), Disabled: busy},
-					)))
+			var rows []layout.Widget
+			for _, r := range inst {
+				k := p.clicksFor(r.Name)
+				toggle := i18n.T("Turn on")
+				if r.Enabled {
+					toggle = i18n.T("Turn off")
 				}
-				return rows.layout(gtx)
-			}))
+				sub := r.Description
+				if !r.Enabled {
+					sub = strings.TrimSpace(i18n.Tf("Off. %s", sub))
+				}
+				rows = append(rows, u.actionRow("ext:"+r.Name, extTitle(r), sub, nil,
+					guikit.Action{Click: &k.toggle, Kind: guikit.ButtonSecondary, Label: toggle, Disabled: busy},
+					guikit.Action{Click: &k.remove, Kind: guikit.ButtonDanger, Label: i18n.T("Remove"), Disabled: busy},
+				))
+			}
+			c.add(u.group(rows...))
 		}
-		c.gap(26)
+		c.gap(28)
 		c.add(u.caps(i18n.T("Available")))
 		c.gap(10)
 		switch {
 		case loading && len(avail) == 0:
-			c.add(u.spinnerLine(i18n.T("Reading the catalogs…")))
+			c.add(u.group(u.spinnerLine(i18n.T("Reading the catalogs…"))))
 		case len(avail) == 0:
-			c.add(u.dim(i18n.T("Nothing more in the catalogs.")))
+			c.add(u.group(u.note(i18n.T("Nothing more in the catalogs."))))
 		default:
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, r := range avail {
-					if i > 0 {
-						rows.gap(10)
-					}
-					k := p.clicksFor(r.Name)
-					rows.add(u.row(extTitle(r), r.Description, u.buttons(
-						guikit.Action{Click: &k.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install"), Disabled: busy},
-					)))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, r := range avail {
+				k := p.clicksFor(r.Name)
+				rows = append(rows, u.actionRow("avail:"+r.Name, extTitle(r), r.Description, nil,
+					guikit.Action{Click: &k.install, Kind: guikit.ButtonSecondary, Label: i18n.T("Install"), Disabled: busy}))
+			}
+			c.add(u.group(rows...))
 		}
 		return c.layout(gtx)
 	})

@@ -141,7 +141,7 @@ func (p *desktopPage) Body(gtx layout.Context) layout.Dimensions {
 			if l == isorelease.GPUFull {
 				label = i18n.T("Switch to the hardware image")
 			}
-			c.add(u.row(label, lineWarning(l), u.buttons(guikit.Action{Click: &p.line, Kind: guikit.ButtonSecondary, Label: i18n.T("Switch…"), Disabled: !can})))
+			c.add(u.group(u.actionRow("line", label, lineWarning(l), nil, guikit.Action{Click: &p.line, Kind: guikit.ButtonSecondary, Label: i18n.T("Switch…"), Disabled: !can})))
 		} else {
 			c.gap(28)
 			c.add(u.dim(i18n.T("This system boots with Trusted Boot: it has one image, the signed UKI. Another desktop stays on it.")))

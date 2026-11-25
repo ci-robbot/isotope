@@ -3035,12 +3035,12 @@ msgid "Set up now"
 msgstr "Configura ora"
 
 #: cmd/isotope-system/page_compat.go
-msgid "Reset…"
-msgstr "Reimposta…"
-
-#: cmd/isotope-system/page_compat.go
 msgid "Download now"
 msgstr "Scarica ora"
+
+#: cmd/isotope-system/page_compat.go
+msgid "Reset…"
+msgstr "Reimposta…"
 
 #: cmd/isotope-system/page_compat.go
 msgid "Glibc environment"

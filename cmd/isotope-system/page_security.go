@@ -268,19 +268,14 @@ func (p *securityPage) Body(gtx layout.Context) layout.Dimensions {
 		case !loaded:
 			c.add(u.spinnerLine(i18n.T("Reading the disk's keys…")))
 		default:
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, l := range RecoveryLines(rec) {
-					if i > 0 {
-						rows.gap(6)
-					}
-					rows.add(u.dim(l))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, l := range RecoveryLines(rec) {
+				rows = append(rows, u.note(l))
+			}
+			c.add(u.group(rows...))
 		}
 		c.gap(28)
-		c.add(u.caps(i18n.T("Recovery key")))
+		c.add(u.section(i18n.T("Recovery key"), acts...))
 		c.gap(10)
 		c.add(u.para(i18n.T("A recovery key opens the disk when the passphrase is lost or the TPM refuses (after a firmware update). A new one replaces the old one, which then stops working.")))
 		c.gap(12)
@@ -290,9 +285,7 @@ func (p *securityPage) Body(gtx layout.Context) layout.Dimensions {
 		}
 		if busy != "" {
 			c.add(u.spinnerLine(busy))
-			c.gap(10)
 		}
-		c.add(u.buttons(acts...))
 		if _, note := resealView(rec); note != "" && loaded {
 			c.gap(10)
 			c.add(u.dim(note))

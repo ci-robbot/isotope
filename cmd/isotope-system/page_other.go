@@ -166,18 +166,13 @@ func (p *aboutPage) Body(gtx layout.Context) layout.Dimensions {
 			)
 		})
 		c.gap(28)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rc col
-			for i, r := range rows {
-				if i > 0 {
-					rc.gap(8)
-				}
-				rc.add(u.row(r[0], "", func(gtx layout.Context) layout.Dimensions {
-					return u.Label(gtx, guikit.StBody, u.Colors().Text2, r[1])
-				}))
-			}
-			return rc.layout(gtx)
-		}))
+		var rc []layout.Widget
+		for _, r := range rows {
+			rc = append(rc, u.actionRow("about:"+r[0], r[0], "", func(gtx layout.Context) layout.Dimensions {
+				return u.Label(gtx, guikit.StBody, u.Colors().Dim, r[1])
+			}))
+		}
+		c.add(u.group(rc...))
 		c.gap(16)
 		c.add(u.dim(i18n.T("Isotope is free software under the Apache License 2.0.")))
 		return c.layout(gtx)

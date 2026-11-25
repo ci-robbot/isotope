@@ -3024,11 +3024,11 @@ msgid "Set up now"
 msgstr ""
 
 #: cmd/isotope-system/page_compat.go
-msgid "Reset…"
+msgid "Download now"
 msgstr ""
 
 #: cmd/isotope-system/page_compat.go
-msgid "Download now"
+msgid "Reset…"
 msgstr ""
 
 #: cmd/isotope-system/page_compat.go

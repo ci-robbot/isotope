@@ -276,42 +276,38 @@ func (p *compatPage) Body(gtx layout.Context) layout.Dimensions {
 		})
 		c.gap(14)
 		v := compatViewOf(s.st)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			var right layout.Widget
-			busy := s.working != ""
-			switch {
-			case v.Setup:
-				right = u.buttons(guikit.Action{Click: &p.setup, Kind: guikit.ButtonPrimary, Label: i18n.T("Set up now"), Disabled: busy})
-			case v.Reset:
-				acts := []guikit.Action{{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: i18n.T("Reset…"), Disabled: busy}}
-				if v.Pull {
-					acts = append([]guikit.Action{{Click: &p.pull, Kind: guikit.ButtonPrimary, Label: i18n.T("Download now"), Disabled: busy}}, acts...)
-				}
-				right = u.buttons(acts...)
+		busy := s.working != ""
+		var as []guikit.Action
+		switch {
+		case v.Setup:
+			as = append(as, guikit.Action{Click: &p.setup, Kind: guikit.ButtonPrimary, Label: i18n.T("Set up now"), Disabled: busy})
+		case v.Reset:
+			if v.Pull {
+				as = append(as, guikit.Action{Click: &p.pull, Kind: guikit.ButtonPrimary, Label: i18n.T("Download now"), Disabled: busy})
 			}
-			rows.add(u.row(i18n.T("Glibc environment"), v.Title, right))
-			rows.gap(6)
-			rows.add(u.dim(v.Sub))
-			if v.Note != "" {
-				rows.gap(6)
-				rows.add(u.dim(v.Note))
+			as = append(as, guikit.Action{Click: &p.reset, Kind: guikit.ButtonSecondary, Label: i18n.T("Reset…"), Disabled: busy})
+		}
+		rows := []layout.Widget{u.actionRow("glibc", i18n.T("Glibc environment"), v.Title, nil, as...), u.note(v.Sub)}
+		if v.Note != "" {
+			rows = append(rows, u.note(v.Note))
+		}
+		if busy {
+			txt := i18n.T("Setting up the glibc environment… This can take a few minutes; it goes on if you close this window.")
+			if s.working == jobPull {
+				txt = i18n.T("Downloading the image… This can take a few minutes; it goes on if you close this window.")
 			}
-			if busy {
-				rows.gap(14)
-				txt := i18n.T("Setting up the glibc environment… This can take a few minutes; it goes on if you close this window.")
-				if s.working == jobPull {
-					txt = i18n.T("Downloading the image… This can take a few minutes; it goes on if you close this window.")
-				}
-				if s.working == jobReset {
-					txt = i18n.T("Resetting the glibc environment… This can take a few minutes; it goes on if you close this window.")
-				}
-				rows.add(u.spinnerLine(txt))
-				rows.gap(10)
-				rows.add(u.log(s.lines, 6))
+			if s.working == jobReset {
+				txt = i18n.T("Resetting the glibc environment… This can take a few minutes; it goes on if you close this window.")
 			}
-			return rows.layout(gtx)
-		}))
+			rows = append(rows, func(gtx layout.Context) layout.Dimensions {
+				var c col
+				c.add(u.spinnerLine(txt))
+				c.gap(10)
+				c.add(u.log(s.lines, 6))
+				return c.layout(gtx)
+			})
+		}
+		c.add(u.group(rows...))
 		if s.inUse != "" {
 			c.gap(14)
 			c.add(u.notice(s.inUse))

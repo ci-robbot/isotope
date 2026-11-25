@@ -398,32 +398,25 @@ func (p *updatesPage) firmwareSection() layout.Widget {
 			return c.layout(gtx)
 		}
 		if len(v.Rows) == 0 {
-			c.add(u.panel(u.dim(v.Note)))
+			c.add(u.group(u.note(v.Note)))
 			return c.layout(gtx)
 		}
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			for i, r := range v.Rows {
-				if i > 0 {
-					rows.gap(10)
-				}
-				var right layout.Widget
-				if r.Action != "" {
-					right = u.buttons(guikit.Action{Click: btns[r.ID], Kind: guikit.ButtonSecondary, Label: r.Action, Disabled: !r.Enabled})
-				}
-				rows.add(u.row(r.Title, r.Sub, right))
-				if r.Progress != "" {
-					rows.gap(6)
-					rows.add(u.spinnerLine(r.Progress))
-				}
+		var rows []layout.Widget
+		for _, r := range v.Rows {
+			var as []guikit.Action
+			if r.Action != "" {
+				as = append(as, guikit.Action{Click: btns[r.ID], Kind: guikit.ButtonSecondary, Label: r.Action, Disabled: !r.Enabled})
 			}
-			if v.Restart {
-				rows.gap(12)
-				rows.add(u.row(i18n.T("Restart to finish the firmware update"), i18n.T("The firmware is written while the computer starts."),
-					u.buttons(guikit.Action{Click: &p.firm.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || v.Writing})))
+			rows = append(rows, u.actionRow("fwupd:"+r.ID, r.Title, r.Sub, nil, as...))
+			if r.Progress != "" {
+				rows = append(rows, u.spinnerLine(r.Progress))
 			}
-			return rows.layout(gtx)
-		}))
+		}
+		if v.Restart {
+			rows = append(rows, u.actionRow("fwupd:restart", i18n.T("Restart to finish the firmware update"), i18n.T("The firmware is written while the computer starts."), nil,
+				guikit.Action{Click: &p.firm.restart, Kind: guikit.ButtonPrimary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || v.Writing}))
+		}
+		c.add(u.group(rows...))
 		if v.Note != "" {
 			c.gap(10)
 			c.add(u.notice(v.Note))

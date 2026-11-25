@@ -419,20 +419,15 @@ func (p *backupPage) Body(gtx layout.Context) layout.Dimensions {
 		case !snapsLoaded:
 			c.add(u.spinnerLine(i18n.T("Reading the backups…")))
 		case len(rows) == 0:
-			c.add(u.dim(i18n.T("No backups yet.")))
+			c.add(u.group(u.note(i18n.T("No backups yet."))))
 		default:
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rc col
-				for i, r := range rows {
-					if i > 0 {
-						rc.gap(6)
-					}
-					rc.add(func(gtx layout.Context) layout.Dimensions {
-						return u.LabelMax(gtx, guikit.StBody, u.Colors().Text2, 1, r)
-					})
-				}
-				return rc.layout(gtx)
-			}))
+			var rc []layout.Widget
+			for _, r := range rows {
+				rc = append(rc, func(gtx layout.Context) layout.Dimensions {
+					return u.LabelMax(gtx, guikit.StBody, u.Colors().Text, 1, r)
+				})
+			}
+			c.add(u.group(rc...))
 		}
 		p.addRestoreHint(&c, restoreHint)
 		return c.layout(gtx)

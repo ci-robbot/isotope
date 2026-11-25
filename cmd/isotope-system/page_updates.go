@@ -379,17 +379,12 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(4)
 			c.add(u.dim(i18n.T("Installing an older release pins the system to it, until you install the latest again.")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, tag := range o.Others {
-					if i > 0 {
-						rows.gap(8)
-					}
-					rows.add(u.row("Isotope "+tag, "", u.buttons(guikit.Action{Click: &p.others[i], Kind: guikit.ButtonSecondary,
-						Label: i18n.T("Install"), Disabled: !o.CanInstall || !u.sys.Admin})))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for i, tag := range o.Others {
+				rows = append(rows, u.actionRow("other:"+tag, "Isotope "+tag, "", nil, guikit.Action{Click: &p.others[i], Kind: guikit.ButtonSecondary,
+					Label: i18n.T("Install"), Disabled: !o.CanInstall || !u.sys.Admin}))
+			}
+			c.add(u.group(rows...))
 		}
 		if o.Advanced {
 			c.gap(28)
@@ -397,38 +392,33 @@ func (p *updatesPage) Body(gtx layout.Context) layout.Dimensions {
 			c.gap(4)
 			c.add(u.dim(i18n.T("Advanced mode is on: any OCI image can be installed. An image that is not a published Isotope release is asked about first.")))
 			c.gap(10)
-			c.add(func(gtx layout.Context) layout.Dimensions {
+			c.add(u.group(func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{Alignment: layout.Middle}.Layout(gtx,
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						return u.Input(gtx, p.image, guikit.StMono13, 38, "", nil)
 					}),
-					layout.Rigid(layout.Spacer{Width: 10}.Layout),
-					layout.Rigid(u.buttons(guikit.Action{Click: &p.advanced, Kind: guikit.ButtonSecondary, Label: i18n.T("Install…"),
+					layout.Rigid(layout.Spacer{Width: 8}.Layout),
+					layout.Rigid(u.rowButtons(guikit.Action{Click: &p.advanced, Kind: guikit.ButtonSecondary, Label: i18n.T("Install…"),
 						Disabled: !o.CanInstall || !u.sys.Admin})),
 				)
-			})
+			}))
 		}
 		if hl := HistoryLines(history, st.Installed, u.now()); len(hl) > 0 {
 			c.gap(28)
 			c.add(u.caps(i18n.T("History")))
 			c.gap(10)
-			c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-				var rows col
-				for i, l := range hl {
-					if i > 0 {
-						rows.gap(6)
-					}
-					rows.add(u.dim(l))
-				}
-				return rows.layout(gtx)
-			}))
+			var rows []layout.Widget
+			for _, l := range hl {
+				rows = append(rows, u.note(l))
+			}
+			c.add(u.group(rows...))
 		}
 		if o.Rollback {
 			c.gap(28)
 			c.add(u.caps(i18n.T("Previous system")))
 			c.gap(10)
-			c.add(u.row(i18n.T("Restart into the previous system"), i18n.T("For the next boot only: the system you had before the last update."),
-				u.buttons(guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || u.writingFirmware()})))
+			c.add(u.group(u.actionRow("rollback", i18n.T("Restart into the previous system"), i18n.T("For the next boot only: the system you had before the last update."), nil,
+				guikit.Action{Click: &p.rollback, Kind: guikit.ButtonSecondary, Label: i18n.T("Restart…"), Disabled: !u.sys.Admin || u.writingFirmware()})))
 		}
 		// Isotope's own releases stay here; the apps update on their page.
 		if l := appUpdatesLine(appsN); l != "" && u.hooks.Apps != nil {
@@ -456,28 +446,23 @@ func (p *updatesPage) autoSection() layout.Widget {
 		var c col
 		c.add(u.caps(i18n.T("Automatic updates")))
 		c.gap(10)
-		c.add(u.panel(func(gtx layout.Context) layout.Dimensions {
-			var rows col
-			var right layout.Widget
-			if v.Toggle != "" {
-				right = u.buttons(guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle,
-					Disabled: !v.Enabled || working != ""})
-			}
-			rows.add(u.row(i18n.T("Install updates automatically"), v.Sub, right))
-			if working != "" {
-				rows.gap(8)
-				rows.add(u.spinnerLine(working))
-			}
-			if v.Last != "" {
-				rows.gap(8)
-				rows.add(u.dim(v.Last))
-			}
-			if v.Hint != "" {
-				rows.gap(8)
-				rows.add(u.dim(v.Hint))
-			}
-			return rows.layout(gtx)
-		}))
+		var as []guikit.Action
+		if v.Toggle != "" {
+			as = append(as, guikit.Action{Click: &p.autoToggle, Kind: guikit.ButtonSecondary, Label: v.Toggle,
+				Disabled: !v.Enabled || working != ""})
+		}
+		rows := []layout.Widget{u.actionRow("auto", i18n.T("Install updates automatically"), v.Sub, nil, as...)}
+		if working != "" {
+			rows = append(rows, u.spinnerLine(working))
+		}
+		if v.Last != "" {
+			rows = append(rows, u.note(v.Last))
+		}
+		c.add(u.group(rows...))
+		if v.Hint != "" {
+			c.gap(8)
+			c.add(u.dim(v.Hint))
+		}
 		return c.layout(gtx)
 	}
 }
