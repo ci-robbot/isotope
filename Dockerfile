@@ -18,7 +18,7 @@
 # value. scripts/bump-hadron.sh rewrites it here, in Dockerfile.agent and in the
 # Makefile; .github/workflows/follow-hadron.yml runs that when Hadron tags a
 # new release.
-ARG HADRON_VERSION=v0.6.7
+ARG HADRON_VERSION=v0.7.0
 # TODO: back to ghcr.io/kairos-io/hadron:${HADRON_VERSION} when the Hadron
 # release with nftables (kairos-io/hadron#893) is out. The firewall needs nft;
 # HADRON_VERSION stays the release for the toolchain and the prebuild keys.

@@ -32,7 +32,7 @@ DESKTOP      ?= sway
 IMAGE        ?= $(DESKTOP)-desktop:dev
 # Hadron release to build on. scripts/bump-hadron.sh rewrites this line together
 # with the HADRON_VERSION defaults in the Dockerfiles.
-HADRON_VERSION ?= v0.6.7
+HADRON_VERSION ?= v0.7.0
 # TODO: back to ghcr.io/kairos-io/hadron:${HADRON_VERSION} when the Hadron
 # release with nftables (kairos-io/hadron#893) is out. The firewall needs nft;
 # HADRON_VERSION stays the release for the toolchain and the prebuild keys.
